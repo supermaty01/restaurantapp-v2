@@ -13,7 +13,6 @@ import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import VisitDetails from '@/features/visits/components/VisitDetails';
 import VisitDishes from '@/features/visits/components/VisitDishes';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
-import { useTheme } from '@/lib/context/ThemeContext';
 import { canDeleteVisitPermanently, softDeleteVisit } from '@/lib/helpers/soft-delete';
 import * as schema from '@/services/db/schema';
 import { exportVisit } from '@/services/share/exportService';
@@ -24,7 +23,6 @@ export default function VisitDetailScreen() {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
   const visit = useVisitById(Number(id));
-  const { isDarkMode } = useTheme();
   const [isSharing, setIsSharing] = useState(false);
 
   function handleEdit() {

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, Modal, FlatList } from 'react-native';
 
 import { useDishesByRestaurant } from '@/features/dishes/hooks/useDishesByRestaurant';
@@ -8,26 +8,42 @@ import { useNewDish } from '@/features/dishes/hooks/useNewDish';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 
-import type { Control, UseFormSetValue } from 'react-hook-form';
+import type {
+  Control,
+  FieldErrors,
+  FieldPathByValue,
+  FieldValues,
+  PathValue,
+  UseFormSetValue,
+} from 'react-hook-form';
 
-interface DishPickerProps {
-  control: Control<any>;
-  name: string;
-  setValue: UseFormSetValue<any>;
+// TName is constrained to fields holding a list of dish ids.
+interface DishPickerProps<
+  TFieldValues extends FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number[]>,
+  TTransformed = TFieldValues,
+> {
+  control: Control<TFieldValues, unknown, TTransformed>;
+  name: TName;
+  setValue: UseFormSetValue<TFieldValues>;
   restaurantId: number | undefined;
-  errors?: any | undefined;
+  errors?: FieldErrors<TFieldValues> | undefined;
   selectedDishes: DishListDTO[];
   setSelectedDishes: (dishes: DishListDTO[]) => void;
 }
 
-const DishPicker: React.FC<DishPickerProps> = ({
+function DishPicker<
+  TFieldValues extends FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number[]>,
+  TTransformed = TFieldValues,
+>({
   name,
   setValue,
   restaurantId,
   errors,
   selectedDishes,
   setSelectedDishes,
-}) => {
+}: DishPickerProps<TFieldValues, TName, TTransformed>) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { newDish, setNewDish } = useNewDish();
   const router = useRouter();
@@ -42,11 +58,9 @@ const DishPicker: React.FC<DishPickerProps> = ({
       if (!selectedDishes.some((d) => d.id === dish.id)) {
         const newSelectedDishes = [...selectedDishes, dish];
         setSelectedDishes(newSelectedDishes);
-        setValue(
-          name,
-          newSelectedDishes.map((d) => d.id),
-          { shouldValidate: true },
-        );
+        setValue(name, newSelectedDishes.map((d) => d.id) as PathValue<TFieldValues, TName>, {
+          shouldValidate: true,
+        });
       }
     },
     [name, selectedDishes, setSelectedDishes, setValue],
@@ -62,11 +76,9 @@ const DishPicker: React.FC<DishPickerProps> = ({
   const handleRemoveDish = (dishId: number) => {
     const updatedDishes = selectedDishes.filter((dish) => dish.id !== dishId);
     setSelectedDishes(updatedDishes);
-    setValue(
-      name,
-      updatedDishes.map((d) => d.id),
-      { shouldValidate: true },
-    );
+    setValue(name, updatedDishes.map((d) => d.id) as PathValue<TFieldValues, TName>, {
+      shouldValidate: true,
+    });
   };
 
   return (
@@ -164,6 +176,6 @@ const DishPicker: React.FC<DishPickerProps> = ({
       </Modal>
     </View>
   );
-};
+}
 
 export default DishPicker;

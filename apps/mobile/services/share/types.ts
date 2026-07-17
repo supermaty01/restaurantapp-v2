@@ -53,21 +53,21 @@ export interface ShareFileData {
   createdAt: string;
 
   // Main entity data (only one will be present based on type)
-  restaurant?: ShareableRestaurant;
-  dish?: ShareableDish;
-  visit?: ShareableVisit;
+  restaurant?: ShareableRestaurant | undefined;
+  dish?: ShareableDish | undefined;
+  visit?: ShareableVisit | undefined;
 
   // For dish: includes the restaurant
   // For visit: includes the restaurant and all dishes associated
-  includedRestaurant?: ShareableRestaurant;
-  includedDishes?: ShareableDish[];
+  includedRestaurant?: ShareableRestaurant | undefined;
+  includedDishes?: ShareableDish[] | undefined;
 }
 
 // Conflict detection result
 export interface ConflictResult {
   hasConflict: boolean;
   existingEntity?: {
-    id: number;
+    id: number | undefined;
     name: string;
   };
   incomingName: string;
@@ -81,9 +81,9 @@ export type ConflictResolution =
 export interface ImportResult {
   success: boolean;
   entityType: ShareEntityType;
-  entityId?: number;
-  entityName?: string;
-  error?: string;
+  entityId?: number | undefined;
+  entityName?: string | undefined;
+  error?: string | undefined;
 }
 
 // File extension and MIME type

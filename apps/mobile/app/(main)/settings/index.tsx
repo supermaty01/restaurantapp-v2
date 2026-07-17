@@ -73,7 +73,9 @@ export default function SettingsScreen() {
         return;
       }
 
-      const fileUri = result.assets[0].uri;
+      const asset = result.assets[0];
+      if (!asset) return;
+      const fileUri = asset.uri;
 
       // 2. Verificar que sea un archivo válido
       Alert.alert(

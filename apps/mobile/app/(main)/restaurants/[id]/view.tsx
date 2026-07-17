@@ -12,7 +12,6 @@ import RestaurantDetails from '@/features/restaurants/components/RestaurantDetai
 import RestaurantDishes from '@/features/restaurants/components/RestaurantDishes';
 import RestaurantVisits from '@/features/restaurants/components/RestaurantVisits';
 import { useRestaurantById } from '@/features/restaurants/hooks/useRestaurantById';
-import { useTheme } from '@/lib/context/ThemeContext';
 import { canDeleteRestaurantPermanently, softDeleteRestaurant } from '@/lib/helpers/soft-delete';
 import * as schema from '@/services/db/schema';
 import { exportRestaurant } from '@/services/share/exportService';
@@ -23,7 +22,6 @@ export default function RestaurantDetailScreen() {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
   const restaurant = useRestaurantById(Number(id));
-  const { isDarkMode } = useTheme();
   const [isSharing, setIsSharing] = useState(false);
 
   function handleEdit() {
