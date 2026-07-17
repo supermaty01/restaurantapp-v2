@@ -18,7 +18,7 @@ interface ZoomableImageProps {
   width: number;
   height: number;
   /** Notifies the pager so it can disable horizontal paging while zoomed in. */
-  onZoomChange?: (isZoomed: boolean) => void;
+  onZoomChange?: ((isZoomed: boolean) => void) | undefined;
 }
 
 /**

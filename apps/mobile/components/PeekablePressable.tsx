@@ -14,7 +14,7 @@ interface PeekablePressableProps {
   previewData: PeekPreviewData;
   style?: StyleProp<ViewStyle> | undefined;
   className?: string | undefined;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
   scaleValue?: number | undefined;
   baseOpacity?: number | undefined;
   sourceBorderRadius?: number | undefined;

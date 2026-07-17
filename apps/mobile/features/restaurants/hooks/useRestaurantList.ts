@@ -22,6 +22,7 @@ export const useRestaurantList = (includeDeleted: boolean = false) => {
       tagId: schema.tags.id,
       tagName: schema.tags.name,
       tagColor: schema.tags.color,
+      tagDeleted: schema.tags.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
     })

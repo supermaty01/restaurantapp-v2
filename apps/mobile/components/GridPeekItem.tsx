@@ -10,7 +10,7 @@ interface GridPeekItemProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle> | undefined;
   previewData: PeekPreviewData;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
 }
 
 const GridPeekItem = React.memo<GridPeekItemProps>(({ children, style, previewData, onPress }) => {

@@ -12,7 +12,7 @@ interface VisitItemProps {
   title: string;
   comments: string | null;
   previewData: PeekPreviewData;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
   deleted?: boolean | undefined;
   restaurantDeleted?: boolean | undefined;
 }

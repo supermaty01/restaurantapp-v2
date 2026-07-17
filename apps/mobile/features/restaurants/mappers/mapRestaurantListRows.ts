@@ -11,6 +11,7 @@ export interface RestaurantListRow {
   tagId: number | null;
   tagName: string | null;
   tagColor: string | null;
+  tagDeleted?: boolean | null;
   imageId: number | null;
   imagePath: string | null;
 }

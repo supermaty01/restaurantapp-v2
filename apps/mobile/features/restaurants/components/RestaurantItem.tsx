@@ -17,7 +17,7 @@ interface RestaurantItemProps {
   rating: number | null;
   imageUrl?: string | undefined;
   previewData: PeekPreviewData;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
 }
 
 const RestaurantItem = React.memo<RestaurantItemProps>(

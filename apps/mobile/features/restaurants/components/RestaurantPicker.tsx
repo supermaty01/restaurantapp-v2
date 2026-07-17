@@ -1,7 +1,7 @@
 import { Picker } from '@react-native-picker/picker';
 import { clsx } from 'clsx';
 import { router } from 'expo-router';
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { Controller } from 'react-hook-form';
 import { View, Text, TouchableOpacity } from 'react-native';
 
@@ -10,25 +10,42 @@ import { useTheme } from '@/lib/context/ThemeContext';
 
 import { useRestaurantList } from '../hooks/useRestaurantList';
 
-import type { Control, UseFormSetValue } from 'react-hook-form';
+import type {
+  Control,
+  FieldErrors,
+  FieldPathByValue,
+  FieldValues,
+  PathValue,
+  UseFormSetValue,
+} from 'react-hook-form';
 
-interface RestaurantPickerProps {
-  control: Control<any>;
-  setValue: UseFormSetValue<any>;
-  name: string;
+// TName is constrained to fields that actually hold a number, so a form
+// without a numeric restaurant field cannot be passed by mistake.
+interface RestaurantPickerProps<
+  TFieldValues extends FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number>,
+  TTransformed = TFieldValues,
+> {
+  control: Control<TFieldValues, unknown, TTransformed>;
+  setValue: UseFormSetValue<TFieldValues>;
+  name: TName;
   label?: string | undefined;
   fixedValue?: boolean | undefined;
-  errors?: any | undefined;
+  errors?: FieldErrors<TFieldValues> | undefined;
 }
 
-const RestaurantPicker: React.FC<RestaurantPickerProps> = ({
+function RestaurantPicker<
+  TFieldValues extends FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number>,
+  TTransformed = TFieldValues,
+>({
   control,
   setValue,
   name,
   label,
   errors,
   fixedValue,
-}) => {
+}: RestaurantPickerProps<TFieldValues, TName, TTransformed>) {
   const { newRestaurantId, setNewRestaurantId } = useNewRestaurant();
   const { isDarkMode } = useTheme();
 
@@ -37,7 +54,7 @@ const RestaurantPicker: React.FC<RestaurantPickerProps> = ({
 
   useEffect(() => {
     if (newRestaurantId) {
-      setValue(name, newRestaurantId, {
+      setValue(name, newRestaurantId as PathValue<TFieldValues, TName>, {
         shouldValidate: true,
         shouldDirty: true,
       });
@@ -86,7 +103,9 @@ const RestaurantPicker: React.FC<RestaurantPickerProps> = ({
       />
 
       {errors?.[name] && (
-        <Text className="text-red-600 dark:text-red-400 mt-1">{errors[name].message}</Text>
+        <Text className="text-red-600 dark:text-red-400 mt-1">
+          {String(errors[name]?.message ?? '')}
+        </Text>
       )}
       {!fixedValue && (
         <TouchableOpacity
@@ -105,6 +124,6 @@ const RestaurantPicker: React.FC<RestaurantPickerProps> = ({
       )}
     </View>
   );
-};
+}
 
 export default RestaurantPicker;

@@ -7,7 +7,7 @@ import Tag from '@/features/tags/components/Tag';
 interface TagItemProps {
   label: string;
   color: string;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
   deleted?: boolean | undefined;
 }
 

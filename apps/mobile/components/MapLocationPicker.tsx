@@ -18,7 +18,8 @@ import type { MapPressEvent, Region } from 'react-native-maps';
 
 interface MapLocationPickerProps {
   location: { latitude: number; longitude: number } | null;
-  onLocationChange?: (location: { latitude: number; longitude: number } | null) => void;
+  onLocationChange?:
+    ((location: { latitude: number; longitude: number } | null) => void) | undefined;
   editable?: boolean | undefined;
 }
 

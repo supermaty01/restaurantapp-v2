@@ -17,7 +17,7 @@ interface DishItemProps {
   rating: number | null;
   images: ImageDTO[];
   previewData: PeekPreviewData;
-  onPress?: () => void;
+  onPress?: (() => void) | undefined;
 }
 
 const DishItem = React.memo<DishItemProps>(

@@ -25,6 +25,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
       tagId: schema.tags.id,
       tagName: schema.tags.name,
       tagColor: schema.tags.color,
+      tagDeleted: schema.tags.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
     })
@@ -71,6 +72,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
           id: row.tagId,
           name: row.tagName!,
           color: row.tagColor!,
+          deleted: row.tagDeleted ?? false,
         });
       }
 
