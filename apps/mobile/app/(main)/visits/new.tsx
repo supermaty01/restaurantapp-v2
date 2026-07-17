@@ -83,7 +83,7 @@ export default function VisitCreateScreen() {
       Alert.alert('Éxito', 'Visita creada correctamente.');
 
       router.back();
-    } catch (error: any) {
+    } catch (error) {
       Alert.alert('Error', 'No se pudo crear la visita');
       console.log(error);
     } finally {

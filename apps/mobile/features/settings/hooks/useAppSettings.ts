@@ -50,7 +50,7 @@ export const useAppSettings = () => {
       const totalSpace = 4 * 1024 ** 3; // ~4GB
       setStorageInfo({
         total: totalSpace,
-        used: (dirInfo as any).size || 0,
+        used: dirInfo.exists && 'size' in dirInfo ? dirInfo.size : 0,
       });
     } catch (error) {
       console.error('Error al obtener información de almacenamiento:', error);

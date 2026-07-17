@@ -36,13 +36,20 @@ const openAppSettings = () => {
   });
 };
 
-export default function ImagesUploader({
-  disabled,
-  isEdit,
-  images,
-  onChangeImages,
-  onRemoveExistingImage,
-}: ImagesUploaderProps) {
+export default function ImagesUploader(props: ImagesUploaderProps) {
+  // Kept as `props` (not destructured) so TS can narrow the discriminated
+  // union on `props.isEdit` inside each handler; that removes the `as any`
+  // casts v1 needed because the destructured callback was an untyped union.
+  const { disabled, isEdit, images } = props;
+
+  const addImages = (uris: string[]) => {
+    if (props.isEdit) {
+      props.onChangeImages([...props.images, ...uris.map((uri) => ({ uri }))]);
+    } else {
+      props.onChangeImages([...props.images, ...uris]);
+    }
+  };
+
   const pickFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -65,13 +72,7 @@ export default function ImagesUploader({
     });
 
     if (!result.canceled && result.assets?.length) {
-      if (isEdit) {
-        const newImages = result.assets.map((asset) => ({ uri: asset.uri }));
-        onChangeImages([...images, ...newImages] as any);
-      } else {
-        const newImages = result.assets.map((asset) => asset.uri);
-        onChangeImages([...images, ...newImages] as any);
-      }
+      addImages(result.assets.map((asset) => asset.uri));
     }
   };
 
@@ -95,26 +96,19 @@ export default function ImagesUploader({
     });
 
     if (!result.canceled && result.assets?.length) {
-      if (isEdit) {
-        const newImages = result.assets.map((asset) => ({ uri: asset.uri }));
-        onChangeImages([...images, ...newImages] as any);
-      } else {
-        const newImages = result.assets.map((asset) => asset.uri);
-        onChangeImages([...images, ...newImages] as any);
-      }
+      addImages(result.assets.map((asset) => asset.uri));
     }
   };
 
-  const removeImage = (image: any) => {
-    if (isEdit) {
-      if (image.id) {
-        onRemoveExistingImage(image.id);
+  const removeImage = (image: ImageItem | string) => {
+    if (props.isEdit) {
+      const target = image as ImageItem;
+      if (target.id) {
+        props.onRemoveExistingImage(target.id);
       }
-      const newImages = images.filter((img) => img.uri !== image.uri);
-      onChangeImages(newImages as any);
+      props.onChangeImages(props.images.filter((img) => img.uri !== target.uri));
     } else {
-      const newImages = images.filter((img) => img !== image);
-      onChangeImages(newImages as any);
+      props.onChangeImages(props.images.filter((img) => img !== image));
     }
   };
 

@@ -3,6 +3,8 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
+
+import type { ComponentProps } from 'react';
 import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 
 import ImportConflictModal from '@/components/ImportConflictModal';
@@ -144,7 +146,7 @@ export default function ImportScreen() {
     }
   };
 
-  const getEntityTypeIcon = () => {
+  const getEntityTypeIcon = (): ComponentProps<typeof Ionicons>['name'] => {
     if (!shareData) return 'document-outline';
     switch (shareData.type) {
       case 'restaurant':
@@ -201,7 +203,7 @@ export default function ImportScreen() {
       ) : (
         <View className="items-center">
           <Ionicons
-            name={getEntityTypeIcon() as any}
+            name={getEntityTypeIcon()}
             size={64}
             color={isDarkMode ? '#7A9455' : '#93AE72'}
           />

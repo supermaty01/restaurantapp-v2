@@ -4,6 +4,10 @@ import { View, Text, TouchableOpacity } from 'react-native';
 
 import { useTheme } from '@/lib/context/ThemeContext';
 
+import type { ComponentProps } from 'react';
+
+type IoniconName = ComponentProps<typeof Ionicons>['name'];
+
 interface ThemeCardProps {
   onPress: () => void;
 }
@@ -26,7 +30,7 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ onPress }) => {
   };
 
   // Get the icon based on current theme mode
-  const getThemeIcon = () => {
+  const getThemeIcon = (): IoniconName => {
     if (themeMode === 'system') {
       return isDarkMode ? 'moon' : 'sunny';
     }
@@ -38,7 +42,7 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ onPress }) => {
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Ionicons
-            name={getThemeIcon() as any}
+            name={getThemeIcon()}
             size={24}
             color={isDarkMode ? '#B27A4D' : '#905c36'}
             className="mr-2"

@@ -86,7 +86,7 @@ export default function DishCreateScreen() {
           params: { id: dishId },
         });
       }
-    } catch (error: any) {
+    } catch (error) {
       Alert.alert('Error', 'No se pudo crear el plato');
       console.log(error);
     } finally {

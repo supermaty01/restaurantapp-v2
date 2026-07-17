@@ -23,13 +23,13 @@ export async function uploadImages(
 
       await FileSystem.copyAsync({ from: uri, to: newPath });
 
-      const imageRecord: any = {
+      const imageRecord: typeof images.$inferInsert = {
         path: newPath,
         uploadedAt: new Date().toISOString(),
+        ...(classType === 'RESTAURANT' && { restaurantId: id }),
+        ...(classType === 'VISIT' && { visitId: id }),
+        ...(classType === 'DISH' && { dishId: id }),
       };
-      if (classType === 'RESTAURANT') imageRecord.restaurantId = id;
-      if (classType === 'VISIT') imageRecord.visitId = id;
-      if (classType === 'DISH') imageRecord.dishId = id;
 
       await db.insert(images).values(imageRecord);
       return newPath;

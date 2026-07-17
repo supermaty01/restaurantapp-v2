@@ -191,7 +191,7 @@ export default function RestaurantsScreen() {
       <View className="flex-row items-center justify-between mb-4">
         <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200">Restaurantes</Text>
         <View className="flex-row items-center" style={{ gap: 12 }}>
-          <TouchableOpacity onPress={() => router.push('/map' as any)}>
+          <TouchableOpacity onPress={() => router.push('/map')}>
             <Ionicons name="map-outline" size={22} color={isDarkMode ? '#ccc' : '#666'} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>

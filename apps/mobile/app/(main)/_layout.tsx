@@ -7,6 +7,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PeekProvider } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 
+import type { ImageSourcePropType } from 'react-native';
+
+// tsc can't resolve image modules through the path alias, so the asset is
+// required and given its proper RN type here instead of leaking `any`.
+const burgerLogo = require('@/assets/burger-logo.png') as ImageSourcePropType;
+
 /**
  * Routing is fully file-based: from SDK 56 expo-router no longer allows
  * declaring react-navigation navigators by hand, which is how v1 did it.
@@ -38,7 +44,7 @@ function CustomHeader({ canGoBack, showSettings }: CustomHeaderProps) {
         )}
       </View>
 
-      <Image source={require('@/assets/burger-logo.png')} className="w-12 h-12" />
+      <Image source={burgerLogo} className="w-12 h-12" />
 
       <View className="w-20 items-end">
         {showSettings && (
