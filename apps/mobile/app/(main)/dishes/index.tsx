@@ -2,14 +2,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { FlatList, TouchableOpacity, View, Text, useWindowDimensions, TextInput } from 'react-native';
+import {
+  FlatList,
+  TouchableOpacity,
+  View,
+  Text,
+  useWindowDimensions,
+  TextInput,
+} from 'react-native';
 
-import FilterSortModal, { FilterSortOptions, defaultFilterSortOptions } from '@/components/FilterSortModal';
+import type { FilterSortOptions } from '@/components/FilterSortModal';
+import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
 import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
 import DishItem from '@/features/dishes/components/DishItem';
 import { useDishList } from '@/features/dishes/hooks/useDishList';
-import { DishListDTO } from '@/features/dishes/types/dish-dto';
+import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
@@ -59,7 +67,8 @@ export default function DishesScreen() {
     }
   }, [prefs.loaded, prefs.sortField, prefs.sortOrder]);
 
-  const hasActiveFilters = filterOptions.selectedTags.length > 0 ||
+  const hasActiveFilters =
+    filterOptions.selectedTags.length > 0 ||
     filterOptions.minRating !== null ||
     filterOptions.sortField !== 'name' ||
     filterOptions.sortOrder !== 'asc';
@@ -75,14 +84,14 @@ export default function DishesScreen() {
     if (filterOptions.selectedTags.length > 0) {
       result = result.filter((dish) =>
         filterOptions.selectedTags.some((filterTag) =>
-          dish.tags?.some((tag) => tag.id === filterTag.id)
-        )
+          dish.tags?.some((tag) => tag.id === filterTag.id),
+        ),
       );
     }
 
     if (filterOptions.minRating !== null) {
       result = result.filter(
-        (dish) => dish.rating !== null && dish.rating >= filterOptions.minRating!
+        (dish) => dish.rating !== null && dish.rating >= filterOptions.minRating!,
       );
     }
 
@@ -103,62 +112,78 @@ export default function DishesScreen() {
     return result;
   }, [dishes, filterOptions, searchQuery]);
 
-  const navigateToDish = useCallback((id: number) => {
-    router.push({ pathname: '/dishes/[id]/view', params: { id } });
-  }, [router]);
+  const navigateToDish = useCallback(
+    (id: number) => {
+      router.push({ pathname: '/dishes/[id]/view', params: { id } });
+    },
+    [router],
+  );
 
-  const renderListItem = useCallback(({ item }: { item: DishListDTO }) => {
-    const previewData = buildPreviewData(item);
+  const renderListItem = useCallback(
+    ({ item }: { item: DishListDTO }) => {
+      const previewData = buildPreviewData(item);
 
-    return (
-      <DishItem
-        name={item.name}
-        comments={item.comments}
-        rating={item.rating}
-        tags={item.tags}
-        images={item.images}
-        previewData={previewData}
-        onPress={() => navigateToDish(item.id)}
-      />
-    );
-  }, [navigateToDish]);
+      return (
+        <DishItem
+          name={item.name}
+          comments={item.comments}
+          rating={item.rating}
+          tags={item.tags}
+          images={item.images}
+          previewData={previewData}
+          onPress={() => navigateToDish(item.id)}
+        />
+      );
+    },
+    [navigateToDish],
+  );
 
-  const renderGridItem = useCallback(({ item }: { item: DishListDTO }) => {
-    const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : undefined;
-    const previewData = buildPreviewData(item);
+  const renderGridItem = useCallback(
+    ({ item }: { item: DishListDTO }) => {
+      const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : undefined;
+      const previewData = buildPreviewData(item);
 
-    return (
-      <GridPeekItem
-        style={{ flex: 1 / numColumns }}
-        previewData={previewData}
-        onPress={() => navigateToDish(item.id)}
-      >
-        {imageUrl ? (
-          <Image
-            source={imageUrl}
-            style={{ width: '100%', height: 100 }}
-            contentFit="cover"
-            recyclingKey={`grid-dish-${item.id}`}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View style={{ width: '100%', height: 100 }} className="bg-gray-200 dark:bg-gray-700" />
-        )}
-        <View className="p-2">
-          <Text className="text-sm font-bold text-gray-800 dark:text-gray-200" numberOfLines={1}>{item.name}</Text>
-          <View className="flex-row mt-1">
-            <RatingStars value={item.rating} size={12} gap={1} readOnly />
+      return (
+        <GridPeekItem
+          style={{ flex: 1 / numColumns }}
+          previewData={previewData}
+          onPress={() => navigateToDish(item.id)}
+        >
+          {imageUrl ? (
+            <Image
+              source={imageUrl}
+              style={{ width: '100%', height: 100 }}
+              contentFit="cover"
+              recyclingKey={`grid-dish-${item.id}`}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={{ width: '100%', height: 100 }} className="bg-gray-200 dark:bg-gray-700" />
+          )}
+          <View className="p-2">
+            <Text className="text-sm font-bold text-gray-800 dark:text-gray-200" numberOfLines={1}>
+              {item.name}
+            </Text>
+            <View className="flex-row mt-1">
+              <RatingStars value={item.rating} size={12} gap={1} readOnly />
+            </View>
           </View>
-        </View>
-      </GridPeekItem>
-    );
-  }, [navigateToDish, numColumns]);
+        </GridPeekItem>
+      );
+    },
+    [navigateToDish, numColumns],
+  );
 
-  const listEmptyComponent = useMemo(() => (
-    <View className="flex-1 justify-center items-center mt-10">
-      <Text className="text-base text-gray-800 dark:text-gray-200">No se encontraron platos.</Text>
-    </View>
-  ), []);
+  const listEmptyComponent = useMemo(
+    () => (
+      <View className="flex-1 justify-center items-center mt-10">
+        <Text className="text-base text-gray-800 dark:text-gray-200">
+          No se encontraron platos.
+        </Text>
+      </View>
+    ),
+    [],
+  );
 
   return (
     <View className="flex-1 bg-muted dark:bg-dark-muted px-4 pt-2 relative">
@@ -177,7 +202,15 @@ export default function DishesScreen() {
               <Ionicons
                 name="filter"
                 size={24}
-                color={hasActiveFilters ? (isDarkMode ? '#7A9455' : '#93AE72') : (isDarkMode ? '#ccc' : '#666')}
+                color={
+                  hasActiveFilters
+                    ? isDarkMode
+                      ? '#7A9455'
+                      : '#93AE72'
+                    : isDarkMode
+                      ? '#ccc'
+                      : '#666'
+                }
               />
               {hasActiveFilters && (
                 <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary dark:bg-dark-primary rounded-full" />

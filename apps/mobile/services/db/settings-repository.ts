@@ -22,11 +22,8 @@ export async function getSetting(db: DrizzleDatabase, key: string): Promise<stri
 export async function setSetting(db: DrizzleDatabase, key: string, value: string): Promise<void> {
   const updatedAt = new Date().toISOString();
 
-  await db
-    .insert(schema.appSettings)
-    .values({ key, value, updatedAt })
-    .onConflictDoUpdate({
-      target: schema.appSettings.key,
-      set: { value, updatedAt },
-    });
+  await db.insert(schema.appSettings).values({ key, value, updatedAt }).onConflictDoUpdate({
+    target: schema.appSettings.key,
+    set: { value, updatedAt },
+  });
 }

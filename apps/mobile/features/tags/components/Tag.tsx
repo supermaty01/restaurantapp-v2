@@ -23,9 +23,7 @@ const Tag = React.memo<TagProps>(({ name, color, deleted }) => {
       style={{ backgroundColor: color, opacity: deleted ? 0.6 : 1 }}
       className="px-2 py-1 rounded-full mr-2 mb-2 flex-row items-center"
     >
-      {deleted && (
-        <View className="w-2 h-2 rounded-full bg-red-500 mr-1" />
-      )}
+      {deleted && <View className="w-2 h-2 rounded-full bg-red-500 mr-1" />}
       <Text style={{ color: textColor }} className="text-xs font-bold">
         {name}
       </Text>

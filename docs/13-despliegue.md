@@ -30,12 +30,12 @@ La app arranca en **modo local**: SQLite en el dispositivo, sin cuenta, sin red.
 
 Variables (`apps/mobile/.env`):
 
-| Variable | Necesaria para | Notas |
-|---|---|---|
-| `GOOGLE_MAPS_API_KEY` | Mapa y autocompletado de direcciones | Restringir la key por app id + SHA en la consola de Google |
-| `EXPO_PUBLIC_SUPABASE_URL` | Cuentas y sync 🚧 | Vacía = la app oculta el login |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Cuentas y sync 🚧 | Es pública por diseño; la seguridad la da RLS |
-| `EXPO_PUBLIC_API_URL` | Share links, IA 🚧 | URL del Worker |
+| Variable                        | Necesaria para                       | Notas                                                      |
+| ------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
+| `GOOGLE_MAPS_API_KEY`           | Mapa y autocompletado de direcciones | Restringir la key por app id + SHA en la consola de Google |
+| `EXPO_PUBLIC_SUPABASE_URL`      | Cuentas y sync 🚧                    | Vacía = la app oculta el login                             |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Cuentas y sync 🚧                    | Es pública por diseño; la seguridad la da RLS              |
+| `EXPO_PUBLIC_API_URL`           | Share links, IA 🚧                   | URL del Worker                                             |
 
 **Decisión:** si faltan las variables de Supabase/API, la app degrada a modo local en vez de fallar. Esto mantiene el principio de "la nube es opcional" también en el arranque de desarrollo.
 

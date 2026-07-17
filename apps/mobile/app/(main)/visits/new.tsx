@@ -3,19 +3,22 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 
 import FormDatePicker from '@/components/FormDatePicker';
 import FormInput from '@/components/FormInput';
 import DishPicker from '@/features/dishes/components/DishPicker';
-import { DishListDTO } from '@/features/dishes/types/dish-dto';
+import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
-import { VisitFormData, visitSchema } from '@/features/visits/schemas/visit-schema';
+import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
+import { visitSchema } from '@/features/visits/schemas/visit-schema';
 import { getTodayLocalDateString } from '@/lib/helpers/date';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import * as schema from '@/services/db/schema';
+
+import type { SubmitHandler } from 'react-hook-form';
 
 export default function VisitCreateScreen() {
   const { restaurantId: routeRestaurantId } = useGlobalSearchParams();
@@ -52,7 +55,7 @@ export default function VisitCreateScreen() {
     try {
       const payload = {
         visitedAt: data.visited_at,
-        comments: data.comments?.trim() || "",
+        comments: data.comments?.trim() || '',
         restaurantId: data.restaurantId,
       };
 
@@ -68,13 +71,13 @@ export default function VisitCreateScreen() {
               visitId,
               dishId: typeof dishId === 'string' ? parseInt(dishId) : dishId,
             });
-          })
+          }),
         );
       }
 
       // Subir imágenes
       if (selectedImages.length > 0) {
-        await uploadImages(drizzleDb, selectedImages, "VISIT", visitId);
+        await uploadImages(drizzleDb, selectedImages, 'VISIT', visitId);
       }
 
       Alert.alert('Éxito', 'Visita creada correctamente.');
@@ -90,7 +93,9 @@ export default function VisitCreateScreen() {
 
   return (
     <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4">
-      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Añadir visita</Text>
+      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+        Añadir visita
+      </Text>
 
       <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
         <FormDatePicker control={control} name="visited_at" label="Fecha" />
@@ -124,10 +129,7 @@ export default function VisitCreateScreen() {
           setSelectedDishes={setSelectedDishes}
         />
 
-        <ImagesUploader
-          images={selectedImages}
-          onChangeImages={setSelectedImages}
-        />
+        <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
 
         <TouchableOpacity
           onPress={handleSubmit(onSubmit)}

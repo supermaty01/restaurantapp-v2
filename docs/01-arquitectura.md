@@ -68,9 +68,9 @@ Schemas zod de entidades y de payloads de API. Es el contrato único entre mobil
 
 ## Modos de operación de la app
 
-| Modo | Datos | Sync | Social | Share | Asistente IA |
-|---|---|---|---|---|---|
-| Anónimo (default) | SQLite local | ❌ | ❌ | export/import archivo | ✅ (con cuota anónima reducida) |
-| Con cuenta | SQLite local + espejo cloud | ✅ segundo plano | ✅ | ✅ links | ✅ (cuota normal) |
+| Modo              | Datos                       | Sync             | Social | Share                 | Asistente IA                    |
+| ----------------- | --------------------------- | ---------------- | ------ | --------------------- | ------------------------------- |
+| Anónimo (default) | SQLite local                | ❌               | ❌     | export/import archivo | ✅ (con cuota anónima reducida) |
+| Con cuenta        | SQLite local + espejo cloud | ✅ segundo plano | ✅     | ✅ links              | ✅ (cuota normal)               |
 
 **Abierto:** si el asistente en modo anónimo es viable (requiere proxy IA sin auth → riesgo de abuso). Alternativa: exigir cuenta solo para el asistente. Se decide en fase 7.

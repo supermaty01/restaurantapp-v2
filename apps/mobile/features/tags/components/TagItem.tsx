@@ -20,7 +20,12 @@ const TagItem: React.FC<TagItemProps> = ({ label, color, onPress, deleted }) => 
       style={{ opacity: deleted ? 0.7 : 1 }}
     >
       <Tag name={label} color={color} deleted={deleted} />
-      <Ionicons name="chevron-forward-outline" size={20} color="#6b6b6b" className="dark:text-gray-400" />
+      <Ionicons
+        name="chevron-forward-outline"
+        size={20}
+        color="#6b6b6b"
+        className="dark:text-gray-400"
+      />
     </TouchableOpacity>
   );
 };

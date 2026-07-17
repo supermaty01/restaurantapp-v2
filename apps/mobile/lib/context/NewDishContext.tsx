@@ -1,6 +1,6 @@
 import React, { createContext, useState } from 'react';
 
-import { DishListDTO } from '@/features/dishes/types/dish-dto';
+import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 
 interface NewDishContextData {
   newDish: DishListDTO | null;
@@ -12,8 +12,6 @@ export const NewDishContext = createContext<NewDishContextData | undefined>(unde
 export const NewDishProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [newDish, setNewDish] = useState<DishListDTO | null>(null);
   return (
-    <NewDishContext.Provider value={{ newDish, setNewDish }}>
-      {children}
-    </NewDishContext.Provider>
+    <NewDishContext.Provider value={{ newDish, setNewDish }}>{children}</NewDishContext.Provider>
   );
 };

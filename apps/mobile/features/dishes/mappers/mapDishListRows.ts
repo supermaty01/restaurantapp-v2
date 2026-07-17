@@ -1,6 +1,6 @@
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
-import { DishListDTO } from '../types/dish-dto';
+import type { DishListDTO } from '../types/dish-dto';
 
 export interface DishListRow {
   dishId: number | null;
@@ -30,19 +30,24 @@ export function mapDishListRows(rows: DishListRow[]): DishListDTO[] {
         name: row.dishName ?? '',
         comments: row.dishComments ?? null,
         rating: row.dishRating ?? null,
-        deleted: row.dishDeleted ?? undefined,
+        deleted: row.dishDeleted ?? false,
         tags: [],
         images: [],
       };
       map.set(row.dishId, dish);
     }
 
-    if (row.tagId && row.tagName && row.tagColor && !dish.tags.some((tag) => tag.id === row.tagId)) {
+    if (
+      row.tagId &&
+      row.tagName &&
+      row.tagColor &&
+      !dish.tags.some((tag) => tag.id === row.tagId)
+    ) {
       dish.tags.push({
         id: row.tagId,
         name: row.tagName,
         color: row.tagColor,
-        deleted: row.tagDeleted ?? undefined,
+        deleted: row.tagDeleted ?? false,
       });
     }
 

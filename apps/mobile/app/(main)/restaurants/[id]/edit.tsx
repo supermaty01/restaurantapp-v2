@@ -5,22 +5,25 @@ import { and, eq } from 'drizzle-orm/sql';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
-import ImagesUploader, { ImageItem } from '@/features/images/components/ImagesUploader';
+import type { ImageItem } from '@/features/images/components/ImagesUploader';
+import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useRestaurantById } from '@/features/restaurants/hooks/useRestaurantById';
-import { RestaurantFormData, restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
+import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
+import { restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import * as schema from '@/services/db/schema';
 
+import type { SubmitHandler } from 'react-hook-form';
 
 export default function RestaurantEditScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
@@ -49,13 +52,16 @@ export default function RestaurantEditScreen() {
 
   useEffect(() => {
     if (restaurant?.id) {
-      const l = (restaurant.latitude && restaurant.longitude) ? {
-        latitude: restaurant.latitude,
-        longitude: restaurant.longitude,
-      } : null;
+      const l =
+        restaurant.latitude && restaurant.longitude
+          ? {
+              latitude: restaurant.latitude,
+              longitude: restaurant.longitude,
+            }
+          : null;
       reset({
         name: restaurant.name,
-        comments: restaurant.comments || "",
+        comments: restaurant.comments || '',
         rating: restaurant.rating,
         location: l,
       });
@@ -75,22 +81,41 @@ export default function RestaurantEditScreen() {
         latitude: location?.latitude || null,
         longitude: location?.longitude || null,
       };
-      await drizzleDb.update(schema.restaurants).set(payload).where(eq(schema.restaurants.id, Number(id)));
+      await drizzleDb
+        .update(schema.restaurants)
+        .set(payload)
+        .where(eq(schema.restaurants.id, Number(id)));
 
       const newImages = selectedImages.filter((image) => !image.id);
       if (newImages.length > 0) {
-        await uploadImages(drizzleDb, newImages.map((img) => img.uri), "RESTAURANT", Number(id));
+        await uploadImages(
+          drizzleDb,
+          newImages.map((img) => img.uri),
+          'RESTAURANT',
+          Number(id),
+        );
       }
 
       // Eliminar etiquetas
       const currentTags = restaurant?.tags.map((tag) => tag.id) || [];
-      const removedTags = currentTags.filter((tagId) => !selectedTags.some((tag) => tag.id === tagId));
-      const addedTags = selectedTags.filter((tag) => !currentTags.includes(tag.id)).map((tag) => tag.id);
+      const removedTags = currentTags.filter(
+        (tagId) => !selectedTags.some((tag) => tag.id === tagId),
+      );
+      const addedTags = selectedTags
+        .filter((tag) => !currentTags.includes(tag.id))
+        .map((tag) => tag.id);
       if (removedTags.length > 0) {
         await Promise.all(
           removedTags.map((tagId) => {
-            return drizzleDb.delete(schema.restaurantTags).where(and(eq(schema.restaurantTags.restaurantId, Number(id)), (eq(schema.restaurantTags.tagId, tagId))));
-          })
+            return drizzleDb
+              .delete(schema.restaurantTags)
+              .where(
+                and(
+                  eq(schema.restaurantTags.restaurantId, Number(id)),
+                  eq(schema.restaurantTags.tagId, tagId),
+                ),
+              );
+          }),
         );
       }
 
@@ -98,8 +123,10 @@ export default function RestaurantEditScreen() {
       if (addedTags.length > 0) {
         await Promise.all(
           addedTags.map((tagId) => {
-            return drizzleDb.insert(schema.restaurantTags).values({ restaurantId: Number(id), tagId });
-          })
+            return drizzleDb
+              .insert(schema.restaurantTags)
+              .values({ restaurantId: Number(id), tagId });
+          }),
         );
       }
 
@@ -107,7 +134,7 @@ export default function RestaurantEditScreen() {
         await Promise.all(
           removedImages.map((imageId) => {
             return drizzleDb.delete(schema.images).where(eq(schema.images.id, imageId));
-          })
+          }),
         );
       }
 
@@ -123,22 +150,23 @@ export default function RestaurantEditScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-muted dark:bg-dark-muted justify-center items-center">
-        <ActivityIndicator size="large" color={isDarkMode ? "#B27A4D" : "#905c36"} />
+        <ActivityIndicator size="large" color={isDarkMode ? '#B27A4D' : '#905c36'} />
       </View>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4" keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
-      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Editar restaurante</Text>
+    <ScrollView
+      className="flex-1 bg-muted dark:bg-dark-muted p-4"
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled={true}
+    >
+      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+        Editar restaurante
+      </Text>
 
       <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
-        <FormInput
-          control={control}
-          name="name"
-          label="Nombre"
-          placeholder="Ingresa el nombre"
-        />
+        <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
 
         <FormInput
           control={control}
@@ -150,10 +178,14 @@ export default function RestaurantEditScreen() {
           numberOfLines={4}
         />
 
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Ubicación</Text>
+        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+          Ubicación
+        </Text>
         <MapLocationPicker location={location} onLocationChange={setLocation} />
 
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">Calificación</Text>
+        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">
+          Calificación
+        </Text>
         <View className="flex justify-center items-center">
           <RatingStars control={control} name="rating" />
         </View>
@@ -187,9 +219,7 @@ export default function RestaurantEditScreen() {
           isEdit
           images={selectedImages}
           onChangeImages={setSelectedImages}
-          onRemoveExistingImage={(imageId) =>
-            setRemovedImages((prev) => [...prev, imageId])
-          }
+          onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
         />
 
         <TouchableOpacity

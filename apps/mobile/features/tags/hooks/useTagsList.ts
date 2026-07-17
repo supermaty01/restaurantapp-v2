@@ -5,7 +5,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
 import * as schema from '@/services/db/schema';
 
-import { TagDTO } from '../types/tag-dto';
+import type { TagDTO } from '../types/tag-dto';
 
 export const useTagsList = (includeDeleted: boolean = false) => {
   const db = useSQLiteContext();

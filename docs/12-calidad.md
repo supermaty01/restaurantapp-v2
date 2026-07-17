@@ -4,14 +4,14 @@ Objetivo declarado del refactor: que este proyecto sea **mantenible durante año
 
 ## Herramientas (toda la CI en `npm run check`)
 
-| Capa | Herramienta | Regla |
-|---|---|---|
-| Formato | **Prettier** | Fuente única de formato. Nada de discutir estilo; `format:check` en CI |
-| Lint | **ESLint** (flat config) + `eslint-config-expo`, `@typescript-eslint` (type-aware), `eslint-plugin-import`, `-unicorn`, `-jsx-a11y` | 0 warnings permitidos en CI (`--max-warnings=0`) |
-| Tipos | **TypeScript strict** | `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`. Prohibido `any` (`no-explicit-any` = error); `unknown` + zod en los bordes |
-| Tests | **Jest** + `@testing-library/react-native` | Ver política abajo |
-| Hooks | **husky** + **lint-staged** | Pre-commit: prettier + eslint sobre lo tocado. Pre-push: `npm run check` |
-| CI | **GitHub Actions** | `check` por workspace en cada push/PR |
+| Capa    | Herramienta                                                                                                                         | Regla                                                                                                                                                                |
+| ------- | ----------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Formato | **Prettier**                                                                                                                        | Fuente única de formato. Nada de discutir estilo; `format:check` en CI                                                                                               |
+| Lint    | **ESLint** (flat config) + `eslint-config-expo`, `@typescript-eslint` (type-aware), `eslint-plugin-import`, `-unicorn`, `-jsx-a11y` | 0 warnings permitidos en CI (`--max-warnings=0`)                                                                                                                     |
+| Tipos   | **TypeScript strict**                                                                                                               | `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`. Prohibido `any` (`no-explicit-any` = error); `unknown` + zod en los bordes |
+| Tests   | **Jest** + `@testing-library/react-native`                                                                                          | Ver política abajo                                                                                                                                                   |
+| Hooks   | **husky** + **lint-staged**                                                                                                         | Pre-commit: prettier + eslint sobre lo tocado. Pre-push: `npm run check`                                                                                             |
+| CI      | **GitHub Actions**                                                                                                                  | `check` por workspace en cada push/PR                                                                                                                                |
 
 ## Reglas de arquitectura (las hace cumplir el linter, no la buena voluntad)
 
@@ -39,16 +39,16 @@ Objetivo declarado del refactor: que este proyecto sea **mantenible durante año
 
 No se persigue un % de cobertura global (métrica que miente). Se exige cobertura **donde el fallo es irreversible o caro**:
 
-| Zona | Nivel exigido |
-|---|---|
-| **Migraciones de esquema** (fase 1) | Obligatorio: fixtures de DB v1 reales, verificación de conteos e integridad referencial. Sin esto no se mergea |
-| **Import / export de backups** | Obligatorio: fixtures congelados por versión de formato (v1 `.restoshare`, backup v1, backup v2); round-trip export→import idempotente |
-| **Motor de sync** (fase 3) | Obligatorio: tests de integración con Supabase local — conflictos, borrados, bootstrap, dos dispositivos, idempotencia |
-| **Repositorios y mappers** | Obligatorio (ya existen en v1: `mapDishListRows`, etc.) |
-| **Schemas zod** | Obligatorio (ya existen en v1) |
-| **Tools del asistente** (fase 7) | Obligatorio: son consultas de datos; casos de prueba con datos sintéticos + set de evaluación de preguntas |
-| **Componentes de UI** | Selectivo: solo lógica no trivial (el visor de imágenes propio, formularios con prefill). No test de snapshot por vicio |
-| **Worker** (fase 4) | Tests con `vitest` + `@cloudflare/vitest-pool-workers` sobre rutas y auth |
+| Zona                                | Nivel exigido                                                                                                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| **Migraciones de esquema** (fase 1) | Obligatorio: fixtures de DB v1 reales, verificación de conteos e integridad referencial. Sin esto no se mergea                         |
+| **Import / export de backups**      | Obligatorio: fixtures congelados por versión de formato (v1 `.restoshare`, backup v1, backup v2); round-trip export→import idempotente |
+| **Motor de sync** (fase 3)          | Obligatorio: tests de integración con Supabase local — conflictos, borrados, bootstrap, dos dispositivos, idempotencia                 |
+| **Repositorios y mappers**          | Obligatorio (ya existen en v1: `mapDishListRows`, etc.)                                                                                |
+| **Schemas zod**                     | Obligatorio (ya existen en v1)                                                                                                         |
+| **Tools del asistente** (fase 7)    | Obligatorio: son consultas de datos; casos de prueba con datos sintéticos + set de evaluación de preguntas                             |
+| **Componentes de UI**               | Selectivo: solo lógica no trivial (el visor de imágenes propio, formularios con prefill). No test de snapshot por vicio                |
+| **Worker** (fase 4)                 | Tests con `vitest` + `@cloudflare/vitest-pool-workers` sobre rutas y auth                                                              |
 
 Además:
 
@@ -58,7 +58,7 @@ Además:
 ## Convenciones
 
 - Idioma: **código, nombres y comentarios en inglés**; documentación y textos de UI en español. (La v1 mezcla; se unifica al migrar cada archivo.)
-- Comentarios: solo para explicar *por qué*, nunca *qué*. El código dice el qué.
+- Comentarios: solo para explicar _por qué_, nunca _qué_. El código dice el qué.
 - Commits: [Conventional Commits](https://www.conventionalcommits.org/) (`feat:`, `fix:`, `chore:`…) — ya se usa parcialmente en la v1. Un commit = un cambio coherente.
 - Ramas: `main` siempre desplegable; trabajo en ramas por fase/feature.
 - Cada fase acaba con: CI verde + docs actualizados + [ESTADO.md](ESTADO.md) al día.

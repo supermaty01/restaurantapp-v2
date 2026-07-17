@@ -53,7 +53,9 @@ export const images = sqliteTable('images', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   path: text('path').notNull(), // Ruta del archivo en el dispositivo
   description: text('description'), // Descripción opcional
-  uploadedAt: text('uploaded_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  uploadedAt: text('uploaded_at')
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 
   // Relación opcional: solo una de estas columnas tendrá valor
   restaurantId: integer('restaurant_id').references(() => restaurants.id),
@@ -67,30 +69,35 @@ export const imagesRelations = relations(images, ({ one }) => ({
   dish: one(dishes, { fields: [images.dishId], references: [dishes.id] }),
 }));
 
-
 // Relaciones de etiquetas con restaurantes (Many-to-Many)
-export const restaurantTags = sqliteTable('restaurant_tag', {
-  restaurantId: integer('restaurant_id').references(() => restaurants.id),
-  tagId: integer('tag_id').references(() => tags.id),
-}, (table) => [
-  primaryKey({ columns: [table.restaurantId, table.tagId] }),
-]);
+export const restaurantTags = sqliteTable(
+  'restaurant_tag',
+  {
+    restaurantId: integer('restaurant_id').references(() => restaurants.id),
+    tagId: integer('tag_id').references(() => tags.id),
+  },
+  (table) => [primaryKey({ columns: [table.restaurantId, table.tagId] })],
+);
 
 // Relaciones de etiquetas con platos (Many-to-Many)
-export const dishTags = sqliteTable('dish_tag', {
-  dishId: integer('dish_id').references(() => dishes.id),
-  tagId: integer('tag_id').references(() => tags.id),
-}, (table) => [
-  primaryKey({ columns: [table.dishId, table.tagId] }),
-]);
+export const dishTags = sqliteTable(
+  'dish_tag',
+  {
+    dishId: integer('dish_id').references(() => dishes.id),
+    tagId: integer('tag_id').references(() => tags.id),
+  },
+  (table) => [primaryKey({ columns: [table.dishId, table.tagId] })],
+);
 
 // Relación de visitas con platos (Many-to-Many)
-export const dishVisits = sqliteTable('dish_visit', {
-  visitId: integer('visit_id').references(() => visits.id),
-  dishId: integer('dish_id').references(() => dishes.id),
-}, (table) => [
-  primaryKey({ columns: [table.visitId, table.dishId] }),
-]);
+export const dishVisits = sqliteTable(
+  'dish_visit',
+  {
+    visitId: integer('visit_id').references(() => visits.id),
+    dishId: integer('dish_id').references(() => dishes.id),
+  },
+  (table) => [primaryKey({ columns: [table.visitId, table.dishId] })],
+);
 
 // Definición de relaciones con Drizzle
 export const usersRelations = relations(users, ({ many }) => ({
@@ -132,5 +139,7 @@ export const appSettings = sqliteTable('app_settings', {
   key: text('key').notNull().unique(),
   value: text('value'),
   blobValue: blob('blob_value'),
-  updatedAt: text('updated_at').notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text('updated_at')
+    .notNull()
+    .default(sql`CURRENT_TIMESTAMP`),
 });

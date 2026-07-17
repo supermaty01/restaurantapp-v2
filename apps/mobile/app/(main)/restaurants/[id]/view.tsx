@@ -5,13 +5,7 @@ import { eq } from 'drizzle-orm/sql';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import RestaurantDetails from '@/features/restaurants/components/RestaurantDetails';
@@ -73,7 +67,9 @@ export default function RestaurantDetailScreen() {
               try {
                 if (canDeletePermanently) {
                   // Eliminar permanentemente
-                  await drizzleDb.delete(schema.restaurants).where(eq(schema.restaurants.id, Number(id)));
+                  await drizzleDb
+                    .delete(schema.restaurants)
+                    .where(eq(schema.restaurants.id, Number(id)));
                 } else {
                   // Soft delete
                   await softDeleteRestaurant(drizzleDb, Number(id));
@@ -87,7 +83,7 @@ export default function RestaurantDetailScreen() {
             },
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
     } catch {
       Alert.alert('Error', 'No se pudo verificar las referencias del restaurante');
@@ -126,10 +122,16 @@ export default function RestaurantDetailScreen() {
               <Ionicons name="share-outline" size={20} color="#fff" />
             )}
           </TouchableOpacity>
-          <TouchableOpacity className="bg-primary dark:bg-dark-primary p-2 rounded-full mr-2" onPress={handleEdit}>
+          <TouchableOpacity
+            className="bg-primary dark:bg-dark-primary p-2 rounded-full mr-2"
+            onPress={handleEdit}
+          >
             <Ionicons name="create-outline" size={20} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity className="bg-destructive dark:bg-dark-destructive p-2 rounded-full" onPress={handleDelete}>
+          <TouchableOpacity
+            className="bg-destructive dark:bg-dark-destructive p-2 rounded-full"
+            onPress={handleDelete}
+          >
             <Ionicons name="trash-outline" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -146,7 +148,10 @@ export default function RestaurantDetailScreen() {
           screenOptions={{
             tabBarActiveTintColor: isDarkMode ? '#7A9455' : '#93AE72',
             tabBarInactiveTintColor: isDarkMode ? '#a0a0a0' : '#6b7280',
-            tabBarIndicatorStyle: { backgroundColor: isDarkMode ? '#7A9455' : '#93AE72', height: 3 },
+            tabBarIndicatorStyle: {
+              backgroundColor: isDarkMode ? '#7A9455' : '#93AE72',
+              height: 3,
+            },
             tabBarLabelStyle: { fontSize: 16, fontWeight: 'bold' },
             tabBarStyle: { backgroundColor: isDarkMode ? '#2A2A2A' : 'white' },
           }}

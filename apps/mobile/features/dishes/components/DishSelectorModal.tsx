@@ -13,7 +13,12 @@ interface DishSelectorModalProps {
   onClose: () => void;
 }
 
-const DishSelectorModal: React.FC<DishSelectorModalProps> = ({ visible, dishes, onSelect, onClose }) => {
+const DishSelectorModal: React.FC<DishSelectorModalProps> = ({
+  visible,
+  dishes,
+  onSelect,
+  onClose,
+}) => {
   const handleSelect = (dish: Dish) => {
     onSelect(dish);
     onClose();
@@ -28,7 +33,10 @@ const DishSelectorModal: React.FC<DishSelectorModalProps> = ({ visible, dishes, 
             data={dishes}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
-              <TouchableOpacity className="p-3 border-b border-gray-300" onPress={() => handleSelect(item)}>
+              <TouchableOpacity
+                className="p-3 border-b border-gray-300"
+                onPress={() => handleSelect(item)}
+              >
                 <Text className="text-base">{item.name}</Text>
               </TouchableOpacity>
             )}

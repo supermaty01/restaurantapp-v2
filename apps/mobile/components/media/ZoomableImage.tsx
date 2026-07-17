@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import React, { useCallback } from 'react';
+import { useCallback } from 'react';
 import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -48,14 +48,11 @@ export function ZoomableImage({ uri, width, height, onZoomChange }: ZoomableImag
    * overflows the viewport by (s-1)/2 of its size on each axis; that overflow is
    * exactly how far it may travel.
    */
-  const clampTranslation = useCallback(
-    (value: number, axisSize: number, currentScale: number) => {
-      'worklet';
-      const maxOffset = Math.max(0, (axisSize * currentScale - axisSize) / 2);
-      return Math.min(Math.max(value, -maxOffset), maxOffset);
-    },
-    [],
-  );
+  const clampTranslation = useCallback((value: number, axisSize: number, currentScale: number) => {
+    'worklet';
+    const maxOffset = Math.max(0, (axisSize * currentScale - axisSize) / 2);
+    return Math.min(Math.max(value, -maxOffset), maxOffset);
+  }, []);
 
   const reset = useCallback(() => {
     'worklet';

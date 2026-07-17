@@ -1,9 +1,9 @@
-import { eq, and, isNotNull } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { useSQLiteContext } from "expo-sqlite";
+import { eq, and, isNotNull } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { useSQLiteContext } from 'expo-sqlite';
 
-import { useLiveTablesQuery } from "@/lib/hooks/useLiveTablesQuery";
-import * as schema from "@/services/db/schema";
+import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import * as schema from '@/services/db/schema';
 
 export interface RestaurantMapDTO {
   id: number;
@@ -30,11 +30,11 @@ export const useRestaurantMapList = () => {
       and(
         eq(schema.restaurants.deleted, false),
         isNotNull(schema.restaurants.latitude),
-        isNotNull(schema.restaurants.longitude)
-      )
+        isNotNull(schema.restaurants.longitude),
+      ),
     );
 
-  const { data: rawData } = useLiveTablesQuery(query, ["restaurants"]);
+  const { data: rawData } = useLiveTablesQuery(query, ['restaurants']);
 
   const restaurants: RestaurantMapDTO[] = (rawData ?? []).map((row) => ({
     id: row.id,
@@ -46,4 +46,3 @@ export const useRestaurantMapList = () => {
 
   return restaurants;
 };
-

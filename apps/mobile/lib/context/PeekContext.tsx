@@ -1,7 +1,7 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 import PeekOverlay from '@/components/peek/PeekOverlay';
-import { PeekSession } from '@/components/peek/types';
+import type { PeekSession } from '@/components/peek/types';
 
 interface PeekActionsContextType {
   beginPeek: (session: PeekSession) => void;

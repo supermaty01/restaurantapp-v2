@@ -27,13 +27,13 @@ El plan completo vive en [`docs/`](docs/README.md). Documentos clave:
 
 ## Stack
 
-| Pieza | Tecnología | Plan gratis |
-|---|---|---|
-| App móvil | Expo + React Native, expo-router, Drizzle + SQLite, NativeWind | — |
-| Base de datos cloud | Supabase (Postgres + Auth + Realtime + pgvector) | ✅ |
-| API | Cloudflare Workers + Hono | ✅ |
-| Imágenes | Cloudflare R2 | ✅ (10 GB) |
-| Builds | EAS | ✅ |
+| Pieza               | Tecnología                                                     | Plan gratis |
+| ------------------- | -------------------------------------------------------------- | ----------- |
+| App móvil           | Expo + React Native, expo-router, Drizzle + SQLite, NativeWind | —           |
+| Base de datos cloud | Supabase (Postgres + Auth + Realtime + pgvector)               | ✅          |
+| API                 | Cloudflare Workers + Hono                                      | ✅          |
+| Imágenes            | Cloudflare R2                                                  | ✅ (10 GB)  |
+| Builds              | EAS                                                            | ✅          |
 
 ## Estado
 

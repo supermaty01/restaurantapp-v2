@@ -1,5 +1,5 @@
-import { ImageDTO } from "@/features/images/types/image-dto";
-import { TagDTO } from "@/features/tags/types/tag-dto";
+import type { ImageDTO } from '@/features/images/types/image-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 
 export interface RestaurantDetailsDTO {
   id: number;
@@ -10,7 +10,7 @@ export interface RestaurantDetailsDTO {
   images: ImageDTO[];
   latitude: number | null;
   longitude: number | null;
-  deleted?: boolean;
+  deleted: boolean;
 }
 
 export interface RestaurantListDTO {
@@ -18,7 +18,7 @@ export interface RestaurantListDTO {
   name: string;
   comments: string | null;
   rating: number | null;
-  deleted?: boolean;
+  deleted: boolean;
   tags: TagDTO[];
   images: ImageDTO[];
 }

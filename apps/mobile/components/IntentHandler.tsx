@@ -16,16 +16,16 @@ export function IntentHandler() {
     // Handle initial URL when app opens from a file
     const checkInitialUrl = async () => {
       if (hasHandledInitialUrl.current) return;
-      
+
       try {
         const initialUrl = await Linking.getInitialURL();
         console.log('[IntentHandler] Initial URL:', initialUrl);
-        
+
         if (initialUrl && isShareFileUrl(initialUrl)) {
           hasHandledInitialUrl.current = true;
           const fileUri = extractFileUri(initialUrl);
           console.log('[IntentHandler] Extracted file URI:', fileUri);
-          
+
           if (fileUri) {
             // Wait a bit for the app to fully initialize
             setTimeout(() => {
@@ -43,11 +43,11 @@ export function IntentHandler() {
     // Listen for incoming URLs while app is running
     const subscription = Linking.addEventListener('url', ({ url }) => {
       console.log('[IntentHandler] Received URL event:', url);
-      
+
       if (isShareFileUrl(url)) {
         const fileUri = extractFileUri(url);
         console.log('[IntentHandler] Extracted file URI from event:', fileUri);
-        
+
         if (fileUri) {
           router.push({ pathname: '/import', params: { uri: encodeURIComponent(fileUri) } });
         }
@@ -109,4 +109,3 @@ function extractFileUri(url: string): string | null {
   console.log('[IntentHandler] Could not extract file URI from:', url);
   return null;
 }
-

@@ -1,14 +1,13 @@
-import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { useSQLiteContext } from "expo-sqlite";
-import { useMemo } from "react";
+import { and, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo } from 'react';
 
-import { imagePathToUri } from "@/lib/helpers/image-paths";
-import { useLiveTablesQuery } from "@/lib/hooks/useLiveTablesQuery";
-import * as schema from "@/services/db/schema";
+import { imagePathToUri } from '@/lib/helpers/image-paths';
+import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import * as schema from '@/services/db/schema';
 
-import { VisitDetailsDTO } from "../types/visit-dto";
-
+import type { VisitDetailsDTO } from '../types/visit-dto';
 
 export const useVisitById = (id: number, includeDeleted: boolean = true) => {
   const db = useSQLiteContext();
@@ -38,15 +37,16 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
     query.where(and(eq(schema.visits.id, id), eq(schema.visits.deleted, false)));
   }
 
-  query.leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
-      .leftJoin(schema.images, eq(schema.visits.id, schema.images.visitId))
-      .leftJoin(schema.dishVisits, eq(schema.visits.id, schema.dishVisits.visitId))
-      .leftJoin(schema.dishes, eq(schema.dishVisits.dishId, schema.dishes.id));
+  query
+    .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
+    .leftJoin(schema.images, eq(schema.visits.id, schema.images.visitId))
+    .leftJoin(schema.dishVisits, eq(schema.visits.id, schema.dishVisits.visitId))
+    .leftJoin(schema.dishes, eq(schema.dishVisits.dishId, schema.dishes.id));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ["visits", "restaurants", "images", "dishVisits", "dishes"],
-    [id, includeDeleted]
+    ['visits', 'restaurants', 'images', 'dishVisits', 'dishes'],
+    [id, includeDeleted],
   );
 
   const visit = useMemo(() => {

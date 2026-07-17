@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { useSQLiteContext } from "expo-sqlite";
+import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo } from 'react';
 
-import { useLiveTablesQuery } from "@/lib/hooks/useLiveTablesQuery";
-import * as schema from "@/services/db/schema";
+import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import * as schema from '@/services/db/schema';
 
 import { mapRestaurantListRows } from '../mappers/mapRestaurantListRows';
 
@@ -31,14 +31,15 @@ export const useRestaurantList = (includeDeleted: boolean = false) => {
     query.where(eq(schema.restaurants.deleted, false));
   }
 
-  query.leftJoin(schema.restaurantTags, eq(schema.restaurants.id, schema.restaurantTags.restaurantId))
-      .leftJoin(schema.tags, eq(schema.restaurantTags.tagId, schema.tags.id))
-      .leftJoin(schema.images, eq(schema.restaurants.id, schema.images.restaurantId));
+  query
+    .leftJoin(schema.restaurantTags, eq(schema.restaurants.id, schema.restaurantTags.restaurantId))
+    .leftJoin(schema.tags, eq(schema.restaurantTags.tagId, schema.tags.id))
+    .leftJoin(schema.images, eq(schema.restaurants.id, schema.images.restaurantId));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
     ['restaurants', 'restaurantTags', 'tags', 'images'],
-    [includeDeleted]
+    [includeDeleted],
   );
 
   return useMemo(() => mapRestaurantListRows(rawData ?? []), [rawData]);

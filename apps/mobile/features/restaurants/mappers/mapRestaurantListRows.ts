@@ -1,6 +1,6 @@
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
-import { RestaurantListDTO } from '../types/restaurant-dto';
+import type { RestaurantListDTO } from '../types/restaurant-dto';
 
 export interface RestaurantListRow {
   restaurantId: number;
@@ -27,7 +27,7 @@ export function mapRestaurantListRows(rows: RestaurantListRow[]): RestaurantList
         name: row.restaurantName,
         comments: row.restaurantComments,
         rating: row.restaurantRating,
-        deleted: row.restaurantDeleted ?? undefined,
+        deleted: row.restaurantDeleted ?? false,
         tags: [],
         images: [],
       };
@@ -39,10 +39,15 @@ export function mapRestaurantListRows(rows: RestaurantListRow[]): RestaurantList
         id: row.tagId,
         name: row.tagName ?? '',
         color: row.tagColor ?? '',
+        deleted: row.tagDeleted ?? false,
       });
     }
 
-    if (row.imageId && row.imagePath && !restaurant.images.some((image) => image.id === row.imageId)) {
+    if (
+      row.imageId &&
+      row.imagePath &&
+      !restaurant.images.some((image) => image.id === row.imageId)
+    ) {
       restaurant.images.push({
         id: row.imageId,
         uri: imagePathToUri(row.imagePath),

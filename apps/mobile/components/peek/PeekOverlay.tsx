@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 import PeekContent from './PeekContent';
-import { PeekSession } from './types';
+
+import type { PeekSession } from './types';
 
 interface PeekOverlayProps {
   activeSession: PeekSession | null;
@@ -130,12 +131,7 @@ export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayPro
   const cardBody = (
     <>
       <PeekContent data={displayedSession.preview} />
-      <View
-        style={[
-          styles.footer,
-          { borderTopColor: isDarkMode ? '#444444' : '#E0E0E0' },
-        ]}
-      >
+      <View style={[styles.footer, { borderTopColor: isDarkMode ? '#444444' : '#E0E0E0' }]}>
         <Text
           style={{
             color: isDarkMode ? '#888' : '#999',
@@ -153,10 +149,7 @@ export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayPro
     <>
       <Animated.View
         pointerEvents={visible ? 'auto' : 'none'}
-        style={[
-          styles.backdrop,
-          { opacity: animatedStyles.backdropOpacity },
-        ]}
+        style={[styles.backdrop, { opacity: animatedStyles.backdropOpacity }]}
       />
 
       <Animated.View
@@ -173,9 +166,7 @@ export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayPro
           },
         ]}
       >
-        <Animated.View style={{ opacity: contentOpacity }}>
-          {cardBody}
-        </Animated.View>
+        <Animated.View style={{ opacity: contentOpacity }}>{cardBody}</Animated.View>
       </Animated.View>
 
       <View pointerEvents="none" style={styles.measureContainer}>

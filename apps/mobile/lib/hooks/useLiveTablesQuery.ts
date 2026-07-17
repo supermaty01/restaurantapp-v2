@@ -1,13 +1,11 @@
-import { is } from "drizzle-orm";
-import { type AnySQLiteSelect } from "drizzle-orm/sqlite-core";
-import { SQLiteRelationalQuery } from "drizzle-orm/sqlite-core/query-builders/query";
-import { addDatabaseChangeListener } from "expo-sqlite";
-import { useEffect, useRef, useState } from "react";
+import { is } from 'drizzle-orm';
+import { type AnySQLiteSelect } from 'drizzle-orm/sqlite-core';
+import { SQLiteRelationalQuery } from 'drizzle-orm/sqlite-core/query-builders/query';
+import { addDatabaseChangeListener } from 'expo-sqlite';
+import { useEffect, useRef, useState } from 'react';
 
 export const useLiveTablesQuery = <
-  T extends
-    | Pick<AnySQLiteSelect, "_" | "then">
-    | SQLiteRelationalQuery<"sync", unknown>,
+  T extends Pick<AnySQLiteSelect, '_' | 'then'> | SQLiteRelationalQuery<'sync', unknown>,
 >(
   query: T,
   tables: string[],
@@ -15,13 +13,11 @@ export const useLiveTablesQuery = <
 ) => {
   const [data, setData] = useState<Awaited<T>>(
     // @ts-ignore
-    (is(query, SQLiteRelationalQuery) && query.mode === "first"
-      ? undefined
-      : []) as Awaited<T>,
+    (is(query, SQLiteRelationalQuery) && query.mode === 'first' ? undefined : []) as Awaited<T>,
   );
   const [error, setError] = useState<Error>();
   const [updatedAt, setUpdatedAt] = useState<Date>();
-  const tableKey = tables.join("|");
+  const tableKey = tables.join('|');
   const depsKey = JSON.stringify(deps);
   const queryRef = useRef(query);
   const tablesRef = useRef(tables);

@@ -7,17 +7,11 @@ import { eq } from 'drizzle-orm/sql';
 import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
-import VisitDetails from '@/features/visits/components/VisitDetails'
-import VisitDishes from '@/features/visits/components/VisitDishes'
+import VisitDetails from '@/features/visits/components/VisitDetails';
+import VisitDishes from '@/features/visits/components/VisitDishes';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { canDeleteVisitPermanently, softDeleteVisit } from '@/lib/helpers/soft-delete';
@@ -88,21 +82,17 @@ export default function VisitDetailScreen() {
             },
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
     } catch {
       Alert.alert('Error', 'No se pudo verificar las referencias de la visita');
     }
   }
 
-
-
   if (!visit) {
     return (
       <View className="flex-1 justify-center items-center bg-muted dark:bg-dark-muted p-4">
-        <Text className="text-base text-gray-800 dark:text-gray-200">
-          No se encontró la visita
-        </Text>
+        <Text className="text-base text-gray-800 dark:text-gray-200">No se encontró la visita</Text>
       </View>
     );
   }
@@ -132,10 +122,16 @@ export default function VisitDetailScreen() {
               <Ionicons name="share-outline" size={20} color="#fff" />
             )}
           </TouchableOpacity>
-          <TouchableOpacity className="bg-primary dark:bg-dark-primary p-2 rounded-full mr-2" onPress={handleEdit}>
+          <TouchableOpacity
+            className="bg-primary dark:bg-dark-primary p-2 rounded-full mr-2"
+            onPress={handleEdit}
+          >
             <Ionicons name="create-outline" size={20} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity className="bg-destructive dark:bg-dark-destructive p-2 rounded-full" onPress={handleDelete}>
+          <TouchableOpacity
+            className="bg-destructive dark:bg-dark-destructive p-2 rounded-full"
+            onPress={handleDelete}
+          >
             <Ionicons name="trash-outline" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -150,7 +146,9 @@ export default function VisitDetailScreen() {
       {visit.restaurant.deleted && (
         <View className="mt-3 mx-4 bg-orange-100 px-2 py-2 rounded flex-row gap-2 border-orange-600 border-[1px]">
           <Ionicons className="flex" name="warning-outline" size={16} color="#ea580c" />
-          <Text className="flex text-orange-600 text-sm">El restaurante de esta visita ha sido eliminado</Text>
+          <Text className="flex text-orange-600 text-sm">
+            El restaurante de esta visita ha sido eliminado
+          </Text>
         </View>
       )}
 
@@ -159,7 +157,10 @@ export default function VisitDetailScreen() {
           screenOptions={{
             tabBarActiveTintColor: isDarkMode ? '#7A9455' : '#93AE72',
             tabBarInactiveTintColor: isDarkMode ? '#a0a0a0' : '#6b7280',
-            tabBarIndicatorStyle: { backgroundColor: isDarkMode ? '#7A9455' : '#93AE72', height: 3 },
+            tabBarIndicatorStyle: {
+              backgroundColor: isDarkMode ? '#7A9455' : '#93AE72',
+              height: 3,
+            },
             tabBarLabelStyle: { fontSize: 16, fontWeight: 'bold' },
             tabBarStyle: { backgroundColor: isDarkMode ? '#2A2A2A' : 'white' },
           }}
@@ -172,6 +173,6 @@ export default function VisitDetailScreen() {
           </Tab.Screen>
         </Tab.Navigator>
       </View>
-    </View >
+    </View>
   );
 }

@@ -1,4 +1,4 @@
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 
 export interface PeekSourceRect {
   x: number;

@@ -1,8 +1,9 @@
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import { images } from '@/services/db/schema';
+
+import type { drizzle } from 'drizzle-orm/expo-sqlite';
 
 export async function uploadImages(
   db: ReturnType<typeof drizzle>,
@@ -27,8 +28,8 @@ export async function uploadImages(
         uploadedAt: new Date().toISOString(),
       };
       if (classType === 'RESTAURANT') imageRecord.restaurantId = id;
-      if (classType === 'VISIT')      imageRecord.visitId      = id;
-      if (classType === 'DISH')       imageRecord.dishId       = id;
+      if (classType === 'VISIT') imageRecord.visitId = id;
+      if (classType === 'DISH') imageRecord.dishId = id;
 
       await db.insert(images).values(imageRecord);
       return newPath;

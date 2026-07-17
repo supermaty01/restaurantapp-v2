@@ -37,7 +37,13 @@ const openAppSettings = () => {
   });
 };
 
-export default function ImagesUploader({ disabled, isEdit, images, onChangeImages, onRemoveExistingImage }: ImagesUploaderProps) {
+export default function ImagesUploader({
+  disabled,
+  isEdit,
+  images,
+  onChangeImages,
+  onRemoveExistingImage,
+}: ImagesUploaderProps) {
   const pickFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -46,8 +52,8 @@ export default function ImagesUploader({ disabled, isEdit, images, onChangeImage
         'Se requieren permisos para acceder a la galería. ¿Deseas ir a la configuración para habilitarlos?',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Abrir Configuración', onPress: openAppSettings }
-        ]
+          { text: 'Abrir Configuración', onPress: openAppSettings },
+        ],
       );
       return;
     }
@@ -56,7 +62,7 @@ export default function ImagesUploader({ disabled, isEdit, images, onChangeImage
       allowsEditing: false,
       quality: 0.5,
       allowsMultipleSelection: true,
-      mediaTypes: ["images"],
+      mediaTypes: ['images'],
     });
 
     if (!result.canceled && result.assets?.length) {
@@ -78,8 +84,8 @@ export default function ImagesUploader({ disabled, isEdit, images, onChangeImage
         'Se requieren permisos para acceder a la cámara. ¿Deseas ir a la configuración para habilitarlos?',
         [
           { text: 'Cancelar', style: 'cancel' },
-          { text: 'Abrir Configuración', onPress: openAppSettings }
-        ]
+          { text: 'Abrir Configuración', onPress: openAppSettings },
+        ],
       );
       return;
     }
@@ -132,42 +138,36 @@ export default function ImagesUploader({ disabled, isEdit, images, onChangeImage
           <Text className="text-gray-800 dark:text-gray-200">Abrir cámara</Text>
         </TouchableOpacity>
       </View>
-      {isEdit ? (
-        images.map((image) => (
-          <View key={image.uri} className="mb-2">
-            <Image
-              source={{ uri: image.uri }}
-              className="w-full h-40 mb-1 rounded-md"
-              resizeMode="cover"
-            />
-            <TouchableOpacity
-              onPress={() => removeImage(image)}
-              className="bg-destructive dark:bg-dark-destructive px-3 py-2 rounded-md w-28 flex-row justify-center"
-              disabled={disabled}
-            >
-              <Ionicons name="trash-outline" size={16} color="#fff" className="mr-2" />
-              <Text className="text-white font-semibold">Eliminar</Text>
-            </TouchableOpacity>
-          </View>
-        ))
-      ) : (
-        images.map((uri) => (
-          <View key={uri} className="mb-2">
-            <Image
-              source={{ uri }}
-              className="w-full h-40 mb-1 rounded-md"
-              resizeMode="cover"
-            />
-            <TouchableOpacity
-              onPress={() => removeImage(uri)}
-              className="bg-destructive dark:bg-dark-destructive px-3 py-2 rounded-md w-24 text-center"
-              disabled={disabled}
-            >
-              <Text className="text-white font-semibold">Eliminar</Text>
-            </TouchableOpacity>
-          </View>
-        ))
-      )}
+      {isEdit
+        ? images.map((image) => (
+            <View key={image.uri} className="mb-2">
+              <Image
+                source={{ uri: image.uri }}
+                className="w-full h-40 mb-1 rounded-md"
+                resizeMode="cover"
+              />
+              <TouchableOpacity
+                onPress={() => removeImage(image)}
+                className="bg-destructive dark:bg-dark-destructive px-3 py-2 rounded-md w-28 flex-row justify-center"
+                disabled={disabled}
+              >
+                <Ionicons name="trash-outline" size={16} color="#fff" className="mr-2" />
+                <Text className="text-white font-semibold">Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          ))
+        : images.map((uri) => (
+            <View key={uri} className="mb-2">
+              <Image source={{ uri }} className="w-full h-40 mb-1 rounded-md" resizeMode="cover" />
+              <TouchableOpacity
+                onPress={() => removeImage(uri)}
+                className="bg-destructive dark:bg-dark-destructive px-3 py-2 rounded-md w-24 text-center"
+                disabled={disabled}
+              >
+                <Text className="text-white font-semibold">Eliminar</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
     </View>
   );
 }

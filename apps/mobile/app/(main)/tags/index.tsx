@@ -8,10 +8,8 @@ import { FlatList, TouchableOpacity, View, Text, Alert } from 'react-native';
 import CreateTagModal from '@/features/tags/components/CreateTagModal';
 import TagItem from '@/features/tags/components/TagItem';
 import { useTagsList } from '@/features/tags/hooks/useTagsList';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import * as schema from '@/services/db/schema';
-
-
 
 export default function TagsScreen() {
   const db = useSQLiteContext();
@@ -25,7 +23,10 @@ export default function TagsScreen() {
     try {
       if (selectedTag) {
         // Actualizar etiqueta existente
-        await drizzleDb.update(schema.tags).set({ name: tagData.name, color: tagData.color }).where(eq(schema.tags.id, selectedTag.id));
+        await drizzleDb
+          .update(schema.tags)
+          .set({ name: tagData.name, color: tagData.color })
+          .where(eq(schema.tags.id, selectedTag.id));
       } else {
         // Crear nueva etiqueta
         await drizzleDb.insert(schema.tags).values({ name: tagData.name, color: tagData.color });
@@ -42,9 +43,7 @@ export default function TagsScreen() {
   const handleDeleteTag = async (tagId: number) => {
     try {
       // Implementar soft delete en lugar de eliminación permanente
-      await drizzleDb.update(schema.tags)
-        .set({ deleted: true })
-        .where(eq(schema.tags.id, tagId));
+      await drizzleDb.update(schema.tags).set({ deleted: true }).where(eq(schema.tags.id, tagId));
       handleModalClose();
       return { success: true };
     } catch (error) {
@@ -84,7 +83,9 @@ export default function TagsScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-base text-gray-800 dark:text-gray-200">No se encontraron etiquetas.</Text>
+            <Text className="text-base text-gray-800 dark:text-gray-200">
+              No se encontraron etiquetas.
+            </Text>
           </View>
         }
       />

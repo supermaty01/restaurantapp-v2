@@ -1,21 +1,21 @@
-import { ImageDTO } from '@/features/images/types/image-dto'
-import { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
+import type { ImageDTO } from '@/features/images/types/image-dto';
+import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 
 export interface DishBasicDTO {
   id: number;
   name: string;
-  deleted?: boolean;
+  deleted: boolean;
 }
 
 export interface VisitDetailsDTO {
   id: number;
   visited_at: string;
   comments: string | null;
-  deleted?: boolean;
+  deleted: boolean;
   restaurant: {
     id: number;
     name: string;
-    deleted?: boolean;
+    deleted: boolean;
   };
   images: ImageDTO[];
   dishes: DishBasicDTO[];
@@ -25,11 +25,11 @@ export interface VisitListDTO {
   id: number;
   visited_at: string;
   comments: string | null;
-  deleted?: boolean;
+  deleted: boolean;
   restaurant: {
     id: number;
     name: string;
-    deleted?: boolean;
+    deleted: boolean;
   };
   images: ImageDTO[];
 }

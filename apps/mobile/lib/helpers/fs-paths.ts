@@ -13,4 +13,4 @@ export const IMAGES_DIR = `${DOCUMENT_DIR}images/`;
 /**
  * Aquí almacenamos la base de datos SQLite
  */
-export const SQLITE_DIR  = `${DOCUMENT_DIR}SQLite/`;
+export const SQLITE_DIR = `${DOCUMENT_DIR}SQLite/`;

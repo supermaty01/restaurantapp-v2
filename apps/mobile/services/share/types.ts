@@ -51,12 +51,12 @@ export interface ShareFileData {
   version: number;
   type: ShareEntityType;
   createdAt: string;
-  
+
   // Main entity data (only one will be present based on type)
   restaurant?: ShareableRestaurant;
   dish?: ShareableDish;
   visit?: ShareableVisit;
-  
+
   // For dish: includes the restaurant
   // For visit: includes the restaurant and all dishes associated
   includedRestaurant?: ShareableRestaurant;
@@ -74,9 +74,8 @@ export interface ConflictResult {
 }
 
 // Import options when conflict is found
-export type ConflictResolution = 
-  | { type: 'use_existing'; existingId: number }
-  | { type: 'create_new' };
+export type ConflictResolution =
+  { type: 'use_existing'; existingId: number } | { type: 'create_new' };
 
 // Import result
 export interface ImportResult {
@@ -91,4 +90,3 @@ export interface ImportResult {
 export const SHARE_FILE_EXTENSION = '.restoshare';
 export const SHARE_FILE_MIME_TYPE = 'application/x-restoshare';
 export const CURRENT_SHARE_VERSION = 1;
-

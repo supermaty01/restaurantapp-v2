@@ -51,12 +51,12 @@ Contrato del Worker:
 
 ## Límites free tier a vigilar
 
-| Recurso | Free tier | Riesgo |
-|---|---|---|
-| Workers | 100k req/día | Bajo (uso personal) |
-| R2 | 10 GB + operaciones | Medio: fotos. Mitigación: compresión agresiva + GC |
-| Supabase DB | 500 MB, pausa por inactividad | Bajo en datos; la pausa se mitiga con el cron del Worker haciendo ping o aceptando el arranque frío |
-| Workers AI | cuota diaria de neuronas | Medio: chat/embeddings/STT. Mitigación: caché y rate limiting del AI Gateway, batch de embeddings, cuota por usuario |
+| Recurso     | Free tier                     | Riesgo                                                                                                               |
+| ----------- | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Workers     | 100k req/día                  | Bajo (uso personal)                                                                                                  |
+| R2          | 10 GB + operaciones           | Medio: fotos. Mitigación: compresión agresiva + GC                                                                   |
+| Supabase DB | 500 MB, pausa por inactividad | Bajo en datos; la pausa se mitiga con el cron del Worker haciendo ping o aceptando el arranque frío                  |
+| Workers AI  | cuota diaria de neuronas      | Medio: chat/embeddings/STT. Mitigación: caché y rate limiting del AI Gateway, batch de embeddings, cuota por usuario |
 
 **Abierto:** dominio propio (necesario para App Links/Universal Links de share). Un dominio barato es el único gasto probable del proyecto (~$10/año) — alternativa: `*.workers.dev` + deep link por scheme, peor UX.
 **Abierto:** rate limiting anónimo para la preview pública de share links.

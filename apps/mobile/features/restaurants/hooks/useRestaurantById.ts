@@ -1,14 +1,13 @@
-import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { useSQLiteContext } from "expo-sqlite";
-import { useMemo } from "react";
+import { and, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo } from 'react';
 
-import { imagePathToUri } from "@/lib/helpers/image-paths";
-import { useLiveTablesQuery } from "@/lib/hooks/useLiveTablesQuery";
-import * as schema from "@/services/db/schema";
+import { imagePathToUri } from '@/lib/helpers/image-paths';
+import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import * as schema from '@/services/db/schema';
 
-import { RestaurantDetailsDTO } from "../types/restaurant-dto";
-
+import type { RestaurantDetailsDTO } from '../types/restaurant-dto';
 
 export const useRestaurantById = (id: number, includeDeleted: boolean = true) => {
   const db = useSQLiteContext();
@@ -38,14 +37,15 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
     query.where(and(eq(schema.restaurants.id, id), eq(schema.restaurants.deleted, false)));
   }
 
-  query.leftJoin(schema.restaurantTags, eq(schema.restaurants.id, schema.restaurantTags.restaurantId))
-      .leftJoin(schema.tags, eq(schema.restaurantTags.tagId, schema.tags.id))
-      .leftJoin(schema.images, eq(schema.restaurants.id, schema.images.restaurantId));
+  query
+    .leftJoin(schema.restaurantTags, eq(schema.restaurants.id, schema.restaurantTags.restaurantId))
+    .leftJoin(schema.tags, eq(schema.restaurantTags.tagId, schema.tags.id))
+    .leftJoin(schema.images, eq(schema.restaurants.id, schema.images.restaurantId));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ["restaurants", "restaurantTags", "tags", "images"],
-    [id, includeDeleted]
+    ['restaurants', 'restaurantTags', 'tags', 'images'],
+    [id, includeDeleted],
   );
 
   const restaurant = useMemo(() => {

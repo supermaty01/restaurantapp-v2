@@ -4,20 +4,23 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
-import { DishFormData, dishSchema } from '@/features/dishes/schemas/dish-schema';
+import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
+import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import * as schema from '@/services/db/schema';
+
+import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishCreateScreen() {
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
@@ -50,7 +53,7 @@ export default function DishCreateScreen() {
       const payload = {
         name: data.name.trim(),
         restaurantId: data.restaurantId,
-        comments: data.comments?.trim() || "",
+        comments: data.comments?.trim() || '',
         price: data.price || null,
         rating: data.rating || null,
       };
@@ -64,7 +67,7 @@ export default function DishCreateScreen() {
       }
 
       if (selectedImages.length > 0) {
-        await uploadImages(drizzleDb, selectedImages, "DISH", dishId);
+        await uploadImages(drizzleDb, selectedImages, 'DISH', dishId);
       }
 
       Alert.alert('Éxito', 'Plato creado correctamente.');
@@ -98,12 +101,7 @@ export default function DishCreateScreen() {
 
       <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
         {/* Nombre */}
-        <FormInput
-          control={control}
-          name="name"
-          label="Nombre"
-          placeholder="Ingresa el nombre"
-        />
+        <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
 
         {/* Comentarios (opcional) */}
         <FormInput
@@ -136,12 +134,11 @@ export default function DishCreateScreen() {
         />
 
         {/* Rating (opcional) */}
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">Calificación</Text>
+        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">
+          Calificación
+        </Text>
         <View className="flex justify-center items-center">
-          <RatingStars
-            control={control}
-            name="rating"
-          />
+          <RatingStars control={control} name="rating" />
         </View>
 
         {/* Tags */}
@@ -171,10 +168,7 @@ export default function DishCreateScreen() {
         />
 
         {/* Imágenes (solo se seleccionan, no se suben aún) */}
-        <ImagesUploader
-          images={selectedImages}
-          onChangeImages={setSelectedImages}
-        />
+        <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
 
         {/* Botón para crear plato */}
         <TouchableOpacity

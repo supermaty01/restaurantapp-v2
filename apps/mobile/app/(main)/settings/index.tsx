@@ -107,7 +107,7 @@ export default function SettingsScreen() {
               }
             },
           },
-        ]
+        ],
       );
     } catch (error) {
       console.error('Error al seleccionar archivo:', error);
@@ -125,11 +125,7 @@ export default function SettingsScreen() {
         <Text className="text-2xl font-bold text-text dark:text-dark-text mb-6">Configuración</Text>
 
         {/* Información de la app */}
-        <InfoCard
-          appVersion={appVersion}
-          storageUsed={storageInfo.used}
-          lastExport={lastExport}
-        />
+        <InfoCard appVersion={appVersion} storageUsed={storageInfo.used} lastExport={lastExport} />
 
         {/* Tema */}
         <ThemeCard onPress={handleThemePress} />

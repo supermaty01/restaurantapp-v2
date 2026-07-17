@@ -2,7 +2,7 @@ import { Picker } from '@react-native-picker/picker';
 import { clsx } from 'clsx';
 import { router } from 'expo-router';
 import React, { useEffect } from 'react';
-import { Controller, Control, UseFormSetValue } from 'react-hook-form';
+import { Controller } from 'react-hook-form';
 import { View, Text, TouchableOpacity } from 'react-native';
 
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
@@ -10,6 +10,7 @@ import { useTheme } from '@/lib/context/ThemeContext';
 
 import { useRestaurantList } from '../hooks/useRestaurantList';
 
+import type { Control, UseFormSetValue } from 'react-hook-form';
 
 interface RestaurantPickerProps {
   control: Control<any>;
@@ -20,7 +21,14 @@ interface RestaurantPickerProps {
   errors?: any;
 }
 
-const RestaurantPicker: React.FC<RestaurantPickerProps> = ({ control, setValue, name, label, errors, fixedValue }) => {
+const RestaurantPicker: React.FC<RestaurantPickerProps> = ({
+  control,
+  setValue,
+  name,
+  label,
+  errors,
+  fixedValue,
+}) => {
   const { newRestaurantId, setNewRestaurantId } = useNewRestaurant();
   const { isDarkMode } = useTheme();
 
@@ -39,7 +47,16 @@ const RestaurantPicker: React.FC<RestaurantPickerProps> = ({ control, setValue, 
 
   return (
     <View>
-      {label && <Text className={clsx("text-base text-gray-800 dark:text-gray-200 mb-2", errors?.[name] ? "text-red-600 dark:text-red-400" : "")}>{label}</Text>}
+      {label && (
+        <Text
+          className={clsx(
+            'text-base text-gray-800 dark:text-gray-200 mb-2',
+            errors?.[name] ? 'text-red-600 dark:text-red-400' : '',
+          )}
+        >
+          {label}
+        </Text>
+      )}
       <Controller
         control={control}
         name={name}
@@ -68,7 +85,9 @@ const RestaurantPicker: React.FC<RestaurantPickerProps> = ({ control, setValue, 
         )}
       />
 
-      {errors?.[name] && <Text className="text-red-600 dark:text-red-400 mt-1">{errors[name].message}</Text>}
+      {errors?.[name] && (
+        <Text className="text-red-600 dark:text-red-400 mt-1">{errors[name].message}</Text>
+      )}
       {!fixedValue && (
         <TouchableOpacity
           className="mt-2"
@@ -79,7 +98,9 @@ const RestaurantPicker: React.FC<RestaurantPickerProps> = ({ control, setValue, 
             })
           }
         >
-          <Text className="text-primary dark:text-dark-primary">¿No lo encuentras? Añade uno nuevo</Text>
+          <Text className="text-primary dark:text-dark-primary">
+            ¿No lo encuentras? Añade uno nuevo
+          </Text>
         </TouchableOpacity>
       )}
     </View>

@@ -1,11 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image } from 'expo-image';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
 import { useDishesDetails } from '@/features/dishes/hooks/useDishesDetails';
-import { VisitDetailsDTO } from '@/features/visits/types/visit-dto'
+import type { VisitDetailsDTO } from '@/features/visits/types/visit-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 interface VisitDishesProps {
@@ -17,7 +17,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
   const { isDarkMode } = useTheme();
 
   // Obtener los IDs de los platos de la visita
-  const dishIds = visit.dishes.map(dish => dish.id);
+  const dishIds = visit.dishes.map((dish) => dish.id);
 
   // Obtener los detalles completos de los platos (incluyendo imágenes)
   const dishesWithDetails = useDishesDetails(dishIds);
@@ -50,7 +50,9 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
               )}
               <View className="flex-1">
                 <View className="flex-row items-center">
-                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 flex-1">{item.name}</Text>
+                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 flex-1">
+                    {item.name}
+                  </Text>
                   {item.deleted && (
                     <View className="bg-red-100 px-2 py-0.5 rounded mr-1">
                       <Text className="text-red-600 text-xs">Eliminado</Text>
@@ -61,14 +63,20 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
                   <Text className="text-sm text-gray-500 dark:text-gray-400">{item.comments}</Text>
                 )}
               </View>
-              <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? "#777" : "#999"} />
+              <Ionicons
+                name="chevron-forward-outline"
+                size={20}
+                color={isDarkMode ? '#777' : '#999'}
+              />
             </TouchableOpacity>
           );
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-base text-gray-800 dark:text-gray-200">No se encontraron platos.</Text>
+            <Text className="text-base text-gray-800 dark:text-gray-200">
+              No se encontraron platos.
+            </Text>
           </View>
         }
       />

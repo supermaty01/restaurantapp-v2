@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 
-import { BackupInfo } from '@/services/backup/backupService';
+import type { BackupInfo } from '@/services/backup/backupService';
 
 import { formatBytes, formatDate } from '../utils/formatters';
 

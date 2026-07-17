@@ -13,7 +13,7 @@ import ReanimatedAnimated, {
 
 import Tag from '@/features/tags/components/Tag';
 import { useTagsList } from '@/features/tags/hooks/useTagsList';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 export type SortField = 'name' | 'rating' | 'date' | 'restaurant' | 'created';
@@ -111,7 +111,10 @@ export default function FilterSortModal({
   };
 
   const handleRatingFilter = (rating: number | null) => {
-    setLocalOptions({ ...localOptions, minRating: localOptions.minRating === rating ? null : rating });
+    setLocalOptions({
+      ...localOptions,
+      minRating: localOptions.minRating === rating ? null : rating,
+    });
   };
 
   const handleSortFieldChange = (field: SortField) => {
@@ -128,7 +131,8 @@ export default function FilterSortModal({
   const handleRestaurantSelect = (restaurantId: number | null) => {
     setLocalOptions({
       ...localOptions,
-      selectedRestaurantId: localOptions.selectedRestaurantId === restaurantId ? null : restaurantId,
+      selectedRestaurantId:
+        localOptions.selectedRestaurantId === restaurantId ? null : restaurantId,
     });
   };
 
@@ -187,142 +191,154 @@ export default function FilterSortModal({
               </TouchableOpacity>
             </View>
 
-          <ScrollView className="p-4">
-            {/* Tag Filter - Only for restaurants and dishes */}
-            {(entityType === 'restaurant' || entityType === 'dish') && (
-              <View className="mb-6">
-                <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                  Filtrar por etiquetas
-                </Text>
-                <View className="flex-row flex-wrap">
-                  {tags.map((tag) => {
-                    const isSelected = localOptions.selectedTags.some((t) => t.id === tag.id);
-                    return (
-                      <TouchableOpacity
-                        key={tag.id}
-                        onPress={() => handleTagToggle(tag)}
-                        className={`mr-2 mb-2 ${isSelected ? 'opacity-100' : 'opacity-50'}`}
-                      >
-                        <Tag name={tag.name} color={tag.color} />
-                      </TouchableOpacity>
-                    );
-                  })}
-                  {tags.length === 0 && (
-                    <Text className="text-sm text-gray-500 dark:text-gray-400">
-                      No hay etiquetas disponibles
-                    </Text>
-                  )}
+            <ScrollView className="p-4">
+              {/* Tag Filter - Only for restaurants and dishes */}
+              {(entityType === 'restaurant' || entityType === 'dish') && (
+                <View className="mb-6">
+                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    Filtrar por etiquetas
+                  </Text>
+                  <View className="flex-row flex-wrap">
+                    {tags.map((tag) => {
+                      const isSelected = localOptions.selectedTags.some((t) => t.id === tag.id);
+                      return (
+                        <TouchableOpacity
+                          key={tag.id}
+                          onPress={() => handleTagToggle(tag)}
+                          className={`mr-2 mb-2 ${isSelected ? 'opacity-100' : 'opacity-50'}`}
+                        >
+                          <Tag name={tag.name} color={tag.color} />
+                        </TouchableOpacity>
+                      );
+                    })}
+                    {tags.length === 0 && (
+                      <Text className="text-sm text-gray-500 dark:text-gray-400">
+                        No hay etiquetas disponibles
+                      </Text>
+                    )}
+                  </View>
                 </View>
-              </View>
-            )}
+              )}
 
-            {/* Restaurant Filter - Only for visits */}
-            {entityType === 'visit' && restaurants.length > 0 && (
+              {/* Restaurant Filter - Only for visits */}
+              {entityType === 'visit' && restaurants.length > 0 && (
+                <View className="mb-6">
+                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    Filtrar por restaurante
+                  </Text>
+                  <View className="flex-row flex-wrap">
+                    {restaurants.map((restaurant) => {
+                      const isSelected = localOptions.selectedRestaurantId === restaurant.id;
+                      return (
+                        <TouchableOpacity
+                          key={restaurant.id}
+                          onPress={() => handleRestaurantSelect(restaurant.id)}
+                          className={`px-3 py-2 mr-2 mb-2 rounded-lg ${
+                            isSelected
+                              ? 'bg-primary dark:bg-dark-primary'
+                              : 'bg-gray-200 dark:bg-gray-700'
+                          }`}
+                        >
+                          <Text
+                            className={`text-sm ${
+                              isSelected
+                                ? 'text-white font-bold'
+                                : 'text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {restaurant.name}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* Rating Filter - For restaurants and dishes */}
+              {(entityType === 'restaurant' || entityType === 'dish') && (
+                <View className="mb-6">
+                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
+                    Valoración mínima
+                  </Text>
+                  <View className="flex-row items-center">
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <TouchableOpacity
+                        key={rating}
+                        onPress={() => handleRatingFilter(rating)}
+                        className={`px-3 py-2 mr-2 rounded-lg ${
+                          localOptions.minRating === rating
+                            ? 'bg-primary dark:bg-dark-primary'
+                            : 'bg-gray-200 dark:bg-gray-700'
+                        }`}
+                      >
+                        <View className="flex-row items-center">
+                          <Text
+                            className={`text-sm mr-1 ${
+                              localOptions.minRating === rating
+                                ? 'text-white font-bold'
+                                : 'text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            {rating}+
+                          </Text>
+                          <Ionicons
+                            name="star"
+                            size={14}
+                            color={localOptions.minRating === rating ? '#fff' : '#FFD700'}
+                          />
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Sort Options */}
               <View className="mb-6">
                 <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                  Filtrar por restaurante
+                  Ordenar por
                 </Text>
-                <View className="flex-row flex-wrap">
-                  {restaurants.map((restaurant) => {
-                    const isSelected = localOptions.selectedRestaurantId === restaurant.id;
-                    return (
-                      <TouchableOpacity
-                        key={restaurant.id}
-                        onPress={() => handleRestaurantSelect(restaurant.id)}
-                        className={`px-3 py-2 mr-2 mb-2 rounded-lg ${isSelected
+                <View className="flex-row flex-wrap items-center">
+                  {getSortOptions().map((option) => (
+                    <TouchableOpacity
+                      key={option.field}
+                      onPress={() => handleSortFieldChange(option.field)}
+                      className={`px-3 py-2 mr-2 mb-2 rounded-lg ${
+                        localOptions.sortField === option.field
                           ? 'bg-primary dark:bg-dark-primary'
                           : 'bg-gray-200 dark:bg-gray-700'
-                          }`}
-                      >
-                        <Text className={`text-sm ${isSelected
-                          ? 'text-white font-bold'
-                          : 'text-gray-700 dark:text-gray-300'
-                          }`}>
-                          {restaurant.name}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            )}
-
-            {/* Rating Filter - For restaurants and dishes */}
-            {(entityType === 'restaurant' || entityType === 'dish') && (
-              <View className="mb-6">
-                <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                  Valoración mínima
-                </Text>
-                <View className="flex-row items-center">
-                  {[1, 2, 3, 4, 5].map((rating) => (
-                    <TouchableOpacity
-                      key={rating}
-                      onPress={() => handleRatingFilter(rating)}
-                      className={`px-3 py-2 mr-2 rounded-lg ${localOptions.minRating === rating
-                        ? 'bg-primary dark:bg-dark-primary'
-                        : 'bg-gray-200 dark:bg-gray-700'
-                        }`}
+                      }`}
                     >
-                      <View className="flex-row items-center">
-                        <Text className={`text-sm mr-1 ${localOptions.minRating === rating
-                          ? 'text-white font-bold'
-                          : 'text-gray-700 dark:text-gray-300'
-                          }`}>
-                          {rating}+
-                        </Text>
-                        <Ionicons
-                          name="star"
-                          size={14}
-                          color={localOptions.minRating === rating ? '#fff' : '#FFD700'}
-                        />
-                      </View>
+                      <Text
+                        className={`text-sm ${
+                          localOptions.sortField === option.field
+                            ? 'text-white font-bold'
+                            : 'text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        {option.label}
+                      </Text>
                     </TouchableOpacity>
                   ))}
-                </View>
-              </View>
-            )}
 
-            {/* Sort Options */}
-            <View className="mb-6">
-              <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                Ordenar por
-              </Text>
-              <View className="flex-row flex-wrap items-center">
-                {getSortOptions().map((option) => (
+                  {/* Sort Order Toggle */}
                   <TouchableOpacity
-                    key={option.field}
-                    onPress={() => handleSortFieldChange(option.field)}
-                    className={`px-3 py-2 mr-2 mb-2 rounded-lg ${localOptions.sortField === option.field
-                      ? 'bg-primary dark:bg-dark-primary'
-                      : 'bg-gray-200 dark:bg-gray-700'
-                      }`}
+                    onPress={handleSortOrderToggle}
+                    className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 flex-row items-center"
                   >
-                    <Text className={`text-sm ${localOptions.sortField === option.field
-                      ? 'text-white font-bold'
-                      : 'text-gray-700 dark:text-gray-300'
-                      }`}>
-                      {option.label}
+                    <Ionicons
+                      name={localOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
+                      size={16}
+                      color={isDarkMode ? '#fff' : '#333'}
+                    />
+                    <Text className="text-sm text-gray-700 dark:text-gray-300 ml-1">
+                      {localOptions.sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
                     </Text>
                   </TouchableOpacity>
-                ))}
-
-                {/* Sort Order Toggle */}
-                <TouchableOpacity
-                  onPress={handleSortOrderToggle}
-                  className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 flex-row items-center"
-                >
-                  <Ionicons
-                    name={localOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
-                    size={16}
-                    color={isDarkMode ? '#fff' : '#333'}
-                  />
-                  <Text className="text-sm text-gray-700 dark:text-gray-300 ml-1">
-                    {localOptions.sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
-                  </Text>
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
 
             {/* Footer Buttons */}
             <View className="flex-row p-4 border-t border-gray-200 dark:border-gray-700">
@@ -347,4 +363,3 @@ export default function FilterSortModal({
     </Modal>
   );
 }
-

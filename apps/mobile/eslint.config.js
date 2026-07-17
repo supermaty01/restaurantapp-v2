@@ -2,7 +2,7 @@
 // screens never touch SQL or the network directly.
 const expoConfig = require('eslint-config-expo/flat');
 const tseslint = require('typescript-eslint');
-const importPlugin = require('eslint-plugin-import');
+
 const unusedImports = require('eslint-plugin-unused-imports');
 const jsxA11y = require('eslint-plugin-jsx-a11y');
 
@@ -29,9 +29,8 @@ module.exports = tseslint.config(
         tsconfigRootDir: __dirname,
       },
     },
+    // `import` and `@typescript-eslint` are already registered by eslint-config-expo.
     plugins: {
-      '@typescript-eslint': tseslint.plugin,
-      import: importPlugin,
       'unused-imports': unusedImports,
       'jsx-a11y': jsxA11y,
     },
@@ -80,7 +79,11 @@ module.exports = tseslint.config(
   // --- Architecture boundaries (docs/12-calidad.md) -------------------------
   // Only repositories may talk to the database.
   {
-    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'features/**/components/**/*.{ts,tsx}'],
+    files: [
+      'app/**/*.{ts,tsx}',
+      'components/**/*.{ts,tsx}',
+      'features/**/components/**/*.{ts,tsx}',
+    ],
     rules: {
       'no-restricted-imports': [
         'error',

@@ -13,10 +13,12 @@ import {
   PanResponder,
   StyleSheet,
 } from 'react-native';
-import MapView, { Marker, PoiClickEvent, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useRestaurantMapList } from '@/features/restaurants/hooks/useRestaurantMapList';
 import { useTheme } from '@/lib/context/ThemeContext';
+
+import type { PoiClickEvent } from 'react-native-maps';
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
@@ -96,18 +98,14 @@ export default function MapScreen() {
   const drawerPanResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, g) =>
-          g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+        onMoveShouldSetPanResponder: (_, g) => g.dy > 6 && Math.abs(g.dy) > Math.abs(g.dx),
         onPanResponderGrant: () => {
           drawerAnim.stopAnimation((v) => {
             panDrawerStart.current = v;
           });
         },
         onPanResponderMove: (_, g) => {
-          const next = Math.min(
-            DRAWER_HEIGHT,
-            Math.max(0, panDrawerStart.current + g.dy),
-          );
+          const next = Math.min(DRAWER_HEIGHT, Math.max(0, panDrawerStart.current + g.dy));
           drawerAnim.setValue(next);
         },
         onPanResponderRelease: (_, g) => {
@@ -129,61 +127,63 @@ export default function MapScreen() {
     [drawerAnim, hideDrawer],
   );
 
-  const fetchPlaceDetails = useCallback(async (
-    placeId: string,
-    name: string,
-    coordinate: { latitude: number; longitude: number },
-  ) => {
-    if (!GOOGLE_PLACES_API_KEY) {
-      setSelectedPoi({ name, coordinate });
-      setLoadingPoi(false);
-      showDrawer();
-      return;
-    }
-
-    try {
-      const params = new URLSearchParams({
-        place_id: placeId,
-        fields: 'formatted_address,rating,price_level,name',
-        key: GOOGLE_PLACES_API_KEY,
-        language: 'es',
-      });
-
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`
-      );
-      const data = await response.json();
-
-      if (data.status !== 'OK') {
+  const fetchPlaceDetails = useCallback(
+    async (placeId: string, name: string, coordinate: { latitude: number; longitude: number }) => {
+      if (!GOOGLE_PLACES_API_KEY) {
         setSelectedPoi({ name, coordinate });
         setLoadingPoi(false);
         showDrawer();
         return;
       }
 
-      setSelectedPoi({
-        name: data.result.name ?? name,
-        coordinate,
-        address: data.result.formatted_address,
-        rating: data.result.rating,
-        priceLevel: data.result.price_level,
-      });
-      setLoadingPoi(false);
-      showDrawer();
-    } catch {
-      setSelectedPoi({ name, coordinate });
-      setLoadingPoi(false);
-      showDrawer();
-    }
-  }, [showDrawer]);
+      try {
+        const params = new URLSearchParams({
+          place_id: placeId,
+          fields: 'formatted_address,rating,price_level,name',
+          key: GOOGLE_PLACES_API_KEY,
+          language: 'es',
+        });
 
-  const handlePoiClick = useCallback((event: PoiClickEvent) => {
-    const { placeId, name, coordinate } = event.nativeEvent;
-    setSelectedPoi({ name, coordinate });
-    setLoadingPoi(true);
-    showDrawer();
-    fetchPlaceDetails(placeId, name, coordinate);
-  }, [fetchPlaceDetails, showDrawer]);
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`,
+        );
+        const data = await response.json();
+
+        if (data.status !== 'OK') {
+          setSelectedPoi({ name, coordinate });
+          setLoadingPoi(false);
+          showDrawer();
+          return;
+        }
+
+        setSelectedPoi({
+          name: data.result.name ?? name,
+          coordinate,
+          address: data.result.formatted_address,
+          rating: data.result.rating,
+          priceLevel: data.result.price_level,
+        });
+        setLoadingPoi(false);
+        showDrawer();
+      } catch {
+        setSelectedPoi({ name, coordinate });
+        setLoadingPoi(false);
+        showDrawer();
+      }
+    },
+    [showDrawer],
+  );
+
+  const handlePoiClick = useCallback(
+    (event: PoiClickEvent) => {
+      const { placeId, name, coordinate } = event.nativeEvent;
+      setSelectedPoi({ name, coordinate });
+      setLoadingPoi(true);
+      showDrawer();
+      fetchPlaceDetails(placeId, name, coordinate);
+    },
+    [fetchPlaceDetails, showDrawer],
+  );
 
   const handleCreateRestaurant = useCallback(() => {
     if (!selectedPoi) return;
@@ -214,18 +214,21 @@ export default function MapScreen() {
           [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Abrir Configuración', onPress: () => Linking.openSettings() },
-          ]
+          ],
         );
         setLocating(false);
         return;
       }
       const loc = await Location.getCurrentPositionAsync({});
-      mapRef.current?.animateToRegion({
-        latitude: loc.coords.latitude,
-        longitude: loc.coords.longitude,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      }, 800);
+      mapRef.current?.animateToRegion(
+        {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        800,
+      );
     } catch {
       Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
     }
@@ -255,9 +258,7 @@ export default function MapScreen() {
                 longitude: restaurant.longitude,
               }}
               title={restaurant.name}
-              description={
-                restaurant.rating ? `⭐ ${restaurant.rating}/5` : undefined
-              }
+              description={restaurant.rating ? `⭐ ${restaurant.rating}/5` : undefined}
               onCalloutPress={() =>
                 router.push({
                   pathname: '/restaurants/[id]/view',
@@ -314,11 +315,7 @@ export default function MapScreen() {
             shadowRadius: 4,
           }}
         >
-          <Ionicons
-            name="locate"
-            size={24}
-            color={isDarkMode ? '#B27A4D' : '#905c36'}
-          />
+          <Ionicons name="locate" size={24} color={isDarkMode ? '#B27A4D' : '#905c36'} />
         </TouchableOpacity>
 
         <Animated.View
@@ -341,15 +338,9 @@ export default function MapScreen() {
           className="bg-card dark:bg-dark-card"
           pointerEvents={drawerVisible ? 'auto' : 'none'}
         >
-          <View
-            {...drawerPanResponder.panHandlers}
-            style={styles.mapDrawerHandle}
-          >
+          <View {...drawerPanResponder.panHandlers} style={styles.mapDrawerHandle}>
             <View
-              style={[
-                styles.mapDrawerNotch,
-                { backgroundColor: isDarkMode ? '#555' : '#ccc' },
-              ]}
+              style={[styles.mapDrawerNotch, { backgroundColor: isDarkMode ? '#555' : '#ccc' }]}
             />
           </View>
           <View
@@ -360,7 +351,6 @@ export default function MapScreen() {
             }}
             className="bg-card dark:bg-dark-card"
           >
-
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name="restaurant" size={18} color={isDarkMode ? '#B27A4D' : '#905c36'} />
               <Text
@@ -372,12 +362,22 @@ export default function MapScreen() {
             </View>
 
             {selectedPoi?.address && (
-              <Text numberOfLines={1} className="text-gray-500 dark:text-gray-400 text-sm ml-7 mb-1">
+              <Text
+                numberOfLines={1}
+                className="text-gray-500 dark:text-gray-400 text-sm ml-7 mb-1"
+              >
                 {selectedPoi.address}
               </Text>
             )}
 
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 28, marginBottom: 12 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginLeft: 28,
+                marginBottom: 12,
+              }}
+            >
               {selectedPoi?.rating != null && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
                   <Ionicons name="star" size={14} color="#F59E0B" />
@@ -397,7 +397,12 @@ export default function MapScreen() {
               onPress={handleCreateRestaurant}
               className="bg-primary dark:bg-dark-primary py-3 rounded-md items-center flex-row justify-center"
             >
-              <Ionicons name="add-circle-outline" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Ionicons
+                name="add-circle-outline"
+                size={20}
+                color="#fff"
+                style={{ marginRight: 8 }}
+              />
               <Text className="text-white font-bold">Crear restaurante</Text>
             </TouchableOpacity>
           </View>

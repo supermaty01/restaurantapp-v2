@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
@@ -12,29 +12,34 @@ import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
-import { RestaurantFormData, restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
+import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
+import { restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import * as schema from '@/services/db/schema';
 
+import type { SubmitHandler } from 'react-hook-form';
+
 export default function RestaurantCreateScreen() {
-  const { useBackRedirect, prefillName, prefillLatitude, prefillLongitude } = useGlobalSearchParams<{
-    useBackRedirect?: string;
-    prefillName?: string;
-    prefillLatitude?: string;
-    prefillLongitude?: string;
-  }>();
+  const { useBackRedirect, prefillName, prefillLatitude, prefillLongitude } =
+    useGlobalSearchParams<{
+      useBackRedirect?: string;
+      prefillName?: string;
+      prefillLatitude?: string;
+      prefillLongitude?: string;
+    }>();
 
-  const prefillLocation = prefillLatitude && prefillLongitude
-    ? { latitude: parseFloat(prefillLatitude as string), longitude: parseFloat(prefillLongitude as string) }
-    : null;
+  const prefillLocation =
+    prefillLatitude && prefillLongitude
+      ? {
+          latitude: parseFloat(prefillLatitude as string),
+          longitude: parseFloat(prefillLongitude as string),
+        }
+      : null;
 
-  const {
-    control,
-    handleSubmit,
-  } = useForm<RestaurantFormData>({
+  const { control, handleSubmit } = useForm<RestaurantFormData>({
     resolver: zodResolver(restaurantSchema),
     defaultValues: {
       name: (prefillName as string) || '',
@@ -44,7 +49,9 @@ export default function RestaurantCreateScreen() {
     },
   });
 
-  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(prefillLocation);
+  const [location, setLocation] = useState<{ latitude: number; longitude: number } | null>(
+    prefillLocation,
+  );
   const [selectedTags, setSelectedTags] = useState<TagDTO[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [isTagModalVisible, setTagModalVisible] = useState(false);
@@ -72,7 +79,7 @@ export default function RestaurantCreateScreen() {
       }
 
       if (selectedImages.length > 0) {
-        await uploadImages(drizzleDb, selectedImages, "RESTAURANT", restaurantId);
+        await uploadImages(drizzleDb, selectedImages, 'RESTAURANT', restaurantId);
       }
 
       Alert.alert('Éxito', 'Restaurante creado correctamente.');
@@ -94,17 +101,18 @@ export default function RestaurantCreateScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4" keyboardShouldPersistTaps="handled" nestedScrollEnabled={true}>
-      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Añadir restaurante</Text>
+    <ScrollView
+      className="flex-1 bg-muted dark:bg-dark-muted p-4"
+      keyboardShouldPersistTaps="handled"
+      nestedScrollEnabled={true}
+    >
+      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+        Añadir restaurante
+      </Text>
 
       <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
         {/* Nombre */}
-        <FormInput
-          control={control}
-          name="name"
-          label="Nombre"
-          placeholder="Ingresa el nombre"
-        />
+        <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
 
         {/* Comentarios (opcional) */}
         <FormInput
@@ -118,11 +126,15 @@ export default function RestaurantCreateScreen() {
         />
 
         {/* Ubicación (opcional) */}
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">Ubicación</Text>
+        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">
+          Ubicación
+        </Text>
         <MapLocationPicker location={location} onLocationChange={setLocation} />
 
         {/* Rating (opcional) */}
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">Calificación</Text>
+        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">
+          Calificación
+        </Text>
         <View className="flex justify-center items-center">
           <RatingStars control={control} name="rating" />
         </View>
@@ -154,10 +166,7 @@ export default function RestaurantCreateScreen() {
         />
 
         {/* Imágenes (solo se seleccionan, no se suben aún) */}
-        <ImagesUploader
-          images={selectedImages}
-          onChangeImages={setSelectedImages}
-        />
+        <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
 
         {/* Botón para crear restaurante */}
         <TouchableOpacity

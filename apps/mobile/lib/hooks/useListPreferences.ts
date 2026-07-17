@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { SortField, SortOrder } from '@/components/FilterSortModal';
+import type { SortField, SortOrder } from '@/components/FilterSortModal';
 import * as schema from '@/services/db/schema';
 
 interface ListPreferences {
@@ -56,33 +56,30 @@ export function useListPreferences(entityType: 'restaurant' | 'dish' | 'visit') 
         if (!cancelled) setPrefs((p) => ({ ...p, loaded: true }));
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [entityType, defaults.sortField, defaults.sortOrder]);
 
-  const upsert = useCallback(
-    async (key: string, value: string) => {
-      try {
-        const existing = await drizzleRef.current
-          .select()
-          .from(schema.appSettings)
-          .where(eq(schema.appSettings.key, key));
+  const upsert = useCallback(async (key: string, value: string) => {
+    try {
+      const existing = await drizzleRef.current
+        .select()
+        .from(schema.appSettings)
+        .where(eq(schema.appSettings.key, key));
 
-        if (existing.length > 0) {
-          await drizzleRef.current
-            .update(schema.appSettings)
-            .set({ value })
-            .where(eq(schema.appSettings.key, key));
-        } else {
-          await drizzleRef.current
-            .insert(schema.appSettings)
-            .values({ key, value });
-        }
-      } catch {
-        // silent
+      if (existing.length > 0) {
+        await drizzleRef.current
+          .update(schema.appSettings)
+          .set({ value })
+          .where(eq(schema.appSettings.key, key));
+      } else {
+        await drizzleRef.current.insert(schema.appSettings).values({ key, value });
       }
-    },
-    [],
-  );
+    } catch {
+      // silent
+    }
+  }, []);
 
   const setIsGridView = useCallback(
     (value: boolean) => {

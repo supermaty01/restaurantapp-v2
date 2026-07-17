@@ -1,22 +1,15 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import clsx from 'clsx';
 import React, { useRef, useState, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
-import {
-  Modal,
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  Dimensions,
-  NativeSyntheticEvent,
-  NativeScrollEvent,
-  Alert,
-} from 'react-native';
+import { useForm } from 'react-hook-form';
+import { Modal, View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
 import { z } from 'zod';
 
 import FormInput from '@/components/FormInput';
 import { useTheme } from '@/lib/context/ThemeContext';
+
+import type { SubmitHandler } from 'react-hook-form';
+import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -28,17 +21,44 @@ type FormData = z.infer<typeof schema>;
 
 const ALL_COLORS = [
   // 12 colores vivos
-  '#F44336', '#E91E63', '#9C27B0', '#673AB7',
-  '#3F51B5', '#2196F3', '#03A9F4', '#00BCD4',
-  '#009688', '#4CAF50', '#FF9800', '#FF5722',
+  '#F44336',
+  '#E91E63',
+  '#9C27B0',
+  '#673AB7',
+  '#3F51B5',
+  '#2196F3',
+  '#03A9F4',
+  '#00BCD4',
+  '#009688',
+  '#4CAF50',
+  '#FF9800',
+  '#FF5722',
   // 12 colores pastel
-  '#FFB6C1', '#AEC6CF', '#D8BFD8', '#77DD77',
-  '#FFFF99', '#FFCC99', '#AAF0D1', '#E6E6FA',
-  '#FF9999', '#FFDAB9', '#B2FFFF', '#E0BBE4',
+  '#FFB6C1',
+  '#AEC6CF',
+  '#D8BFD8',
+  '#77DD77',
+  '#FFFF99',
+  '#FFCC99',
+  '#AAF0D1',
+  '#E6E6FA',
+  '#FF9999',
+  '#FFDAB9',
+  '#B2FFFF',
+  '#E0BBE4',
   // 12 colores neutros
-  '#FFFFFF', '#F0F0F0', '#E0E0E0', '#CCCCCC',
-  '#B3B3B3', '#999999', '#7F7F7F', '#666666',
-  '#4C4C4C', '#333333', '#1A1A1A', '#000000',
+  '#FFFFFF',
+  '#F0F0F0',
+  '#E0E0E0',
+  '#CCCCCC',
+  '#B3B3B3',
+  '#999999',
+  '#7F7F7F',
+  '#666666',
+  '#4C4C4C',
+  '#333333',
+  '#1A1A1A',
+  '#000000',
 ];
 
 const chunkSize = 12;
@@ -65,12 +85,7 @@ export default function CreateTagModal({
   isEditing = false,
 }: CreateTagModalProps) {
   const { isDarkMode } = useTheme();
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-  } = useForm<FormData>({
+  const { control, handleSubmit, reset, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { name: '' },
   });
@@ -107,40 +122,31 @@ export default function CreateTagModal({
       onAdd({
         name: data.name.trim(),
         color: selectedColor,
-        ...(isEditing && editTag ? { id: editTag.id } : {})
+        ...(isEditing && editTag ? { id: editTag.id } : {}),
       });
     }
   };
 
   const handleDeletePress = () => {
     if (editTag && onDelete) {
-      Alert.alert(
-        "Confirmar eliminación",
-        "¿Estás seguro de que deseas eliminar esta etiqueta?",
-        [
-          {
-            text: "Cancelar",
-            style: "cancel"
-          },
-          {
-            text: "Eliminar",
-            onPress: () => onDelete(editTag.id),
-            style: "destructive"
-          }
-        ]
-      );
+      Alert.alert('Confirmar eliminación', '¿Estás seguro de que deseas eliminar esta etiqueta?', [
+        {
+          text: 'Cancelar',
+          style: 'cancel',
+        },
+        {
+          text: 'Eliminar',
+          onPress: () => onDelete(editTag.id),
+          style: 'destructive',
+        },
+      ]);
     }
   };
 
   const circleWidth = (screenWidth - 60) / 6 - 16;
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-center items-center">
         <View className="bg-white dark:bg-dark-card w-11/12 rounded-md p-4">
           <Text className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">
@@ -176,7 +182,13 @@ export default function CreateTagModal({
                       onPress={() => setSelectedColor(color)}
                       className={clsx(
                         'm-2 rounded-full border-2 aspect-square justify-center items-center',
-                        isSelected ? (isDarkMode ? 'border-white border-[3px]' : 'border-black border-[3px]') : (isDarkMode ? 'border-white/20' : 'border-black/20')
+                        isSelected
+                          ? isDarkMode
+                            ? 'border-white border-[3px]'
+                            : 'border-black border-[3px]'
+                          : isDarkMode
+                            ? 'border-white/20'
+                            : 'border-black/20',
                       )}
                       style={{ backgroundColor: color, width: circleWidth, height: circleWidth }}
                     />
@@ -192,7 +204,13 @@ export default function CreateTagModal({
                 key={index}
                 className={clsx(
                   'w-2 h-2 rounded-full mx-1',
-                  currentPage === index ? (isDarkMode ? 'bg-white' : 'bg-black') : (isDarkMode ? 'bg-gray-600' : 'bg-gray-300')
+                  currentPage === index
+                    ? isDarkMode
+                      ? 'bg-white'
+                      : 'bg-black'
+                    : isDarkMode
+                      ? 'bg-gray-600'
+                      : 'bg-gray-300',
                 )}
               />
             ))}
@@ -219,9 +237,7 @@ export default function CreateTagModal({
                 onPress={handleSubmit(onSubmit)}
                 className="px-4 py-2 rounded-md bg-primary dark:bg-dark-primary"
               >
-                <Text className="text-white font-semibold">
-                  {isEditing ? 'Guardar' : 'Añadir'}
-                </Text>
+                <Text className="text-white font-semibold">{isEditing ? 'Guardar' : 'Añadir'}</Text>
               </TouchableOpacity>
             </View>
           </View>

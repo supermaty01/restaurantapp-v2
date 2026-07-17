@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Animated, GestureResponderEvent, StyleProp, View, ViewStyle } from 'react-native';
+import { Animated, View } from 'react-native';
 
-import { PeekPreviewData } from '@/components/peek/types';
+import type { PeekPreviewData } from '@/components/peek/types';
 import { usePeekActions } from '@/lib/context/PeekContext';
+
+import type { GestureResponderEvent, StyleProp, ViewStyle } from 'react-native';
 
 const LONG_PRESS_DELAY = 150;
 const MOVE_CANCEL_THRESHOLD = 12;
@@ -37,14 +39,17 @@ const PeekablePressable: React.FC<PeekablePressableProps> = ({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [isPressed, setIsPressed] = useState(false);
 
-  const animateScale = useCallback((toValue: number) => {
-    Animated.spring(scaleAnim, {
-      toValue,
-      friction: 7,
-      tension: 130,
-      useNativeDriver: true,
-    }).start();
-  }, [scaleAnim]);
+  const animateScale = useCallback(
+    (toValue: number) => {
+      Animated.spring(scaleAnim, {
+        toValue,
+        friction: 7,
+        tension: 130,
+        useNativeDriver: true,
+      }).start();
+    },
+    [scaleAnim],
+  );
 
   const clearLongPressTimeout = useCallback(() => {
     if (longPressTimeoutRef.current) {
@@ -85,39 +90,45 @@ const PeekablePressable: React.FC<PeekablePressableProps> = ({
     });
   }, [animateScale, beginPeek, previewData, scaleValue, sourceBorderRadius]);
 
-  const handleTouchStart = useCallback((event: GestureResponderEvent) => {
-    const touch = event.nativeEvent.touches?.[0] ?? event.nativeEvent.changedTouches?.[0];
-    touchStartRef.current = touch ? { x: touch.pageX, y: touch.pageY } : null;
-    movedBeforePeekRef.current = false;
-    isPeekingRef.current = false;
-    setIsPressed(true);
-    clearLongPressTimeout();
-    longPressTimeoutRef.current = setTimeout(() => {
-      longPressTimeoutRef.current = null;
-      openPeek();
-    }, LONG_PRESS_DELAY);
-  }, [clearLongPressTimeout, openPeek]);
-
-  const handleTouchMove = useCallback((event: GestureResponderEvent) => {
-    if (isPeekingRef.current || movedBeforePeekRef.current || !touchStartRef.current) {
-      return;
-    }
-
-    const touch = event.nativeEvent.touches?.[0] ?? event.nativeEvent.changedTouches?.[0];
-    if (!touch) {
-      return;
-    }
-
-    const deltaX = touch.pageX - touchStartRef.current.x;
-    const deltaY = touch.pageY - touchStartRef.current.y;
-    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-
-    if (distance > MOVE_CANCEL_THRESHOLD) {
-      movedBeforePeekRef.current = true;
-      setIsPressed(false);
+  const handleTouchStart = useCallback(
+    (event: GestureResponderEvent) => {
+      const touch = event.nativeEvent.touches?.[0] ?? event.nativeEvent.changedTouches?.[0];
+      touchStartRef.current = touch ? { x: touch.pageX, y: touch.pageY } : null;
+      movedBeforePeekRef.current = false;
+      isPeekingRef.current = false;
+      setIsPressed(true);
       clearLongPressTimeout();
-    }
-  }, [clearLongPressTimeout]);
+      longPressTimeoutRef.current = setTimeout(() => {
+        longPressTimeoutRef.current = null;
+        openPeek();
+      }, LONG_PRESS_DELAY);
+    },
+    [clearLongPressTimeout, openPeek],
+  );
+
+  const handleTouchMove = useCallback(
+    (event: GestureResponderEvent) => {
+      if (isPeekingRef.current || movedBeforePeekRef.current || !touchStartRef.current) {
+        return;
+      }
+
+      const touch = event.nativeEvent.touches?.[0] ?? event.nativeEvent.changedTouches?.[0];
+      if (!touch) {
+        return;
+      }
+
+      const deltaX = touch.pageX - touchStartRef.current.x;
+      const deltaY = touch.pageY - touchStartRef.current.y;
+      const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+
+      if (distance > MOVE_CANCEL_THRESHOLD) {
+        movedBeforePeekRef.current = true;
+        setIsPressed(false);
+        clearLongPressTimeout();
+      }
+    },
+    [clearLongPressTimeout],
+  );
 
   const handleTouchEnd = useCallback(() => {
     setIsPressed(false);

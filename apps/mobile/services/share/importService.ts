@@ -3,13 +3,14 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import * as schema from '@/services/db/schema';
 
-import {
+import { CURRENT_SHARE_VERSION } from './types';
+
+import type {
   ShareFileData,
   ShareableRestaurant,
   ShareableDish,
@@ -18,8 +19,8 @@ import {
   ConflictResult,
   ConflictResolution,
   ImportResult,
-  CURRENT_SHARE_VERSION,
 } from './types';
+import type { drizzle } from 'drizzle-orm/expo-sqlite';
 
 type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -57,7 +58,9 @@ export async function parseShareFile(fileUri: string): Promise<ShareFileData | n
       localUri = copiedPath;
     }
 
-    const content = await FileSystem.readAsStringAsync(localUri, { encoding: FileSystem.EncodingType.UTF8 });
+    const content = await FileSystem.readAsStringAsync(localUri, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
 
     const data = JSON.parse(content) as ShareFileData;
 
@@ -78,36 +81,48 @@ export async function parseShareFile(fileUri: string): Promise<ShareFileData | n
 }
 
 // Find similar restaurants by name (case-insensitive)
-export async function findSimilarRestaurants(db: DrizzleDb, name: string): Promise<{ id: number; name: string }[]> {
+export async function findSimilarRestaurants(
+  db: DrizzleDb,
+  name: string,
+): Promise<{ id: number; name: string }[]> {
   try {
     const normalizedName = name.toLowerCase().trim();
-    const allRestaurants = await db.select({ id: schema.restaurants.id, name: schema.restaurants.name })
+    const allRestaurants = await db
+      .select({ id: schema.restaurants.id, name: schema.restaurants.name })
       .from(schema.restaurants)
       .where(eq(schema.restaurants.deleted, false));
-    
-    return allRestaurants.filter(r => r.name.toLowerCase().trim() === normalizedName);
+
+    return allRestaurants.filter((r) => r.name.toLowerCase().trim() === normalizedName);
   } catch {
     return [];
   }
 }
 
 // Find similar dishes by name (case-insensitive)
-export async function findSimilarDishes(db: DrizzleDb, name: string, _restaurantId?: number): Promise<{ id: number; name: string }[]> {
+export async function findSimilarDishes(
+  db: DrizzleDb,
+  name: string,
+  _restaurantId?: number,
+): Promise<{ id: number; name: string }[]> {
   try {
     const normalizedName = name.toLowerCase().trim();
-    let query = db.select({ id: schema.dishes.id, name: schema.dishes.name })
+    let query = db
+      .select({ id: schema.dishes.id, name: schema.dishes.name })
       .from(schema.dishes)
       .where(eq(schema.dishes.deleted, false));
-    
+
     const allDishes = await query;
-    return allDishes.filter(d => d.name.toLowerCase().trim() === normalizedName);
+    return allDishes.filter((d) => d.name.toLowerCase().trim() === normalizedName);
   } catch {
     return [];
   }
 }
 
 // Check for restaurant conflicts
-export async function checkRestaurantConflict(db: DrizzleDb, name: string): Promise<ConflictResult> {
+export async function checkRestaurantConflict(
+  db: DrizzleDb,
+  name: string,
+): Promise<ConflictResult> {
   const similar = await findSimilarRestaurants(db, name);
   if (similar.length > 0) {
     return { hasConflict: true, existingEntity: similar[0], incomingName: name };
@@ -119,11 +134,13 @@ export async function checkRestaurantConflict(db: DrizzleDb, name: string): Prom
 async function saveBase64Image(image: ShareableImage): Promise<string | null> {
   try {
     await FileSystem.makeDirectoryAsync(IMAGES_DIR, { intermediates: true });
-    
+
     const uniqueFilename = `${Date.now()}_${image.filename}`;
     const filePath = `${IMAGES_DIR}${uniqueFilename}`;
-    
-    await FileSystem.writeAsStringAsync(filePath, image.base64, { encoding: FileSystem.EncodingType.Base64 });
+
+    await FileSystem.writeAsStringAsync(filePath, image.base64, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
     return filePath;
   } catch {
     return null;
@@ -132,11 +149,10 @@ async function saveBase64Image(image: ShareableImage): Promise<string | null> {
 
 // Get or create tag
 async function getOrCreateTag(db: DrizzleDb, tag: ShareableTag): Promise<number> {
-  const existing = await db.select().from(schema.tags)
-    .where(eq(schema.tags.name, tag.name));
-  
+  const existing = await db.select().from(schema.tags).where(eq(schema.tags.name, tag.name));
+
   if (existing.length > 0) return existing[0].id;
-  
+
   const result = await db.insert(schema.tags).values({ name: tag.name, color: tag.color });
   return result.lastInsertRowId;
 }
@@ -145,7 +161,7 @@ async function getOrCreateTag(db: DrizzleDb, tag: ShareableTag): Promise<number>
 export async function importRestaurant(
   db: DrizzleDb,
   restaurant: ShareableRestaurant,
-  resolution?: ConflictResolution
+  resolution?: ConflictResolution,
 ): Promise<number | null> {
   try {
     // If using existing, return its ID
@@ -173,7 +189,9 @@ export async function importRestaurant(
     for (const image of restaurant.images) {
       const path = await saveBase64Image(image);
       if (path) {
-        await db.insert(schema.images).values({ path, restaurantId, uploadedAt: new Date().toISOString() });
+        await db
+          .insert(schema.images)
+          .values({ path, restaurantId, uploadedAt: new Date().toISOString() });
       }
     }
 
@@ -187,7 +205,7 @@ export async function importRestaurant(
 export async function importDish(
   db: DrizzleDb,
   dish: ShareableDish,
-  restaurantId: number
+  restaurantId: number,
 ): Promise<number | null> {
   try {
     const result = await db.insert(schema.dishes).values({
@@ -209,7 +227,9 @@ export async function importDish(
     for (const image of dish.images) {
       const path = await saveBase64Image(image);
       if (path) {
-        await db.insert(schema.images).values({ path, dishId, uploadedAt: new Date().toISOString() });
+        await db
+          .insert(schema.images)
+          .values({ path, dishId, uploadedAt: new Date().toISOString() });
       }
     }
 
@@ -226,7 +246,7 @@ export async function importVisit(
   comments: string | null,
   images: ShareableImage[],
   restaurantId: number,
-  dishIds: number[]
+  dishIds: number[],
 ): Promise<number | null> {
   try {
     const result = await db.insert(schema.visits).values({ visitedAt, comments, restaurantId });
@@ -241,7 +261,9 @@ export async function importVisit(
     for (const image of images) {
       const path = await saveBase64Image(image);
       if (path) {
-        await db.insert(schema.images).values({ path, visitId, uploadedAt: new Date().toISOString() });
+        await db
+          .insert(schema.images)
+          .values({ path, visitId, uploadedAt: new Date().toISOString() });
       }
     }
 
@@ -255,7 +277,7 @@ export async function importVisit(
 export async function importRestaurantFile(
   db: DrizzleDb,
   data: ShareFileData,
-  restaurantResolution?: ConflictResolution
+  restaurantResolution?: ConflictResolution,
 ): Promise<ImportResult> {
   if (!data.restaurant) {
     return { success: false, entityType: 'restaurant', error: 'No restaurant data found' };
@@ -266,14 +288,19 @@ export async function importRestaurantFile(
     return { success: false, entityType: 'restaurant', error: 'Failed to import restaurant' };
   }
 
-  return { success: true, entityType: 'restaurant', entityId: restaurantId, entityName: data.restaurant.name };
+  return {
+    success: true,
+    entityType: 'restaurant',
+    entityId: restaurantId,
+    entityName: data.restaurant.name,
+  };
 }
 
 // Full import workflow for dish type
 export async function importDishFile(
   db: DrizzleDb,
   data: ShareFileData,
-  restaurantResolution?: ConflictResolution
+  restaurantResolution?: ConflictResolution,
 ): Promise<ImportResult> {
   if (!data.dish) {
     return { success: false, entityType: 'dish', error: 'No dish data found' };
@@ -303,7 +330,7 @@ export async function importDishFile(
 export async function importVisitFile(
   db: DrizzleDb,
   data: ShareFileData,
-  restaurantResolution?: ConflictResolution
+  restaurantResolution?: ConflictResolution,
 ): Promise<ImportResult> {
   if (!data.visit) {
     return { success: false, entityType: 'visit', error: 'No visit data found' };
@@ -330,11 +357,22 @@ export async function importVisitFile(
     }
   }
 
-  const visitId = await importVisit(db, data.visit.visitedAt, data.visit.comments, data.visit.images, restaurantId, dishIds);
+  const visitId = await importVisit(
+    db,
+    data.visit.visitedAt,
+    data.visit.comments,
+    data.visit.images,
+    restaurantId,
+    dishIds,
+  );
   if (!visitId) {
     return { success: false, entityType: 'visit', error: 'Failed to import visit' };
   }
 
-  return { success: true, entityType: 'visit', entityId: visitId, entityName: data.visit.visitedAt };
+  return {
+    success: true,
+    entityType: 'visit',
+    entityId: visitId,
+    entityName: data.visit.visitedAt,
+  };
 }
-

@@ -70,7 +70,9 @@ export default function NotFoundScreen() {
 
   if (checking || isFileImport) {
     return (
-      <View className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}>
+      <View
+        className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}
+      >
         <ActivityIndicator size="large" color={isDarkMode ? '#7A9455' : '#93AE72'} />
         <Text className={`mt-4 text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
           Procesando...
@@ -80,12 +82,16 @@ export default function NotFoundScreen() {
   }
 
   return (
-    <View className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}>
+    <View
+      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}
+    >
       <Ionicons name="alert-circle-outline" size={64} color={isDarkMode ? '#888' : '#666'} />
       <Text className={`mt-4 text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
         Página no encontrada
       </Text>
-      <Text className={`mt-2 text-base text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+      <Text
+        className={`mt-2 text-base text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
+      >
         La página que buscas no existe.
       </Text>
       <TouchableOpacity
@@ -97,4 +103,3 @@ export default function NotFoundScreen() {
     </View>
   );
 }
-

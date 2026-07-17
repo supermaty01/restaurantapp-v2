@@ -1,6 +1,6 @@
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
-import { VisitListDTO } from '../types/visit-dto';
+import type { VisitListDTO } from '../types/visit-dto';
 
 export interface VisitListRow {
   visitId: number | null;
@@ -27,11 +27,11 @@ export function mapVisitListRows(rows: VisitListRow[]): VisitListDTO[] {
         id: row.visitId,
         visited_at: row.visitedAt ?? '',
         comments: row.visitComments ?? null,
-        deleted: row.visitDeleted ?? undefined,
+        deleted: row.visitDeleted ?? false,
         restaurant: {
           id: row.restaurantId ?? 0,
           name: row.restaurantName ?? '',
-          deleted: row.restaurantDeleted ?? undefined,
+          deleted: row.restaurantDeleted ?? false,
         },
         images: [],
       };

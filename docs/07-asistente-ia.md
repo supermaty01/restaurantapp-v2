@@ -47,11 +47,11 @@ Ventaja añadida: el binding `AI` del Worker autentica solo — no hay API keys 
 
 Roles:
 
-| Función | Modelo (Workers AI) | Notas |
-|---|---|---|
+| Función                 | Modelo (Workers AI)                                                                           | Notas                                                                                                            |
+| ----------------------- | --------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | Chat + function calling | Modelo instruct con soporte de tools del catálogo (familia Llama 3.x/4 o equivalente vigente) | Selección concreta en fase 7a: el catálogo cambia, se elige el mejor **con function calling** disponible ese día |
-| Embeddings | Modelo de embeddings multilingüe del catálogo (familia BGE o equivalente) | Debe rendir bien en **español**: los datos están en español |
-| Speech-to-text | Whisper | Solo como fallback del STT nativo |
+| Embeddings              | Modelo de embeddings multilingüe del catálogo (familia BGE o equivalente)                     | Debe rendir bien en **español**: los datos están en español                                                      |
+| Speech-to-text          | Whisper                                                                                       | Solo como fallback del STT nativo                                                                                |
 
 Uso del **AI Gateway** (no es opcional, es parte del diseño de coste):
 
@@ -109,13 +109,13 @@ Principios:
 
 ## Requisitos que impone a fases anteriores (por esto se planifica ya)
 
-| Requisito | Fase donde se construye |
-|---|---|
-| `people` + `visit_participants` (para "con Caro") | Fase 1 (esquema) y 5 (social) |
-| `change_log` reutilizable como cola de indexación | Fase 1/3 (sync) |
-| Repositorios de consulta parametrizados y testeados (base de las tools) | Fase 1 (refactor) |
-| Worker con auth + cuotas + AI Gateway | Fase 4 |
-| Formularios invocables con prefill vía parámetros | Fase 6 (UI) |
+| Requisito                                                               | Fase donde se construye       |
+| ----------------------------------------------------------------------- | ----------------------------- |
+| `people` + `visit_participants` (para "con Caro")                       | Fase 1 (esquema) y 5 (social) |
+| `change_log` reutilizable como cola de indexación                       | Fase 1/3 (sync)               |
+| Repositorios de consulta parametrizados y testeados (base de las tools) | Fase 1 (refactor)             |
+| Worker con auth + cuotas + AI Gateway                                   | Fase 4                        |
+| Formularios invocables con prefill vía parámetros                       | Fase 6 (UI)                   |
 
 **Abierto:** ¿asistente en modo anónimo? Requiere cuota sin identidad (riesgo de abuso del proxy). Propuesta inicial: exigir cuenta.
 **Abierto:** modelo concreto de chat y de embeddings — se decide en 7a con el set de evaluación y el catálogo vigente.

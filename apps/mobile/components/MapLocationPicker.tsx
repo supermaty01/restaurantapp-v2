@@ -10,20 +10,15 @@ import {
   Linking,
   TextInput,
 } from 'react-native';
-import MapView, {
-  Marker,
-  PROVIDER_GOOGLE,
-  MapPressEvent,
-  Region,
-} from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useTheme } from '@/lib/context/ThemeContext';
 
+import type { MapPressEvent, Region } from 'react-native-maps';
+
 interface MapLocationPickerProps {
   location: { latitude: number; longitude: number } | null;
-  onLocationChange?: (
-    location: { latitude: number; longitude: number } | null
-  ) => void;
+  onLocationChange?: (location: { latitude: number; longitude: number } | null) => void;
   editable?: boolean;
 }
 
@@ -36,10 +31,7 @@ const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
 const openAppSettings = () => {
   Linking.openSettings().catch(() => {
-    Alert.alert(
-      'Error',
-      'No se pudo abrir la configuración de la aplicación.'
-    );
+    Alert.alert('Error', 'No se pudo abrir la configuración de la aplicación.');
   });
 };
 
@@ -159,69 +151,65 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     }
   };
 
-  const searchPlaces = useCallback(async (input: string) => {
-    const trimmed = input.trim();
+  const searchPlaces = useCallback(
+    async (input: string) => {
+      const trimmed = input.trim();
 
-    if (!trimmed || trimmed.length < 2) {
-      setSuggestions([]);
-      return;
-    }
+      if (!trimmed || trimmed.length < 2) {
+        setSuggestions([]);
+        return;
+      }
 
-    if (!GOOGLE_PLACES_API_KEY) {
-      console.warn('Missing EXPO_PUBLIC_GOOGLE_PLACES_API_KEY');
-      setSuggestions([]);
-      return;
-    }
+      if (!GOOGLE_PLACES_API_KEY) {
+        console.warn('Missing EXPO_PUBLIC_GOOGLE_PLACES_API_KEY');
+        setSuggestions([]);
+        return;
+      }
 
-    setLoadingSuggestions(true);
+      setLoadingSuggestions(true);
 
-    try {
-      const biasLocation =
-        searchBiasLocation ||
-        selectedLocation || {
-          latitude: mapRegion.latitude,
-          longitude: mapRegion.longitude,
-        };
+      try {
+        const biasLocation = searchBiasLocation ||
+          selectedLocation || {
+            latitude: mapRegion.latitude,
+            longitude: mapRegion.longitude,
+          };
 
-      const params = new URLSearchParams({
-        input: trimmed,
-        key: GOOGLE_PLACES_API_KEY,
-        language: 'es',
-        location: `${biasLocation.latitude},${biasLocation.longitude}`,
-        radius: '50000',
-      });
+        const params = new URLSearchParams({
+          input: trimmed,
+          key: GOOGLE_PLACES_API_KEY,
+          language: 'es',
+          location: `${biasLocation.latitude},${biasLocation.longitude}`,
+          radius: '50000',
+        });
 
-      const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params.toString()}`;
+        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params.toString()}`;
 
-      const response = await fetch(url);
-      const data = await response.json();
+        const response = await fetch(url);
+        const data = await response.json();
 
-      if (data.status === 'OK') {
-        const mappedSuggestions: PlaceSuggestion[] = data.predictions.map(
-          (item: any) => ({
+        if (data.status === 'OK') {
+          const mappedSuggestions: PlaceSuggestion[] = data.predictions.map((item: any) => ({
             place_id: item.place_id,
             description: item.description,
-          })
-        );
+          }));
 
-        setSuggestions(mappedSuggestions.slice(0, 5));
-      } else if (data.status === 'ZERO_RESULTS') {
+          setSuggestions(mappedSuggestions.slice(0, 5));
+        } else if (data.status === 'ZERO_RESULTS') {
+          setSuggestions([]);
+        } else {
+          console.warn('Places autocomplete error:', data.status, data.error_message);
+          setSuggestions([]);
+        }
+      } catch (error) {
+        console.warn('Error searching places:', error);
         setSuggestions([]);
-      } else {
-        console.warn(
-          'Places autocomplete error:',
-          data.status,
-          data.error_message
-        );
-        setSuggestions([]);
+      } finally {
+        setLoadingSuggestions(false);
       }
-    } catch (error) {
-      console.warn('Error searching places:', error);
-      setSuggestions([]);
-    } finally {
-      setLoadingSuggestions(false);
-    }
-  }, [mapRegion, searchBiasLocation, selectedLocation]);
+    },
+    [mapRegion, searchBiasLocation, selectedLocation],
+  );
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -319,7 +307,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           [
             { text: 'Cancelar', style: 'cancel' },
             { text: 'Abrir Configuración', onPress: openAppSettings },
-          ]
+          ],
         );
         return;
       }
@@ -376,12 +364,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
               minHeight: 48,
             }}
           >
-            <Ionicons
-              name="search"
-              size={18}
-              color={colors.mutedText}
-              style={{ marginRight: 8 }}
-            />
+            <Ionicons name="search" size={18} color={colors.mutedText} style={{ marginRight: 8 }} />
 
             <TextInput
               value={searchQuery}
@@ -403,11 +386,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 }}
                 hitSlop={10}
               >
-                <Ionicons
-                  name="close-circle"
-                  size={18}
-                  color={colors.mutedText}
-                />
+                <Ionicons name="close-circle" size={18} color={colors.mutedText} />
               </TouchableOpacity>
             )}
           </View>
@@ -419,10 +398,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 alignItems: 'center',
               }}
             >
-              <ActivityIndicator
-                size="small"
-                color={isDarkMode ? '#fff' : '#000'}
-              />
+              <ActivityIndicator size="small" color={isDarkMode ? '#fff' : '#000'} />
             </View>
           )}
 
@@ -443,9 +419,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 return (
                   <TouchableOpacity
                     key={item.place_id}
-                    onPress={() =>
-                      selectPlace(item.place_id, item.description)
-                    }
+                    onPress={() => selectPlace(item.place_id, item.description)}
                     style={{
                       paddingHorizontal: 14,
                       paddingVertical: 12,
@@ -494,10 +468,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
       <View style={{ paddingTop: 12, alignItems: 'center' }}>
         {loadingAddress ? (
-          <ActivityIndicator
-            size="small"
-            color={isDarkMode ? '#fff' : '#000'}
-          />
+          <ActivityIndicator size="small" color={isDarkMode ? '#fff' : '#000'} />
         ) : (
           <Text
             style={{
@@ -528,15 +499,8 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
               <ActivityIndicator size="small" color="#fff" />
             ) : (
               <>
-                <Ionicons
-                  name="location"
-                  size={18}
-                  color="white"
-                  style={{ marginRight: 6 }}
-                />
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>
-                  Usar mi ubicación
-                </Text>
+                <Ionicons name="location" size={18} color="white" style={{ marginRight: 6 }} />
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>Usar mi ubicación</Text>
               </>
             )}
           </TouchableOpacity>
@@ -553,9 +517,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
             className="bg-destructive dark:bg-dark-destructive"
             onPress={handleClearSelection}
           >
-            <Text style={{ color: 'white', fontWeight: '600' }}>
-              Borrar selección
-            </Text>
+            <Text style={{ color: 'white', fontWeight: '600' }}>Borrar selección</Text>
           </TouchableOpacity>
         )}
       </View>

@@ -30,13 +30,14 @@ export const useVisitList = (includeDeleted: boolean = false) => {
     query.where(eq(schema.visits.deleted, false));
   }
 
-  query.leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
-      .leftJoin(schema.images, eq(schema.visits.id, schema.images.visitId));
+  query
+    .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
+    .leftJoin(schema.images, eq(schema.visits.id, schema.images.visitId));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
     ['visits', 'restaurants', 'images'],
-    [includeDeleted]
+    [includeDeleted],
   );
 
   return useMemo(() => mapVisitListRows(rawData ?? []), [rawData]);

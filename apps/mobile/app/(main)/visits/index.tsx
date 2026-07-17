@@ -2,13 +2,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { FlatList, Text, TouchableOpacity, View, useWindowDimensions, TextInput } from 'react-native';
+import {
+  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
+  useWindowDimensions,
+  TextInput,
+} from 'react-native';
 
-import FilterSortModal, { FilterSortOptions, defaultFilterSortOptions } from '@/components/FilterSortModal';
+import type { FilterSortOptions } from '@/components/FilterSortModal';
+import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
 import GridPeekItem from '@/components/GridPeekItem';
-import VisitItem from '@/features/visits/components/VisitItem'
+import VisitItem from '@/features/visits/components/VisitItem';
 import { useVisitList } from '@/features/visits/hooks/useVisitList';
-import { VisitListDTO } from '@/features/visits/types/visit-dto';
+import type { VisitListDTO } from '@/features/visits/types/visit-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
@@ -71,7 +79,8 @@ export default function VisitsScreen() {
     return Array.from(uniqueRestaurants.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [visits]);
 
-  const hasActiveFilters = filterOptions.selectedRestaurantId !== null ||
+  const hasActiveFilters =
+    filterOptions.selectedRestaurantId !== null ||
     filterOptions.sortField !== 'date' ||
     filterOptions.sortOrder !== 'desc';
 
@@ -84,9 +93,7 @@ export default function VisitsScreen() {
     }
 
     if (filterOptions.selectedRestaurantId !== null) {
-      result = result.filter(
-        (visit) => visit.restaurant.id === filterOptions.selectedRestaurantId
-      );
+      result = result.filter((visit) => visit.restaurant.id === filterOptions.selectedRestaurantId);
     }
 
     result.sort((a, b) => {
@@ -102,64 +109,80 @@ export default function VisitsScreen() {
     return result;
   }, [visits, filterOptions, searchQuery]);
 
-  const navigateToVisit = useCallback((id: number) => {
-    router.push({ pathname: '/visits/[id]/view', params: { id } });
-  }, [router]);
+  const navigateToVisit = useCallback(
+    (id: number) => {
+      router.push({ pathname: '/visits/[id]/view', params: { id } });
+    },
+    [router],
+  );
 
-  const renderListItem = useCallback(({ item }: { item: VisitListDTO }) => {
-    const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
-    const previewData = buildPreviewData(item);
-    const formattedVisitDate = formatVisitDate(item.visited_at);
+  const renderListItem = useCallback(
+    ({ item }: { item: VisitListDTO }) => {
+      const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
+      const previewData = buildPreviewData(item);
+      const formattedVisitDate = formatVisitDate(item.visited_at);
 
-    return (
-      <VisitItem
-        imageUrl={imageUrl}
-        date={formattedVisitDate}
-        title={item.restaurant.name}
-        comments={item.comments}
-        deleted={item.deleted}
-        restaurantDeleted={item.restaurant.deleted}
-        previewData={previewData}
-        onPress={() => navigateToVisit(item.id)}
-      />
-    );
-  }, [buildPreviewData, navigateToVisit]);
+      return (
+        <VisitItem
+          imageUrl={imageUrl}
+          date={formattedVisitDate}
+          title={item.restaurant.name}
+          comments={item.comments}
+          deleted={item.deleted}
+          restaurantDeleted={item.restaurant.deleted}
+          previewData={previewData}
+          onPress={() => navigateToVisit(item.id)}
+        />
+      );
+    },
+    [buildPreviewData, navigateToVisit],
+  );
 
-  const renderGridItem = useCallback(({ item }: { item: VisitListDTO }) => {
-    const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
-    const previewData = buildPreviewData(item);
-    const formattedVisitDate = formatVisitDate(item.visited_at);
+  const renderGridItem = useCallback(
+    ({ item }: { item: VisitListDTO }) => {
+      const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
+      const previewData = buildPreviewData(item);
+      const formattedVisitDate = formatVisitDate(item.visited_at);
 
-    return (
-      <GridPeekItem
-        style={{ flex: 1 / numColumns }}
-        previewData={previewData}
-        onPress={() => navigateToVisit(item.id)}
-      >
-        {imageUrl ? (
-          <Image
-            source={imageUrl}
-            style={{ width: '100%', height: 100 }}
-            contentFit="cover"
-            recyclingKey={`grid-visit-${item.id}`}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View style={{ width: '100%', height: 100 }} className="bg-gray-200 dark:bg-gray-700" />
-        )}
-        <View className="p-2">
-          <Text className="text-sm font-bold text-gray-800 dark:text-gray-200" numberOfLines={1}>{item.restaurant.name}</Text>
-          <Text className="text-xs text-gray-500 dark:text-gray-400">{formattedVisitDate}</Text>
-        </View>
-      </GridPeekItem>
-    );
-  }, [buildPreviewData, navigateToVisit, numColumns]);
+      return (
+        <GridPeekItem
+          style={{ flex: 1 / numColumns }}
+          previewData={previewData}
+          onPress={() => navigateToVisit(item.id)}
+        >
+          {imageUrl ? (
+            <Image
+              source={imageUrl}
+              style={{ width: '100%', height: 100 }}
+              contentFit="cover"
+              recyclingKey={`grid-visit-${item.id}`}
+              cachePolicy="memory-disk"
+            />
+          ) : (
+            <View style={{ width: '100%', height: 100 }} className="bg-gray-200 dark:bg-gray-700" />
+          )}
+          <View className="p-2">
+            <Text className="text-sm font-bold text-gray-800 dark:text-gray-200" numberOfLines={1}>
+              {item.restaurant.name}
+            </Text>
+            <Text className="text-xs text-gray-500 dark:text-gray-400">{formattedVisitDate}</Text>
+          </View>
+        </GridPeekItem>
+      );
+    },
+    [buildPreviewData, navigateToVisit, numColumns],
+  );
 
-  const listEmptyComponent = useMemo(() => (
-    <View className="flex-1 justify-center items-center mt-10">
-      <Text className="text-base text-gray-800 dark:text-gray-200">No se encontraron visitas.</Text>
-    </View>
-  ), []);
+  const listEmptyComponent = useMemo(
+    () => (
+      <View className="flex-1 justify-center items-center mt-10">
+        <Text className="text-base text-gray-800 dark:text-gray-200">
+          No se encontraron visitas.
+        </Text>
+      </View>
+    ),
+    [],
+  );
 
   return (
     <View className="flex-1 bg-muted dark:bg-dark-muted px-4 pt-2 relative">
@@ -178,7 +201,15 @@ export default function VisitsScreen() {
               <Ionicons
                 name="filter"
                 size={24}
-                color={hasActiveFilters ? (isDarkMode ? '#7A9455' : '#93AE72') : (isDarkMode ? '#ccc' : '#666')}
+                color={
+                  hasActiveFilters
+                    ? isDarkMode
+                      ? '#7A9455'
+                      : '#93AE72'
+                    : isDarkMode
+                      ? '#ccc'
+                      : '#666'
+                }
               />
               {hasActiveFilters && (
                 <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary dark:bg-dark-primary rounded-full" />

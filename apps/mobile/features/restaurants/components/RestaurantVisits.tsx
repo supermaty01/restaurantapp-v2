@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import React from 'react';
-import { Image } from 'expo-image';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
-import { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
+import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 import { useVisitsByRestaurant } from '@/features/visits/hooks/useVisitsByRestaurant';
 import { formatVisitDate } from '@/lib/helpers/date';
 
@@ -49,14 +49,21 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
                   <Text className="text-sm text-gray-500 dark:text-gray-400">{item.comments}</Text>
                 )}
               </View>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" className="dark:text-gray-400" />
+              <Ionicons
+                name="chevron-forward-outline"
+                size={20}
+                color="#999"
+                className="dark:text-gray-400"
+              />
             </TouchableOpacity>
           );
         }}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-base text-gray-800 dark:text-gray-200">No se encontraron visitas.</Text>
+            <Text className="text-base text-gray-800 dark:text-gray-200">
+              No se encontraron visitas.
+            </Text>
           </View>
         }
       />

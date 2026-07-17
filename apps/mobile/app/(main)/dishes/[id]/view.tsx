@@ -16,7 +16,6 @@ import * as schema from '@/services/db/schema';
 import { exportDish } from '@/services/share/exportService';
 
 export default function DishDetailScreen() {
-
   const router = useRouter();
   const { id } = useGlobalSearchParams(); // Obtiene el id desde la ruta
   const db = useSQLiteContext();
@@ -29,7 +28,7 @@ export default function DishDetailScreen() {
     router.push({
       pathname: '/dishes/[id]/edit',
       params: { id: id?.toString() },
-    })
+    });
   }
 
   async function handleShare() {
@@ -78,7 +77,7 @@ export default function DishDetailScreen() {
             },
           },
         ],
-        { cancelable: true }
+        { cancelable: true },
       );
     } catch {
       Alert.alert('Error', 'No se pudo verificar las referencias del plato');
@@ -100,9 +99,7 @@ export default function DishDetailScreen() {
       {/* Nombre y botones Editar/Eliminar */}
       <View className="flex-row items-center justify-between px-4 mt-4">
         <View className="flex-1 mr-2">
-          <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-            {dish.name}
-          </Text>
+          <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200">{dish.name}</Text>
         </View>
         <View className="flex-row">
           <TouchableOpacity
@@ -140,19 +137,25 @@ export default function DishDetailScreen() {
       {dish.restaurant.deleted && (
         <View className="mt-3 mx-4 bg-orange-100 px-2 py-2 rounded flex-row gap-2 border-orange-600 border-[1px]">
           <Ionicons className="flex" name="warning-outline" size={16} color="#ea580c" />
-          <Text className="flex text-orange-600 text-sm">El restaurante de este plato ha sido eliminado</Text>
+          <Text className="flex text-orange-600 text-sm">
+            El restaurante de este plato ha sido eliminado
+          </Text>
         </View>
       )}
 
       <View className="bg-card dark:bg-dark-card my-4 mx-4 p-4 rounded-xl">
         <View className="flex-row mb-4">
           <View className="flex-1 items-center">
-            <Text className="text-base font-bold text-primary dark:text-dark-primary">Detalles</Text>
+            <Text className="text-base font-bold text-primary dark:text-dark-primary">
+              Detalles
+            </Text>
             <View className="w-full h-1 bg-primary dark:bg-dark-primary mt-1 " />
           </View>
         </View>
 
-        <Text className="text-base font-bold text-gray-400 dark:text-gray-300 mb-2">Restaurante visitado</Text>
+        <Text className="text-base font-bold text-gray-400 dark:text-gray-300 mb-2">
+          Restaurante visitado
+        </Text>
         <TouchableOpacity
           className="flex-row items-center py-3 border-b border-gray-200 dark:border-gray-700 mb-8"
           onPress={() =>
@@ -160,28 +163,29 @@ export default function DishDetailScreen() {
           }
         >
           <View className="flex-1">
-            <Text className="text-base font-bold text-gray-800 dark:text-gray-200">{dish.restaurant.name}</Text>
+            <Text className="text-base font-bold text-gray-800 dark:text-gray-200">
+              {dish.restaurant.name}
+            </Text>
           </View>
-          <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? "#777" : "#999"} />
+          <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? '#777' : '#999'} />
         </TouchableOpacity>
 
         <Text className="text-base font-bold text-gray-400 dark:text-gray-300 mb-2">Precio</Text>
         {dish.price ? (
           <Text className="text-xl font-bold text-primary dark:text-dark-primary mb-4">
-            {new Intl.NumberFormat("es-CO", {
-              style: "currency",
-              currency: "COP",
+            {new Intl.NumberFormat('es-CO', {
+              style: 'currency',
+              currency: 'COP',
               minimumFractionDigits: 0,
             }).format(dish.price)}
           </Text>
-
         ) : (
-          <Text className="text-base italic text-gray-500 dark:text-gray-400 mb-4">
-            Sin precio
-          </Text>
+          <Text className="text-base italic text-gray-500 dark:text-gray-400 mb-4">Sin precio</Text>
         )}
 
-        <Text className="text-base font-bold text-gray-400 dark:text-gray-300 mb-2">Comentarios</Text>
+        <Text className="text-base font-bold text-gray-400 dark:text-gray-300 mb-2">
+          Comentarios
+        </Text>
         {dish.comments ? (
           <Text className="text-base text-gray-800 dark:text-gray-200 mb-4">{dish.comments}</Text>
         ) : (
@@ -203,16 +207,13 @@ export default function DishDetailScreen() {
           </Text>
         )}
 
-        <Text className="text-base font-bold text-gray-400 dark:text-gray-300 my-2">Calificación</Text>
+        <Text className="text-base font-bold text-gray-400 dark:text-gray-300 my-2">
+          Calificación
+        </Text>
         <View className="flex-row">
-          <RatingStars
-            value={dish.rating}
-            readOnly
-          />
+          <RatingStars value={dish.rating} readOnly />
         </View>
-
-
       </View>
-    </ScrollView >
+    </ScrollView>
   );
 }

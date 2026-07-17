@@ -7,7 +7,10 @@ import * as schema from '@/services/db/schema';
 
 import { mapDishListRows } from '../mappers/mapDishListRows';
 
-export const useDishesByRestaurant = (restaurantId: number | undefined, includeDeleted: boolean = false) => {
+export const useDishesByRestaurant = (
+  restaurantId: number | undefined,
+  includeDeleted: boolean = false,
+) => {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
 
@@ -33,10 +36,9 @@ export const useDishesByRestaurant = (restaurantId: number | undefined, includeD
       query = query.where(eq(schema.dishes.restaurantId, restaurantId));
     } else {
       // Filtrar por restaurantId y no eliminados
-      query = query.where(and(
-        eq(schema.dishes.restaurantId, restaurantId),
-        eq(schema.dishes.deleted, false)
-      ));
+      query = query.where(
+        and(eq(schema.dishes.restaurantId, restaurantId), eq(schema.dishes.deleted, false)),
+      );
     }
   } else {
     // Si no hay restaurantId, devolver una consulta vacía
@@ -50,8 +52,8 @@ export const useDishesByRestaurant = (restaurantId: number | undefined, includeD
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ["dishes", "dishTags", "tags", "images"],
-    [restaurantId, includeDeleted]
+    ['dishes', 'dishTags', 'tags', 'images'],
+    [restaurantId, includeDeleted],
   );
 
   return mapDishListRows(rawData ?? []);

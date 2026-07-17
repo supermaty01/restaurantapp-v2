@@ -78,7 +78,7 @@ Documento: [06](06-social.md).
 
 Documento: [08](08-ui.md). No es estrictamente secuencial:
 
-- **6a — Sistema de diseño** (tokens + componentes, tomando el proyecto de Claude Design como *referencia visual*, no como estructura): debe completarse **antes de la fase 5**, para que perfil/feed/asistente nazcan con el diseño nuevo.
+- **6a — Sistema de diseño** (tokens + componentes, tomando el proyecto de Claude Design como _referencia visual_, no como estructura): debe completarse **antes de la fase 5**, para que perfil/feed/asistente nazcan con el diseño nuevo.
 - **6b — Re-arquitectura de navegación**: la v2 tiene superficies que el rediseño no contemplaba (feed, perfil, amigos, asistente). La estructura de navegación se rediseña de cero.
 - **6c — Re-skin de pantallas v1**: en paralelo desde la fase 4, por grupos de pantallas.
 - Prefill por parámetros en formularios (prerrequisito del asistente).

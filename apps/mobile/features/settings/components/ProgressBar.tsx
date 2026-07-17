@@ -11,7 +11,7 @@ const ProgressBar: React.FC<ProgressBarProps> = ({ progress, isDarkMode }) => {
     <View className="mt-4">
       <View className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
         <View
-          className={isDarkMode ? "h-full bg-dark-primary" : "h-full bg-primary"}
+          className={isDarkMode ? 'h-full bg-dark-primary' : 'h-full bg-primary'}
           style={{ width: `${progress}%` }}
         />
       </View>

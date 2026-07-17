@@ -38,8 +38,8 @@ describe('mapDishListRows', () => {
     ]);
 
     expect(dishes).toHaveLength(1);
-    expect(dishes[0].tags).toHaveLength(1);
-    expect(dishes[0].images).toHaveLength(1);
+    expect(dishes[0]!.tags).toHaveLength(1);
+    expect(dishes[0]!.images).toHaveLength(1);
     expect(dishes[0].images[0].uri).toBe('file:///documents/images/ramen.jpg');
   });
 });

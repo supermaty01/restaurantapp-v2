@@ -4,21 +4,23 @@ import { eq } from 'drizzle-orm/sql';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useEffect, useState } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 
 import FormDatePicker from '@/components/FormDatePicker';
 import FormInput from '@/components/FormInput';
 import DishPicker from '@/features/dishes/components/DishPicker';
-import { DishListDTO } from '@/features/dishes/types/dish-dto';
-import ImagesUploader, { ImageItem } from '@/features/images/components/ImagesUploader';
+import type { DishListDTO } from '@/features/dishes/types/dish-dto';
+import type { ImageItem } from '@/features/images/components/ImagesUploader';
+import ImagesUploader from '@/features/images/components/ImagesUploader';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
-import { VisitFormData, visitSchema } from '@/features/visits/schemas/visit-schema';
+import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
+import { visitSchema } from '@/features/visits/schemas/visit-schema';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import * as schema from '@/services/db/schema';
 
-
+import type { SubmitHandler } from 'react-hook-form';
 
 export default function VisitEditScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
@@ -49,27 +51,29 @@ export default function VisitEditScreen() {
     if (visit?.id) {
       reset({
         visited_at: visit.visited_at,
-        comments: visit.comments || "",
+        comments: visit.comments || '',
         restaurantId: visit.restaurant.id,
-        dishes: visit.dishes.map(dish => dish.id),
+        dishes: visit.dishes.map((dish) => dish.id),
       });
 
       setSelectedImages(visit.images);
-      setSelectedDishes(visit.dishes.map(dish => ({
-        id: dish.id,
-        name: dish.name,
-        comments: null,
-        rating: null,
-        tags: [],
-        images: [],
-      })));
+      setSelectedDishes(
+        visit.dishes.map((dish) => ({
+          id: dish.id,
+          name: dish.name,
+          comments: null,
+          rating: null,
+          tags: [],
+          images: [],
+        })),
+      );
     }
   }, [visit, reset]);
 
   useEffect(() => {
-    if (restaurantId && visit && (restaurantId !== visit?.restaurant.id)) {
+    if (restaurantId && visit && restaurantId !== visit?.restaurant.id) {
       setSelectedDishes([]);
-      setValue("dishes", []);
+      setValue('dishes', []);
     }
   }, [restaurantId, setValue, visit]);
 
@@ -82,12 +86,20 @@ export default function VisitEditScreen() {
       };
 
       // Actualizar la visita
-      await drizzleDb.update(schema.visits).set(payload).where(eq(schema.visits.id, Number(id)));
+      await drizzleDb
+        .update(schema.visits)
+        .set(payload)
+        .where(eq(schema.visits.id, Number(id)));
 
       // Manejar imágenes nuevas
       const newImages = selectedImages.filter((image) => !image.id);
       if (newImages.length > 0) {
-        await uploadImages(drizzleDb, newImages.map((img) => img.uri), "VISIT", Number(id));
+        await uploadImages(
+          drizzleDb,
+          newImages.map((img) => img.uri),
+          'VISIT',
+          Number(id),
+        );
       }
 
       // Manejar imágenes eliminadas
@@ -95,7 +107,7 @@ export default function VisitEditScreen() {
         await Promise.all(
           removedImages.map((imageId) => {
             return drizzleDb.delete(schema.images).where(eq(schema.images.id, imageId));
-          })
+          }),
         );
       }
 
@@ -111,7 +123,7 @@ export default function VisitEditScreen() {
               visitId: Number(id),
               dishId: typeof dishId === 'string' ? parseInt(dishId) : dishId,
             });
-          })
+          }),
         );
       }
 
@@ -128,7 +140,9 @@ export default function VisitEditScreen() {
 
   return (
     <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4">
-      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Editar visita</Text>
+      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">
+        Editar visita
+      </Text>
 
       <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
         <FormDatePicker control={control} name="visited_at" label="Fecha" />
@@ -165,9 +179,7 @@ export default function VisitEditScreen() {
           isEdit
           images={selectedImages}
           onChangeImages={setSelectedImages}
-          onRemoveExistingImage={(imageId) =>
-            setRemovedImages((prev) => [...prev, imageId])
-          }
+          onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
         />
 
         <TouchableOpacity

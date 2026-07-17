@@ -1,13 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import clsx from 'clsx';
-import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList } from 'react-native';
 
 import Tag from '@/features/tags/components/Tag';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import * as schema from '@/services/db/schema';
 
 import CreateTagModal from './CreateTagModal';
@@ -61,7 +60,9 @@ export default function TagSelectorModal({
     <Modal visible={visible} transparent onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-center items-center">
         <View className="bg-white dark:bg-dark-card w-10/12 rounded-md p-4 max-h-[60%]">
-          <Text className="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">Seleccionar Etiquetas</Text>
+          <Text className="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">
+            Seleccionar Etiquetas
+          </Text>
           <FlatList
             data={tags}
             keyExtractor={(item) => item.id.toString()}
@@ -73,7 +74,12 @@ export default function TagSelectorModal({
                   onPress={() => handleToggle(item)}
                 >
                   <View
-                    className={clsx("size-6 mr-2 rounded-md", isSelected ? 'bg-primary dark:bg-dark-primary' : 'bg-gray-300 dark:bg-gray-700')}
+                    className={clsx(
+                      'size-6 mr-2 rounded-md',
+                      isSelected
+                        ? 'bg-primary dark:bg-dark-primary'
+                        : 'bg-gray-300 dark:bg-gray-700',
+                    )}
                   >
                     {isSelected && <Ionicons name="checkmark" size={20} />}
                   </View>
@@ -83,7 +89,9 @@ export default function TagSelectorModal({
             }}
             ListEmptyComponent={
               <View className="flex-1 justify-center items-center mt-10">
-                <Text className="text-base text-gray-800 dark:text-gray-200">No se encontraron etiquetas.</Text>
+                <Text className="text-base text-gray-800 dark:text-gray-200">
+                  No se encontraron etiquetas.
+                </Text>
               </View>
             }
           />

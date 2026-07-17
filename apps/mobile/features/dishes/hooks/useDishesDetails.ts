@@ -5,7 +5,9 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
 import * as schema from '@/services/db/schema';
 
-import { DishListRow, mapDishListRows } from '../mappers/mapDishListRows';
+import { mapDishListRows } from '../mappers/mapDishListRows';
+
+import type { DishListRow } from '../mappers/mapDishListRows';
 
 export const useDishesDetails = (dishIds: number[]) => {
   const db = useSQLiteContext();
@@ -31,8 +33,8 @@ export const useDishesDetails = (dishIds: number[]) => {
           .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
           .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId))
       : drizzleDb.select().from(schema.dishes).where(eq(schema.dishes.id, -1)), // Query vacía si no hay dishIds
-    ["dishes", "dishTags", "tags", "images"],
-    [dishIds.join(",")]
+    ['dishes', 'dishTags', 'tags', 'images'],
+    [dishIds.join(',')],
   );
 
   return mapDishListRows((rawData ?? []) as DishListRow[]);

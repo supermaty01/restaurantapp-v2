@@ -5,21 +5,25 @@ import { and, eq } from 'drizzle-orm/sql';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState, useEffect } from 'react';
-import { useForm, SubmitHandler } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
-import { DishFormData, dishSchema } from '@/features/dishes/schemas/dish-schema';
-import ImagesUploader, { ImageItem } from '@/features/images/components/ImagesUploader';
+import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
+import { dishSchema } from '@/features/dishes/schemas/dish-schema';
+import type { ImageItem } from '@/features/images/components/ImagesUploader';
+import ImagesUploader from '@/features/images/components/ImagesUploader';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
-import { TagDTO } from '@/features/tags/types/tag-dto';
+import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import * as schema from '@/services/db/schema';
+
+import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishEditScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
@@ -58,7 +62,7 @@ export default function DishEditScreen() {
       reset({
         name: dish.name,
         restaurantId: dish.restaurant.id,
-        comments: dish.comments || "",
+        comments: dish.comments || '',
         rating: dish.rating !== null ? dish.rating : undefined,
         price: dish.price !== null ? dish.price : undefined,
       });
@@ -73,18 +77,26 @@ export default function DishEditScreen() {
       const payload = {
         name: data.name.trim(),
         restaurantId: data.restaurantId,
-        comments: data.comments?.trim() || "",
+        comments: data.comments?.trim() || '',
         price: data.price || null,
         rating: data.rating || null,
       };
 
       // Update dish record
-      await drizzleDb.update(schema.dishes).set(payload).where(eq(schema.dishes.id, Number(id)));
+      await drizzleDb
+        .update(schema.dishes)
+        .set(payload)
+        .where(eq(schema.dishes.id, Number(id)));
 
       // Handle new images upload
       const newImages = selectedImages.filter((image) => !image.id);
       if (newImages.length > 0) {
-        await uploadImages(drizzleDb, newImages.map((img) => img.uri), "DISH", Number(id));
+        await uploadImages(
+          drizzleDb,
+          newImages.map((img) => img.uri),
+          'DISH',
+          Number(id),
+        );
       }
 
       // Handle removed images
@@ -92,24 +104,28 @@ export default function DishEditScreen() {
         await Promise.all(
           removedImages.map((imageId) => {
             return drizzleDb.delete(schema.images).where(eq(schema.images.id, imageId));
-          })
+          }),
         );
       }
 
       // Handle tags
       // First, get current tags
       const currentTags = dish?.tags.map((tag) => tag.id) || [];
-      const removedTags = currentTags.filter((tagId) => !selectedTags.some((tag) => tag.id === tagId));
-      const addedTags = selectedTags.filter((tag) => !currentTags.includes(tag.id)).map((tag) => tag.id);
+      const removedTags = currentTags.filter(
+        (tagId) => !selectedTags.some((tag) => tag.id === tagId),
+      );
+      const addedTags = selectedTags
+        .filter((tag) => !currentTags.includes(tag.id))
+        .map((tag) => tag.id);
 
       // Remove tags that were unselected
       if (removedTags.length > 0) {
         await Promise.all(
           removedTags.map((tagId) => {
-            return drizzleDb.delete(schema.dishTags).where(
-              and(eq(schema.dishTags.dishId, Number(id)), eq(schema.dishTags.tagId, tagId))
-            );
-          })
+            return drizzleDb
+              .delete(schema.dishTags)
+              .where(and(eq(schema.dishTags.dishId, Number(id)), eq(schema.dishTags.tagId, tagId)));
+          }),
         );
       }
 
@@ -118,7 +134,7 @@ export default function DishEditScreen() {
         await Promise.all(
           addedTags.map((tagId) => {
             return drizzleDb.insert(schema.dishTags).values({ dishId: Number(id), tagId });
-          })
+          }),
         );
       }
 
@@ -135,7 +151,7 @@ export default function DishEditScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-muted dark:bg-dark-muted justify-center items-center">
-        <ActivityIndicator size="large" color={isDarkMode ? "#B27A4D" : "#905c36"} />
+        <ActivityIndicator size="large" color={isDarkMode ? '#B27A4D' : '#905c36'} />
       </View>
     );
   }
@@ -146,12 +162,7 @@ export default function DishEditScreen() {
 
       <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
         {/* Nombre */}
-        <FormInput
-          control={control}
-          name="name"
-          label="Nombre"
-          placeholder="Ingresa el nombre"
-        />
+        <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
 
         {/* Comentarios (opcional) */}
         <FormInput
@@ -183,12 +194,11 @@ export default function DishEditScreen() {
         />
 
         {/* Rating (opcional) */}
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">Calificación</Text>
+        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">
+          Calificación
+        </Text>
         <View className="flex justify-center items-center">
-          <RatingStars
-            control={control}
-            name="rating"
-          />
+          <RatingStars control={control} name="rating" />
         </View>
 
         {/* Tags */}
@@ -222,9 +232,7 @@ export default function DishEditScreen() {
           isEdit
           images={selectedImages}
           onChangeImages={setSelectedImages}
-          onRemoveExistingImage={(imageId) =>
-            setRemovedImages((prev) => [...prev, imageId])
-          }
+          onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
         />
 
         {/* Submit button */}

@@ -3,6 +3,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
+import * as schema from '@/services/db/schema';
 import { getSetting, setSetting } from '@/services/db/settings-repository';
 
 const THEME_MODE_KEY = 'themeMode';
@@ -32,7 +33,7 @@ interface ThemeProviderProps {
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const sqliteDb = useSQLiteContext();
-  const db = useMemo(() => drizzle(sqliteDb), [sqliteDb]);
+  const db = useMemo(() => drizzle(sqliteDb, { schema }), [sqliteDb]);
 
   const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
   const systemColorScheme = useColorScheme();

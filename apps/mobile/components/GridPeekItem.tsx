@@ -1,9 +1,10 @@
 import React from 'react';
-import { ViewStyle, StyleProp } from 'react-native';
 
-import { PeekPreviewData } from '@/components/peek/types';
+import type { PeekPreviewData } from '@/components/peek/types';
 
 import PeekablePressable from './PeekablePressable';
+
+import type { ViewStyle, StyleProp } from 'react-native';
 
 interface GridPeekItemProps {
   children: React.ReactNode;
@@ -12,12 +13,7 @@ interface GridPeekItemProps {
   onPress?: () => void;
 }
 
-const GridPeekItem = React.memo<GridPeekItemProps>(({
-  children,
-  style,
-  previewData,
-  onPress,
-}) => {
+const GridPeekItem = React.memo<GridPeekItemProps>(({ children, style, previewData, onPress }) => {
   return (
     <PeekablePressable
       style={style}

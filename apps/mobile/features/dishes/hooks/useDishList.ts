@@ -31,14 +31,15 @@ export const useDishList = (includeDeleted: boolean = false) => {
     query.where(eq(schema.dishes.deleted, false));
   }
 
-  query.leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
-      .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
-      .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId));
+  query
+    .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
+    .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
+    .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
     ['dishes', 'dishTags', 'tags', 'images'],
-    [includeDeleted]
+    [includeDeleted],
   );
 
   return useMemo(() => mapDishListRows(rawData ?? []), [rawData]);

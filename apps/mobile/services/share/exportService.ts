@@ -3,23 +3,23 @@
  */
 
 import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 import * as schema from '@/services/db/schema';
 
-import {
+import { SHARE_FILE_EXTENSION, CURRENT_SHARE_VERSION } from './types';
+
+import type {
   ShareFileData,
   ShareableRestaurant,
   ShareableDish,
   ShareableVisit,
   ShareableImage,
   ShareableTag,
-  SHARE_FILE_EXTENSION,
-  CURRENT_SHARE_VERSION,
 } from './types';
+import type { drizzle } from 'drizzle-orm/expo-sqlite';
 
 type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
 
@@ -28,16 +28,16 @@ async function imageToBase64(imagePath: string): Promise<ShareableImage | null> 
   try {
     const uri = imagePathToUri(imagePath);
     const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
-    
+
     const fileInfo = await FileSystem.getInfoAsync(fileUri);
     if (!fileInfo.exists) {
       return null;
     }
-    
+
     const base64 = await FileSystem.readAsStringAsync(fileUri, {
       encoding: FileSystem.EncodingType.Base64,
     });
-    
+
     const filename = imagePath.split('/').pop() || 'image.jpg';
     return { base64, filename };
   } catch {
@@ -46,9 +46,15 @@ async function imageToBase64(imagePath: string): Promise<ShareableImage | null> 
 }
 
 // Fetch restaurant with all related data
-async function fetchRestaurantData(db: DrizzleDb, restaurantId: number): Promise<ShareableRestaurant | null> {
+async function fetchRestaurantData(
+  db: DrizzleDb,
+  restaurantId: number,
+): Promise<ShareableRestaurant | null> {
   try {
-    const restaurants = await db.select().from(schema.restaurants).where(eq(schema.restaurants.id, restaurantId));
+    const restaurants = await db
+      .select()
+      .from(schema.restaurants)
+      .where(eq(schema.restaurants.id, restaurantId));
     if (restaurants.length === 0) return null;
     const restaurant = restaurants[0];
 
@@ -57,10 +63,15 @@ async function fetchRestaurantData(db: DrizzleDb, restaurantId: number): Promise
       .from(schema.restaurantTags)
       .leftJoin(schema.tags, eq(schema.restaurantTags.tagId, schema.tags.id))
       .where(eq(schema.restaurantTags.restaurantId, restaurantId));
-    
-    const tags: ShareableTag[] = tagRows.filter(t => t.name && t.color).map(t => ({ name: t.name!, color: t.color! }));
 
-    const imageRows = await db.select().from(schema.images).where(eq(schema.images.restaurantId, restaurantId));
+    const tags: ShareableTag[] = tagRows
+      .filter((t) => t.name && t.color)
+      .map((t) => ({ name: t.name!, color: t.color! }));
+
+    const imageRows = await db
+      .select()
+      .from(schema.images)
+      .where(eq(schema.images.restaurantId, restaurantId));
     const images: ShareableImage[] = [];
     for (const img of imageRows) {
       const shareableImg = await imageToBase64(img.path);
@@ -93,8 +104,10 @@ async function fetchDishData(db: DrizzleDb, dishId: number): Promise<ShareableDi
       .from(schema.dishTags)
       .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
       .where(eq(schema.dishTags.dishId, dishId));
-    
-    const tags: ShareableTag[] = tagRows.filter(t => t.name && t.color).map(t => ({ name: t.name!, color: t.color! }));
+
+    const tags: ShareableTag[] = tagRows
+      .filter((t) => t.name && t.color)
+      .map((t) => ({ name: t.name!, color: t.color! }));
 
     const imageRows = await db.select().from(schema.images).where(eq(schema.images.dishId, dishId));
     const images: ShareableImage[] = [];
@@ -103,7 +116,14 @@ async function fetchDishData(db: DrizzleDb, dishId: number): Promise<ShareableDi
       if (shareableImg) images.push(shareableImg);
     }
 
-    return { name: dish.name, price: dish.price, rating: dish.rating, comments: dish.comments, tags, images };
+    return {
+      name: dish.name,
+      price: dish.price,
+      rating: dish.rating,
+      comments: dish.comments,
+      tags,
+      images,
+    };
   } catch {
     return null;
   }
@@ -116,7 +136,10 @@ async function fetchVisitData(db: DrizzleDb, visitId: number): Promise<Shareable
     if (visits.length === 0) return null;
     const visit = visits[0];
 
-    const imageRows = await db.select().from(schema.images).where(eq(schema.images.visitId, visitId));
+    const imageRows = await db
+      .select()
+      .from(schema.images)
+      .where(eq(schema.images.visitId, visitId));
     const images: ShareableImage[] = [];
     for (const img of imageRows) {
       const shareableImg = await imageToBase64(img.path);
@@ -132,7 +155,10 @@ async function fetchVisitData(db: DrizzleDb, visitId: number): Promise<Shareable
 // Get dishes associated with a visit
 async function fetchVisitDishes(db: DrizzleDb, visitId: number): Promise<ShareableDish[]> {
   try {
-    const dishVisitRows = await db.select({ dishId: schema.dishVisits.dishId }).from(schema.dishVisits).where(eq(schema.dishVisits.visitId, visitId));
+    const dishVisitRows = await db
+      .select({ dishId: schema.dishVisits.dishId })
+      .from(schema.dishVisits)
+      .where(eq(schema.dishVisits.visitId, visitId));
     const dishes: ShareableDish[] = [];
     for (const row of dishVisitRows) {
       if (row.dishId) {
@@ -162,7 +188,10 @@ async function createAndShareFile(data: ShareFileData, filename: string): Promis
     const isAvailable = await Sharing.isAvailableAsync();
     if (!isAvailable) throw new Error('Sharing is not available on this device');
 
-    await Sharing.shareAsync(filePath, { mimeType: 'application/octet-stream', dialogTitle: 'Compartir' });
+    await Sharing.shareAsync(filePath, {
+      mimeType: 'application/octet-stream',
+      dialogTitle: 'Compartir',
+    });
     return filePath;
   } catch {
     return null;
@@ -170,7 +199,10 @@ async function createAndShareFile(data: ShareFileData, filename: string): Promis
 }
 
 // Export a restaurant
-export async function exportRestaurant(db: DrizzleDb, restaurantId: number): Promise<string | null> {
+export async function exportRestaurant(
+  db: DrizzleDb,
+  restaurantId: number,
+): Promise<string | null> {
   try {
     const restaurant = await fetchRestaurantData(db, restaurantId);
     if (!restaurant) throw new Error('Restaurant not found');
@@ -239,4 +271,3 @@ export async function exportVisit(db: DrizzleDb, visitId: number): Promise<strin
     return null;
   }
 }
-

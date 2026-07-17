@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { ImageCarousel } from '@/components/media/ImageCarousel';
 import type { ImageDTO } from '@/features/images/types/image-dto';
 

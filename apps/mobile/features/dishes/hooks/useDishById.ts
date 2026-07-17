@@ -1,14 +1,13 @@
-import { and, eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/expo-sqlite";
-import { useSQLiteContext } from "expo-sqlite";
-import { useMemo } from "react";
+import { and, eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/expo-sqlite';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo } from 'react';
 
-import { imagePathToUri } from "@/lib/helpers/image-paths";
-import { useLiveTablesQuery } from "@/lib/hooks/useLiveTablesQuery";
-import * as schema from "@/services/db/schema";
+import { imagePathToUri } from '@/lib/helpers/image-paths';
+import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import * as schema from '@/services/db/schema';
 
-import { DishDetailsDTO } from "../types/dish-dto";
-
+import type { DishDetailsDTO } from '../types/dish-dto';
 
 export const useDishById = (id: number, includeDeleted: boolean = true) => {
   const db = useSQLiteContext();
@@ -40,15 +39,16 @@ export const useDishById = (id: number, includeDeleted: boolean = true) => {
     query.where(and(eq(schema.dishes.id, id), eq(schema.dishes.deleted, false)));
   }
 
-  query.leftJoin(schema.restaurants, eq(schema.dishes.restaurantId, schema.restaurants.id))
-      .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
-      .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
-      .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId));
+  query
+    .leftJoin(schema.restaurants, eq(schema.dishes.restaurantId, schema.restaurants.id))
+    .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
+    .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
+    .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ["dishes", "dishTags", "tags", "images", "restaurants"],
-    [id, includeDeleted]
+    ['dishes', 'dishTags', 'tags', 'images', 'restaurants'],
+    [id, includeDeleted],
   );
 
   const dish = useMemo(() => {

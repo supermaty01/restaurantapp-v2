@@ -15,5 +15,3 @@ export const NewRestaurantProvider: React.FC<{ children: React.ReactNode }> = ({
     </NewRestaurantContext.Provider>
   );
 };
-
-

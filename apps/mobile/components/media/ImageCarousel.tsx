@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -100,9 +100,7 @@ export function ImageCarousel({ images, height = CAROUSEL_HEIGHT }: ImageCarouse
             <View
               key={image.id}
               className={`w-2 h-2 rounded-full mx-1 ${
-                activeIndex === index
-                  ? 'bg-black dark:bg-white'
-                  : 'bg-gray-300 dark:bg-gray-600'
+                activeIndex === index ? 'bg-black dark:bg-white' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             />
           ))}

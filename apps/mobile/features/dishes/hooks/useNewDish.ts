@@ -1,6 +1,6 @@
-import { useContext } from "react";
+import { useContext } from 'react';
 
-import { NewDishContext } from "@/lib/context/NewDishContext";
+import { NewDishContext } from '@/lib/context/NewDishContext';
 
 export const useNewDish = () => {
   const context = useContext(NewDishContext);

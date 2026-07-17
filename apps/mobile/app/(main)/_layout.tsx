@@ -25,7 +25,6 @@ import VisitEditScreen from './visits/[id]/edit';
 import VisitDetailScreen from './visits/[id]/view';
 import VisitCreateScreen from './visits/new';
 
-
 const TopTab = createMaterialTopTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -40,7 +39,12 @@ function TabsLayout() {
         tabBarActiveTintColor: isDarkMode ? '#B27A4D' : '#905c36',
         tabBarInactiveTintColor: isDarkMode ? '#A09A8C' : '#6b6246',
         tabBarStyle: { backgroundColor: isDarkMode ? '#2A2A2A' : '#cdc8b8' },
-        tabBarLabelStyle: { fontSize: 10, textTransform: 'none', marginHorizontal: 0, paddingHorizontal: 0 },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          textTransform: 'none',
+          marginHorizontal: 0,
+          paddingHorizontal: 0,
+        },
         tabBarItemStyle: { paddingHorizontal: 0 },
       }}
       tabBarPosition="bottom"
@@ -50,9 +54,7 @@ function TabsLayout() {
         component={RestaurantsScreen}
         options={{
           title: 'Restaurantes',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="restaurant-outline" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Ionicons name="restaurant-outline" size={24} color={color} />,
         }}
       />
       <TopTab.Screen
@@ -60,9 +62,7 @@ function TabsLayout() {
         component={DishesScreen}
         options={{
           title: 'Platos',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="fast-food-outline" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Ionicons name="fast-food-outline" size={24} color={color} />,
         }}
       />
       <TopTab.Screen
@@ -70,9 +70,7 @@ function TabsLayout() {
         component={VisitsScreen}
         options={{
           title: 'Visitas',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="eye-outline" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Ionicons name="eye-outline" size={24} color={color} />,
         }}
       />
       <TopTab.Screen
@@ -80,9 +78,7 @@ function TabsLayout() {
         component={TagsScreen}
         options={{
           title: 'Etiquetas',
-          tabBarIcon: ({ color }) => (
-            <Ionicons name="pricetag-outline" size={24} color={color} />
-          ),
+          tabBarIcon: ({ color }) => <Ionicons name="pricetag-outline" size={24} color={color} />,
         }}
       />
     </TopTab.Navigator>
@@ -98,24 +94,29 @@ const CustomHeader: React.FC<CustomHeaderProps> = ({ navigation, route }) => {
   const { isDarkMode } = useTheme();
 
   return (
-    <View className={`w-full flex-row items-center justify-between p-4 bg-accent dark:bg-dark-accent`}>
+    <View
+      className={`w-full flex-row items-center justify-between p-4 bg-accent dark:bg-dark-accent`}
+    >
       <View className="w-20">
         {route.name !== 'Tabs' && (
           <TouchableOpacity onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back-outline" size={24} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+            <Ionicons
+              name="arrow-back-outline"
+              size={24}
+              color={isDarkMode ? '#B27A4D' : '#905c36'}
+            />
           </TouchableOpacity>
         )}
       </View>
-      <Image
-        source={require('@/assets/burger-logo.png')}
-        className="w-12 h-12"
-      />
+      <Image source={require('@/assets/burger-logo.png')} className="w-12 h-12" />
       <View className="w-20 items-end">
         {route.name !== 'settings' && (
-          <TouchableOpacity
-            onPress={() => navigation.navigate('settings')}
-          >
-            <Ionicons name="settings-outline" size={28} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+          <TouchableOpacity onPress={() => navigation.navigate('settings')}>
+            <Ionicons
+              name="settings-outline"
+              size={28}
+              color={isDarkMode ? '#B27A4D' : '#905c36'}
+            />
           </TouchableOpacity>
         )}
       </View>
@@ -129,7 +130,10 @@ export default function MainLayout() {
   return (
     <PeekProvider>
       <SafeAreaView className="flex-1 bg-muted dark:bg-dark-muted">
-        <StatusBar style={isDarkMode ? "light" : "dark"} backgroundColor={isDarkMode ? "#111c16" : "#e3e6d6"} />
+        <StatusBar
+          style={isDarkMode ? 'light' : 'dark'}
+          backgroundColor={isDarkMode ? '#111c16' : '#e3e6d6'}
+        />
         <Stack.Navigator
           screenOptions={{
             headerShown: true,
@@ -139,11 +143,7 @@ export default function MainLayout() {
           }}
         >
           {/* Pantalla principal de listas: se oculta la flecha (nombre "Tabs") */}
-          <Stack.Screen
-            name="Tabs"
-            component={TabsLayout}
-            options={{ headerShown: true }}
-          />
+          <Stack.Screen name="Tabs" component={TabsLayout} options={{ headerShown: true }} />
           {/* Pantalla para añadir restaurante u otras: se mostrará la flecha */}
           <Stack.Screen
             name="restaurants/new"
@@ -190,11 +190,7 @@ export default function MainLayout() {
             component={VisitEditScreen}
             options={{ presentation: 'modal' }}
           />
-          <Stack.Screen
-            name="map"
-            component={MapScreen}
-            options={{ presentation: 'modal' }}
-          />
+          <Stack.Screen name="map" component={MapScreen} options={{ presentation: 'modal' }} />
           <Stack.Screen
             name="settings"
             component={SettingsScreen}
