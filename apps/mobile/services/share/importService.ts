@@ -151,7 +151,8 @@ async function saveBase64Image(image: ShareableImage): Promise<string | null> {
 async function getOrCreateTag(db: DrizzleDb, tag: ShareableTag): Promise<number> {
   const existing = await db.select().from(schema.tags).where(eq(schema.tags.name, tag.name));
 
-  if (existing.length > 0) return existing[0].id;
+  const existingTag = existing[0];
+  if (existingTag) return existingTag.id;
 
   const result = await db.insert(schema.tags).values({ name: tag.name, color: tag.color });
   return result.lastInsertRowId;

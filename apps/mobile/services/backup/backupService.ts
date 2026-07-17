@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
+import { z } from 'zod';
 
 import { IMAGES_DIR, SQLITE_DIR } from '@/lib/helpers/fs-paths';
 import { DATABASE_NAME } from '@/services/db/constants';
@@ -8,6 +9,23 @@ import * as schema from '@/services/db/schema';
 import type { DrizzleDatabase } from '@/services/db/types';
 
 import { createZip, extractZip } from './zip';
+
+/**
+ * These records are JSON blobs read back from app_settings, i.e. an untrusted
+ * boundary (an old app version may have written a different shape). Parse with
+ * zod rather than trusting the cast - docs/12-calidad.md.
+ */
+const exportInfoSchema = z.object({
+  date: z.string(),
+  path: z.string(),
+  size: z.number().optional(),
+  version: z.string().optional(),
+});
+
+const backupInfoSchema = z.object({
+  date: z.string(),
+  path: z.string(),
+});
 
 export interface BackupInfo {
   date: Date;
@@ -204,12 +222,11 @@ export class BackupService {
       throw new Error('No backup available');
     }
 
-    const info = JSON.parse(settings[0].value || '{}');
-    const backupDir = info.path;
-
-    if (!backupDir) {
+    const parsed = backupInfoSchema.safeParse(JSON.parse(settings[0]?.value || '{}'));
+    if (!parsed.success) {
       throw new Error('Invalid backup path');
     }
+    const backupDir = parsed.data.path;
 
     const backupExists = await FileSystem.getInfoAsync(backupDir);
     if (!backupExists.exists) {
@@ -250,12 +267,14 @@ export class BackupService {
 
     if (!settings.length) return null;
 
-    const data = JSON.parse(settings[0].value || '{}');
+    const parsed = exportInfoSchema.safeParse(JSON.parse(settings[0]?.value || '{}'));
+    if (!parsed.success) return null;
+
     return {
-      date: new Date(data.date),
-      path: data.path,
-      size: data.size || 0,
-      version: data.version || '',
+      date: new Date(parsed.data.date),
+      path: parsed.data.path,
+      size: parsed.data.size ?? 0,
+      version: parsed.data.version ?? '',
     };
   }
 
@@ -267,11 +286,13 @@ export class BackupService {
 
     if (!settings.length) return null;
 
-    const data = JSON.parse(settings[0].value || '{}');
+    const parsed = backupInfoSchema.safeParse(JSON.parse(settings[0]?.value || '{}'));
+    if (!parsed.success) return null;
+
     return {
-      date: new Date(data.date),
-      path: data.path,
-      backupPath: data.path,
+      date: new Date(parsed.data.date),
+      path: parsed.data.path,
+      backupPath: parsed.data.path,
     };
   }
 

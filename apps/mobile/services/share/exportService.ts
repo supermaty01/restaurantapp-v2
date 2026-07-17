@@ -224,12 +224,16 @@ export async function exportRestaurant(
 export async function exportDish(db: DrizzleDb, dishId: number): Promise<string | null> {
   try {
     const dishes = await db.select().from(schema.dishes).where(eq(schema.dishes.id, dishId));
-    if (dishes.length === 0) throw new Error('Dish not found');
+    const dishRow = dishes[0];
+    if (!dishRow) throw new Error('Dish not found');
 
     const dish = await fetchDishData(db, dishId);
     if (!dish) throw new Error('Failed to fetch dish data');
 
-    const includedRestaurant = await fetchRestaurantData(db, dishes[0].restaurantId!);
+    // restaurantId is nullable in the schema; v1 asserted it with `!`, which
+    // would blow up at runtime on an orphaned dish.
+    if (dishRow.restaurantId === null) throw new Error('Dish has no restaurant');
+    const includedRestaurant = await fetchRestaurantData(db, dishRow.restaurantId);
 
     const shareData: ShareFileData = {
       version: CURRENT_SHARE_VERSION,
@@ -249,12 +253,14 @@ export async function exportDish(db: DrizzleDb, dishId: number): Promise<string 
 export async function exportVisit(db: DrizzleDb, visitId: number): Promise<string | null> {
   try {
     const visits = await db.select().from(schema.visits).where(eq(schema.visits.id, visitId));
-    if (visits.length === 0) throw new Error('Visit not found');
+    const visitRow = visits[0];
+    if (!visitRow) throw new Error('Visit not found');
 
     const visit = await fetchVisitData(db, visitId);
     if (!visit) throw new Error('Failed to fetch visit data');
 
-    const includedRestaurant = await fetchRestaurantData(db, visits[0].restaurantId!);
+    if (visitRow.restaurantId === null) throw new Error('Visit has no restaurant');
+    const includedRestaurant = await fetchRestaurantData(db, visitRow.restaurantId);
     const includedDishes = await fetchVisitDishes(db, visitId);
 
     const shareData: ShareFileData = {
