@@ -1,0 +1,9 @@
+node_modules
+.expo
+dist
+coverage
+android
+ios
+.wrangler
+package-lock.json
+apps/mobile/drizzle

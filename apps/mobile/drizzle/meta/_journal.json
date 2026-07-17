@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1741468639600,
+      "tag": "0000_lame_kinsey_walden",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1741472372798,
+      "tag": "0001_left_lightspeed",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1741486157767,
+      "tag": "0002_lucky_spot",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1741490301441,
+      "tag": "0003_romantic_betty_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1741549513593,
+      "tag": "0004_magical_virginia_dare",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1744910861836,
+      "tag": "0005_slow_calypso",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1744914164112,
+      "tag": "0006_boring_wrecking_crew",
+      "breakpoints": true
+    }
+  ]
+}
