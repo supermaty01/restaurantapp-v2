@@ -9,7 +9,7 @@ Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está
 | Fase                    | Estado                      |
 | ----------------------- | --------------------------- |
 | Documentación de diseño | ✅ Completa (docs 00–13)    |
-| 0 — Puesta a punto      | 🟡 En curso (~70%)          |
+| 0 — Puesta a punto      | 🟡 En curso (~85%)          |
 | 1 — Esquema local       | ⬜ Siguiente                |
 | 2 — Supabase + Auth     | ⬜ Bloqueada (credenciales) |
 | 3 — Sync                | ⬜                          |
@@ -61,14 +61,117 @@ El visor propio incluye: paginado, pinch-zoom con clamp de bordes, doble-tap con
 
 ## ⚠️ Fase 0 — lo que falta
 
-1. **133 errores de TypeScript** y **~234 errores de ESLint** en el código portado de v1.
-   Son consecuencia _deseada_ de activar las reglas estrictas de [12 — Calidad](12-calidad.md) (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `no-explicit-any`, `no-unsafe-assignment`) sobre código que no se escribió con ellas. **No son regresiones del port**: los tests pasan.
-   Ya corregidos: mappers, `soft-delete`, DTOs (`deleted` pasa de `boolean?` a `boolean`, que es lo que dice la BD), ThemeContext, componentes de media.
-   Pendiente: mayoría en `app/**` (pantallas) y `services/share/exportService.ts`.
-   Medir con: `cd apps/mobile && npx tsc --noEmit | grep -c "error TS"`.
-2. **`packages/shared` está vacío** — mover ahí los schemas zod.
+1. **13 errores de TypeScript** (desde 133) y lint pendiente en el código portado de v1.
+   Son consecuencia _deseada_ de activar las reglas estrictas de [12 — Calidad](12-calidad.md) sobre código que no se escribió con ellas. **No son regresiones**: tests y bundle en verde en cada paso.
+
+   Ya saldado, y no fue cosmético — salieron bugs reales:
+   - asertaba : un plato o visita huérfano habría petado en runtime. Ahora se trata explícitamente.
+   - parseaba los JSON de con un cast; ahora se validan con **zod** (es un borde no confiable: una versión vieja pudo escribir otra forma).
+   - Las consultas de restaurantes **no seleccionaban ** aunque el componente lo pinta.
+   - , , y eran : aceptaban cualquier nombre de campo. Ahora son genéricos, con restringiendo al tipo real del campo.
+   - DTOs: pasa de opcional a (la BD lo define NOT NULL DEFAULT false).
+
+   Restantes (13), medibles con app/(main)/dishes/[id]/edit.tsx(198,24): error TS2322: Type 'Control<{ name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }, any, { name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }>' is not assignable to type 'Control<any>'.
+   The types of '_options.validate' are incompatible between these types.
+   Type 'ValidateForm<{ name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }>' is not assignable to type 'ValidateForm<any>'.
+   Types of parameters 'props' and 'props' are incompatible.
+   Type '{ formValues: any; formState: FormState<any>; eventType?: ValidateFormEventType; name?: string | string[]; }' is not assignable to type '{ formValues: { name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }; formState: FormState<{ name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }>; eventType?: ValidateFor...' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'name' are incompatible.
+   Type 'string | string[]' is not assignable to type '"name" | "comments" | "rating" | "restaurantId" | "price" | ("name" | "comments" | "rating" | "restaurantId" | "price")[]'.
+   Type 'string' is not assignable to type '"name" | "comments" | "rating" | "restaurantId" | "price" | ("name" | "comments" | "rating" | "restaurantId" | "price")[]'.
+   app/(main)/dishes/new.tsx(73,20): error TS2345: Argument of type '{ id: number; name: string; comments: string; rating: number | null; tags: never[]; images: never[]; }' is not assignable to parameter of type 'DishListDTO'.
+   Property 'deleted' is missing in type '{ id: number; name: string; comments: string; rating: number | null; tags: never[]; images: never[]; }' but required in type 'DishListDTO'.
+   app/(main)/dishes/new.tsx(139,24): error TS2322: Type 'Control<{ name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }, any, { name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }>' is not assignable to type 'Control<any>'.
+   The types of '_options.validate' are incompatible between these types.
+   Type 'ValidateForm<{ name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }>' is not assignable to type 'ValidateForm<any>'.
+   Types of parameters 'props' and 'props' are incompatible.
+   Type '{ formValues: any; formState: FormState<any>; eventType?: ValidateFormEventType; name?: string | string[]; }' is not assignable to type '{ formValues: { name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }; formState: FormState<{ name: string; restaurantId: number; comments?: string | undefined; rating?: number | undefined; price?: number | undefined; }>; eventType?: ValidateFor...' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'name' are incompatible.
+   Type 'string | string[]' is not assignable to type '"name" | "comments" | "rating" | "restaurantId" | "price" | ("name" | "comments" | "rating" | "restaurantId" | "price")[]'.
+   Type 'string' is not assignable to type '"name" | "comments" | "rating" | "restaurantId" | "price" | ("name" | "comments" | "rating" | "restaurantId" | "price")[]'.
+   app/(main)/map.tsx(254,14): error TS2375: Type '{ key: number; coordinate: { latitude: number; longitude: number; }; title: string; description: string | undefined; onCalloutPress: () => void; }' is not assignable to type 'Readonly<MapMarkerProps>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'description' are incompatible.
+   Type 'string | undefined' is not assignable to type 'string'.
+   Type 'undefined' is not assignable to type 'string'.
+   app/(main)/restaurants/[id]/edit.tsx(188,24): error TS2322: Type 'Control<{ name: string; comments?: string | null | undefined; rating?: number | null | undefined; location?: { latitude: number; longitude: number; } | null | undefined; }, any, { name: string; comments?: string | ... 1 more ... | undefined; rating?: number | ... 1 more ... | undefined; location?: { ...; } | ... 1 m...' is not assignable to type 'Control<any>'.
+   The types of '_options.validate' are incompatible between these types.
+   Type 'ValidateForm<{ name: string; comments?: string | null | undefined; rating?: number | null | undefined; location?: { latitude: number; longitude: number; } | null | undefined; }>' is not assignable to type 'ValidateForm<any>'.
+   Types of parameters 'props' and 'props' are incompatible.
+   Type '{ formValues: any; formState: FormState<any>; eventType?: ValidateFormEventType; name?: string | string[]; }' is not assignable to type '{ formValues: { name: string; comments?: string | null | undefined; rating?: number | null | undefined; location?: { latitude: number; longitude: number; } | null | undefined; }; formState: FormState<...>; eventType?: ValidateFormEventType; name?: "name" | ... 5 more ... | ("name" | ... 4 more ... | "location.longit...' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'name' are incompatible.
+   Type 'string | string[]' is not assignable to type '"name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude" | ("name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude")[]'.
+   Type 'string' is not assignable to type '"name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude" | ("name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude")[]'.
+   app/(main)/restaurants/new.tsx(137,24): error TS2322: Type 'Control<{ name: string; comments?: string | null | undefined; rating?: number | null | undefined; location?: { latitude: number; longitude: number; } | null | undefined; }, any, { name: string; comments?: string | ... 1 more ... | undefined; rating?: number | ... 1 more ... | undefined; location?: { ...; } | ... 1 m...' is not assignable to type 'Control<any>'.
+   The types of '_options.validate' are incompatible between these types.
+   Type 'ValidateForm<{ name: string; comments?: string | null | undefined; rating?: number | null | undefined; location?: { latitude: number; longitude: number; } | null | undefined; }>' is not assignable to type 'ValidateForm<any>'.
+   Types of parameters 'props' and 'props' are incompatible.
+   Type '{ formValues: any; formState: FormState<any>; eventType?: ValidateFormEventType; name?: string | string[]; }' is not assignable to type '{ formValues: { name: string; comments?: string | null | undefined; rating?: number | null | undefined; location?: { latitude: number; longitude: number; } | null | undefined; }; formState: FormState<...>; eventType?: ValidateFormEventType; name?: "name" | ... 5 more ... | ("name" | ... 4 more ... | "location.longit...' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'name' are incompatible.
+   Type 'string | string[]' is not assignable to type '"name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude" | ("name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude")[]'.
+   Type 'string' is not assignable to type '"name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude" | ("name" | "comments" | "rating" | "location" | "location.latitude" | "location.longitude")[]'.
+   app/(main)/visits/[id]/edit.tsx(61,9): error TS2345: Argument of type '{ id: number; name: string; comments: null; rating: null; tags: never[]; images: never[]; }[]' is not assignable to parameter of type 'SetStateAction<DishListDTO[]>'.
+   Type '{ id: number; name: string; comments: null; rating: null; tags: never[]; images: never[]; }[]' is not assignable to type 'DishListDTO[]'.
+   Property 'deleted' is missing in type '{ id: number; name: string; comments: null; rating: null; tags: never[]; images: never[]; }' but required in type 'DishListDTO'.
+   app/(main)/visits/[id]/edit.tsx(170,11): error TS2322: Type 'string' is not assignable to type 'never'.
+   app/(main)/visits/new.tsx(124,11): error TS2322: Type 'string' is not assignable to type 'never'.
+   components/ImportConflictModal.tsx(109,51): error TS2322: Type 'number | undefined' is not assignable to type 'number'.
+   Type 'undefined' is not assignable to type 'number'.
+   components/PeekablePressable.tsx(170,8): error TS2375: Type '{ children: ReactNode; className: string | undefined; style: { opacity: number; transform: { scale: Value; }[]; }; }' is not assignable to type 'AnimatedProps<ViewProps & RefAttributes<View>>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'className' are incompatible.
+   Type 'string | undefined' is not assignable to type 'string | Value | AnimatedInterpolation<string | number>'.
+   Type 'undefined' is not assignable to type 'string | Value | AnimatedInterpolation<string | number>'.
+   features/dishes/components/DishPicker.tsx(131,63): error TS2769: No overload matches this call.
+   Overload 1 of 2, '(props: TextProps): Text', gave the following error.
+   Type 'string | ("message" extends keyof FieldError & keyof DeepRequired<TFieldValues>[string] ? [FieldError["message" & keyof DeepRequired<...>[string]], FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]] : strin...' is not assignable to type 'ReactNode'.
+   Type '"message" extends keyof FieldError & keyof DeepRequired<TFieldValues>[string] ? [FieldError["message" & keyof DeepRequired<...>[string]], FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]] : string | undefi...' is not assignable to type 'ReactNode'.
+   Type 'string | ([FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]) | undefined' is not assignable to type 'ReactNode'.
+   Type '[FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]' is not assignable to type 'ReactNode'.
+   Type 'FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<TFieldValues>[string]] | Merge<...>' is not assignable to type 'ReactNode'.
+   Type '(DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obj...' is not assignable to type 'ReactNode'.
+   Type 'DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obje...' is not assignable to type 'ReactNode'.
+   Type 'FieldError | ("message" & keyof DeepRequired<TFieldValues>[string] extends "root" | `root.${string}` ? Partial<{ type: string | number; message: string; }> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends object ? Merge<...> : FieldError)' is not assignable to type 'ReactNode'.
+   Type 'FieldError' is not assignable to type 'ReactNode'.
+   Type 'FieldError' is missing the following properties from type 'ReactPortal': children, props, key
+   Type 'DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obje...' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'FieldError | ("message" & keyof DeepRequired<TFieldValues>[string] extends "root" | `root.${string}` ? Partial<{ type: string | number; message: string; }> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends object ? Merge<...> : FieldError)' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'FieldError' is missing the following properties from type 'Promise<AwaitedReactNode>': then, catch, finally, [Symbol.toStringTag]
+   Type '[FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<TFieldValues>[string]] | Merge<...>' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type '(DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obj...' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'undefined' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type '"message" extends keyof FieldError & keyof DeepRequired<TFieldValues>[string] ? [FieldError["message" & keyof DeepRequired<...>[string]], FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]] : string | undefi...' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'string | ([FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]) | undefined' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'undefined' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Overload 2 of 2, '(props: TextProps, context: any): Text', gave the following error.
+   Type 'string | ("message" extends keyof FieldError & keyof DeepRequired<TFieldValues>[string] ? [FieldError["message" & keyof DeepRequired<...>[string]], FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]] : strin...' is not assignable to type 'ReactNode'.
+   Type '"message" extends keyof FieldError & keyof DeepRequired<TFieldValues>[string] ? [FieldError["message" & keyof DeepRequired<...>[string]], FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]] : string | undefi...' is not assignable to type 'ReactNode'.
+   Type 'string | ([FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]) | undefined' is not assignable to type 'ReactNode'.
+   Type '[FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]' is not assignable to type 'ReactNode'.
+   Type 'FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<TFieldValues>[string]] | Merge<...>' is not assignable to type 'ReactNode'.
+   Type '(DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obj...' is not assignable to type 'ReactNode'.
+   Type 'DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obje...' is not assignable to type 'ReactNode'.
+   Type 'FieldError | ("message" & keyof DeepRequired<TFieldValues>[string] extends "root" | `root.${string}` ? Partial<{ type: string | number; message: string; }> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends object ? Merge<...> : FieldError)' is not assignable to type 'ReactNode'.
+   Type 'FieldError' is not assignable to type 'ReactNode'.
+   Type 'FieldError' is missing the following properties from type 'ReactPortal': children, props, key
+   Type 'DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obje...' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'FieldError | ("message" & keyof DeepRequired<TFieldValues>[string] extends "root" | `root.${string}` ? Partial<{ type: string | number; message: string; }> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends object ? Merge<...> : FieldError)' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'FieldError' is missing the following properties from type 'Promise<AwaitedReactNode>': then, catch, finally, [Symbol.toStringTag]
+   Type '[FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<TFieldValues>[string]] | Merge<...>' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type '(DeepRequired<TFieldValues>[string]["message" & keyof DeepRequired<TFieldValues>[string]] extends Blob | BrowserNativeObject ? FieldError : "message" & keyof DeepRequired<...>[string] extends "root" | `root.${string}` ? Partial<...> : DeepRequired<...>[string]["message" & keyof DeepRequired<...>[string]] extends obj...' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'undefined' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type '"message" extends keyof FieldError & keyof DeepRequired<TFieldValues>[string] ? [FieldError["message" & keyof DeepRequired<...>[string]], FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]] : string | undefi...' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'string | ([FieldError["message" & keyof DeepRequired<TFieldValues>[string]], FieldErrorsImpl<DeepRequired<TFieldValues>[string]>["message" & keyof DeepRequired<...>[string]]] extends [...] ? Merge<...> : FieldErrorsImpl<...>["message" & keyof DeepRequired<...>[string]]) | undefined' is not assignable to type 'Promise<AwaitedReactNode>'.
+   Type 'undefined' is not assignable to type 'Promise<AwaitedReactNode>'.
+   services/share/importService.ts(128,5): error TS2375: Type '{ hasConflict: true; existingEntity: { id: number; name: string; } | undefined; incomingName: string; }' is not assignable to type 'ConflictResult' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+   Types of property 'existingEntity' are incompatible.
+   Type '{ id: number; name: string; } | undefined' is not assignable to type '{ id: number | undefined; name: string; }'.
+   Type 'undefined' is not assignable to type '{ id: number | undefined; name: string; }'.:
+   , , , , , (paso de a los pickers ya genéricos), (prop de MapMarker), (props de Animated), , .
+
+2. ** está vacío** — mover ahí los schemas zod.
 3. **CI (GitHub Actions) no creada.**
-4. **Verificación en emulador/dispositivo: no hecha.** El bundle compila, pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto. Es el siguiente paso obligatorio antes de dar la fase por cerrada.
+4. **Verificación en emulador/dispositivo: no hecha.** El bundle compila, pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto.
 
 ### Corrección a los docs a partir de lo aprendido
 
