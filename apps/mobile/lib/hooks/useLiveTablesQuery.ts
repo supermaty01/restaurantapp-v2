@@ -30,8 +30,11 @@ export const useLiveTablesQuery = <
   useEffect(() => {
     let listener: ReturnType<typeof addDatabaseChangeListener> | undefined;
 
-    const handleData = (data: any) => {
-      setData(data);
+    // The query's `then` is an intersection of two drizzle thenables, so its
+    // callback parameter is only expressible as `unknown`; the resolved value
+    // is `Awaited<T>` by construction.
+    const handleData = (result: unknown) => {
+      setData(result as Awaited<T>);
       setError(undefined);
       setUpdatedAt(new Date());
     };

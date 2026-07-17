@@ -13,6 +13,7 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useTheme } from '@/lib/context/ThemeContext';
+import { getAutocomplete, getPlaceDetails } from '@/services/places';
 
 import type { MapPressEvent, Region } from 'react-native-maps';
 
@@ -176,21 +177,10 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
             longitude: mapRegion.longitude,
           };
 
-        const params = new URLSearchParams({
-          input: trimmed,
-          key: GOOGLE_PLACES_API_KEY,
-          language: 'es',
-          location: `${biasLocation.latitude},${biasLocation.longitude}`,
-          radius: '50000',
-        });
-
-        const url = `https://maps.googleapis.com/maps/api/place/autocomplete/json?${params.toString()}`;
-
-        const response = await fetch(url);
-        const data = await response.json();
+        const data = await getAutocomplete(GOOGLE_PLACES_API_KEY, trimmed, biasLocation, 50000);
 
         if (data.status === 'OK') {
-          const mappedSuggestions: PlaceSuggestion[] = data.predictions.map((item: any) => ({
+          const mappedSuggestions: PlaceSuggestion[] = data.predictions.map((item) => ({
             place_id: item.place_id,
             description: item.description,
           }));
@@ -228,25 +218,19 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     }
 
     try {
-      const params = new URLSearchParams({
-        place_id: placeId,
-        fields: 'geometry,name,formatted_address',
-        key: GOOGLE_PLACES_API_KEY,
-        language: 'es',
-      });
+      const data = await getPlaceDetails(
+        GOOGLE_PLACES_API_KEY,
+        placeId,
+        'geometry,name,formatted_address',
+      );
 
-      const url = `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`;
-
-      const response = await fetch(url);
-      const data = await response.json();
-
-      if (data.status !== 'OK') {
+      const placeLocation = data.result?.geometry?.location;
+      if (data.status !== 'OK' || !placeLocation) {
         console.warn('Place details error:', data.status, data.error_message);
         Alert.alert('Error', 'No se pudo obtener la ubicación del lugar.');
         return;
       }
 
-      const placeLocation = data.result.geometry.location;
       const coords = {
         latitude: placeLocation.lat,
         longitude: placeLocation.lng,
@@ -266,7 +250,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
       mapRef.current?.animateToRegion(newRegion, 500);
 
-      setAddress(data.result.formatted_address || description);
+      setAddress(data.result?.formatted_address || description);
       setSearchQuery(description);
       setSuggestions([]);
     } catch (error) {

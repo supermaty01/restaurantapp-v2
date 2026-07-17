@@ -14,7 +14,15 @@ export const useDishesByRestaurant = (
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
 
-  let query: any = drizzleDb
+  // WHERE applies after the joins regardless of builder order, so joins are
+  // chained first to keep the query fully typed (no `any` reassignment).
+  const whereCondition = !restaurantId
+    ? eq(schema.dishes.id, -1) // no restaurant selected → empty result
+    : includeDeleted
+      ? eq(schema.dishes.restaurantId, restaurantId)
+      : and(eq(schema.dishes.restaurantId, restaurantId), eq(schema.dishes.deleted, false));
+
+  const query = drizzleDb
     .select({
       dishId: schema.dishes.id,
       dishName: schema.dishes.name,
@@ -28,27 +36,11 @@ export const useDishesByRestaurant = (
       imageId: schema.images.id,
       imagePath: schema.images.path,
     })
-    .from(schema.dishes);
-
-  if (restaurantId) {
-    if (includeDeleted) {
-      // Solo filtrar por restaurantId
-      query = query.where(eq(schema.dishes.restaurantId, restaurantId));
-    } else {
-      // Filtrar por restaurantId y no eliminados
-      query = query.where(
-        and(eq(schema.dishes.restaurantId, restaurantId), eq(schema.dishes.deleted, false)),
-      );
-    }
-  } else {
-    // Si no hay restaurantId, devolver una consulta vacía
-    query = query.where(eq(schema.dishes.id, -1));
-  }
-
-  query = query
+    .from(schema.dishes)
     .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
     .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
-    .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId));
+    .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId))
+    .where(whereCondition);
 
   const { data: rawData } = useLiveTablesQuery(
     query,

@@ -17,6 +17,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useRestaurantMapList } from '@/features/restaurants/hooks/useRestaurantMapList';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { getPlaceDetails } from '@/services/places';
 
 import type { PoiClickEvent } from 'react-native-maps';
 
@@ -25,9 +26,9 @@ const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 type PoiDetails = {
   name: string;
   coordinate: { latitude: number; longitude: number };
-  address?: string;
-  rating?: number;
-  priceLevel?: number;
+  address?: string | undefined;
+  rating?: number | undefined;
+  priceLevel?: number | undefined;
 };
 
 const DRAWER_HEIGHT = 190;
@@ -137,19 +138,13 @@ export default function MapScreen() {
       }
 
       try {
-        const params = new URLSearchParams({
-          place_id: placeId,
-          fields: 'formatted_address,rating,price_level,name',
-          key: GOOGLE_PLACES_API_KEY,
-          language: 'es',
-        });
-
-        const response = await fetch(
-          `https://maps.googleapis.com/maps/api/place/details/json?${params.toString()}`,
+        const data = await getPlaceDetails(
+          GOOGLE_PLACES_API_KEY,
+          placeId,
+          'formatted_address,rating,price_level,name',
         );
-        const data = await response.json();
 
-        if (data.status !== 'OK') {
+        if (data.status !== 'OK' || !data.result) {
           setSelectedPoi({ name, coordinate });
           setLoadingPoi(false);
           showDrawer();
