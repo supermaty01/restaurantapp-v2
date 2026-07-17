@@ -11,7 +11,7 @@ export interface SegmentedTab {
 
 interface SegmentedTabsProps {
   tabs: SegmentedTab[];
-  initialKey?: string;
+  initialKey?: string | undefined;
 }
 
 /**

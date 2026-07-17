@@ -55,8 +55,8 @@ async function fetchRestaurantData(
       .select()
       .from(schema.restaurants)
       .where(eq(schema.restaurants.id, restaurantId));
-    if (restaurants.length === 0) return null;
     const restaurant = restaurants[0];
+    if (!restaurant) return null;
 
     const tagRows = await db
       .select({ name: schema.tags.name, color: schema.tags.color })
@@ -96,8 +96,8 @@ async function fetchRestaurantData(
 async function fetchDishData(db: DrizzleDb, dishId: number): Promise<ShareableDish | null> {
   try {
     const dishes = await db.select().from(schema.dishes).where(eq(schema.dishes.id, dishId));
-    if (dishes.length === 0) return null;
     const dish = dishes[0];
+    if (!dish) return null;
 
     const tagRows = await db
       .select({ name: schema.tags.name, color: schema.tags.color })
@@ -133,8 +133,8 @@ async function fetchDishData(db: DrizzleDb, dishId: number): Promise<ShareableDi
 async function fetchVisitData(db: DrizzleDb, visitId: number): Promise<ShareableVisit | null> {
   try {
     const visits = await db.select().from(schema.visits).where(eq(schema.visits.id, visitId));
-    if (visits.length === 0) return null;
     const visit = visits[0];
+    if (!visit) return null;
 
     const imageRows = await db
       .select()

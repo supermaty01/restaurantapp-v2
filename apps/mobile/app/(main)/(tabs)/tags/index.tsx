@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FlatList, TouchableOpacity, View, Text, Alert } from 'react-native';
 
 import CreateTagModal from '@/features/tags/components/CreateTagModal';

@@ -15,7 +15,7 @@ interface RestaurantItemProps {
   comments: string | null;
   tags: TagDTO[];
   rating: number | null;
-  imageUrl?: string;
+  imageUrl?: string | undefined;
   previewData: PeekPreviewData;
   onPress?: () => void;
 }

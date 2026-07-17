@@ -1,10 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import React from 'react';
 import { View, Text, TouchableOpacity, Image, Alert, Linking } from 'react-native';
 
 interface ImagesUploaderBaseProps {
-  disabled?: boolean;
+  disabled?: boolean | undefined;
 }
 
 // Props para el modo creación (usa string[] para las imágenes)

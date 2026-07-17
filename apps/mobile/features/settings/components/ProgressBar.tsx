@@ -3,7 +3,7 @@ import { View, Text } from 'react-native';
 
 interface ProgressBarProps {
   progress: number;
-  isDarkMode?: boolean;
+  isDarkMode?: boolean | undefined;
 }
 
 const ProgressBar: React.FC<ProgressBarProps> = ({ progress, isDarkMode }) => {

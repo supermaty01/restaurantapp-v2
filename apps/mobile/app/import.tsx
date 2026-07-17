@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 
 import ImportConflictModal from '@/components/ImportConflictModal';

@@ -4,7 +4,7 @@ import { View, Text } from 'react-native';
 export interface TagProps {
   name: string;
   color: string;
-  deleted?: boolean;
+  deleted?: boolean | undefined;
 }
 
 function getContrastYIQ(hexColor: string): string {

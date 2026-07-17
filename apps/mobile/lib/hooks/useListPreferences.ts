@@ -13,13 +13,16 @@ interface ListPreferences {
   loaded: boolean;
 }
 
-const DEFAULTS: Record<string, { sortField: SortField; sortOrder: SortOrder }> = {
+type ListEntityType = 'restaurant' | 'dish' | 'visit';
+
+// Keyed by the exact union rather than `string`, so indexing is provably safe.
+const DEFAULTS: Record<ListEntityType, { sortField: SortField; sortOrder: SortOrder }> = {
   restaurant: { sortField: 'name', sortOrder: 'asc' },
   dish: { sortField: 'name', sortOrder: 'asc' },
   visit: { sortField: 'date', sortOrder: 'desc' },
 };
 
-export function useListPreferences(entityType: 'restaurant' | 'dish' | 'visit') {
+export function useListPreferences(entityType: ListEntityType) {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
   const defaults = DEFAULTS[entityType];

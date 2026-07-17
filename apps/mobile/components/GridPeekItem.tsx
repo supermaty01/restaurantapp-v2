@@ -8,7 +8,7 @@ import type { ViewStyle, StyleProp } from 'react-native';
 
 interface GridPeekItemProps {
   children: React.ReactNode;
-  style?: StyleProp<ViewStyle>;
+  style?: StyleProp<ViewStyle> | undefined;
   previewData: PeekPreviewData;
   onPress?: () => void;
 }

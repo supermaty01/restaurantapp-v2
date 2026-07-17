@@ -16,9 +16,9 @@ interface RestaurantPickerProps {
   control: Control<any>;
   setValue: UseFormSetValue<any>;
   name: string;
-  label?: string;
-  fixedValue?: boolean;
-  errors?: any;
+  label?: string | undefined;
+  fixedValue?: boolean | undefined;
+  errors?: any | undefined;
 }
 
 const RestaurantPicker: React.FC<RestaurantPickerProps> = ({

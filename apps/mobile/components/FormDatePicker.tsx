@@ -9,7 +9,7 @@ import type { Control } from 'react-hook-form';
 interface FormDatePickerProps {
   control: Control<any>;
   name: string;
-  label?: string;
+  label?: string | undefined;
 }
 
 const FormDatePicker: React.FC<FormDatePickerProps> = ({ control, name, label }) => {

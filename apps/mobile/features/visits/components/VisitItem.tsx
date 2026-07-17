@@ -13,8 +13,8 @@ interface VisitItemProps {
   comments: string | null;
   previewData: PeekPreviewData;
   onPress?: () => void;
-  deleted?: boolean;
-  restaurantDeleted?: boolean;
+  deleted?: boolean | undefined;
+  restaurantDeleted?: boolean | undefined;
 }
 
 const VisitItem = React.memo<VisitItemProps>(

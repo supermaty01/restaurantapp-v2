@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 

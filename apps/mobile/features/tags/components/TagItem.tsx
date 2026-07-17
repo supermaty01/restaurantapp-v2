@@ -8,7 +8,7 @@ interface TagItemProps {
   label: string;
   color: string;
   onPress?: () => void;
-  deleted?: boolean;
+  deleted?: boolean | undefined;
 }
 
 const TagItem: React.FC<TagItemProps> = ({ label, color, onPress, deleted }) => {

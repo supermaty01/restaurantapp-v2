@@ -5,7 +5,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { eq } from 'drizzle-orm/sql';
 import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';

@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { and, eq } from 'drizzle-orm/sql';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
 

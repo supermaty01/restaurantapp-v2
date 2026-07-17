@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React from 'react';
 import { Text, TouchableOpacity, View } from 'react-native';
 
 import type { VisitDetailsDTO } from '@/features/visits/types/visit-dto';

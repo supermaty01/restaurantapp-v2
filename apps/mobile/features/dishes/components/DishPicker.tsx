@@ -15,7 +15,7 @@ interface DishPickerProps {
   name: string;
   setValue: UseFormSetValue<any>;
   restaurantId: number | undefined;
-  errors?: any;
+  errors?: any | undefined;
   selectedDishes: DishListDTO[];
   setSelectedDishes: (dishes: DishListDTO[]) => void;
 }

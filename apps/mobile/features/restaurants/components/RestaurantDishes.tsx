@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import React from 'react';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
 import { useDishesByRestaurant } from '@/features/dishes/hooks/useDishesByRestaurant';

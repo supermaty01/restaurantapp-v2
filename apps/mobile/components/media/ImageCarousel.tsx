@@ -17,7 +17,7 @@ const CAROUSEL_HEIGHT = 224;
 
 interface ImageCarouselProps {
   images: LightboxImage[];
-  height?: number;
+  height?: number | undefined;
 }
 
 /**

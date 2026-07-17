@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import React from 'react';
 import { Text, View } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import clsx from 'clsx';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList } from 'react-native';
 
 import Tag from '@/features/tags/components/Tag';

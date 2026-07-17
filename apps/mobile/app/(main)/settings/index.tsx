@@ -1,5 +1,5 @@
 import * as DocumentPicker from 'expo-document-picker';
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
 
 import { DBVersionContext } from '@/app/_layout';

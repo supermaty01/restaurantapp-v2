@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import clsx from 'clsx';
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Modal, View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } from 'react-native';
 import { z } from 'zod';
@@ -73,7 +73,7 @@ interface CreateTagModalProps {
   onAdd: (tag: { name: string; color: string }) => void;
   onDelete?: (tagId: number) => void;
   editTag?: { id: number; name: string; color: string } | null;
-  isEditing?: boolean;
+  isEditing?: boolean | undefined;
 }
 
 export default function CreateTagModal({

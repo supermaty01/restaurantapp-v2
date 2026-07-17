@@ -12,12 +12,12 @@ const MOVE_CANCEL_THRESHOLD = 12;
 interface PeekablePressableProps {
   children: React.ReactNode;
   previewData: PeekPreviewData;
-  style?: StyleProp<ViewStyle>;
-  className?: string;
+  style?: StyleProp<ViewStyle> | undefined;
+  className?: string | undefined;
   onPress?: () => void;
-  scaleValue?: number;
-  baseOpacity?: number;
-  sourceBorderRadius?: number;
+  scaleValue?: number | undefined;
+  baseOpacity?: number | undefined;
+  sourceBorderRadius?: number | undefined;
 }
 
 const PeekablePressable: React.FC<PeekablePressableProps> = ({

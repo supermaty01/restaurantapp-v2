@@ -19,7 +19,7 @@ import type { MapPressEvent, Region } from 'react-native-maps';
 interface MapLocationPickerProps {
   location: { latitude: number; longitude: number } | null;
   onLocationChange?: (location: { latitude: number; longitude: number } | null) => void;
-  editable?: boolean;
+  editable?: boolean | undefined;
 }
 
 interface PlaceSuggestion {
@@ -128,8 +128,8 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         longitude,
       });
 
-      if (geocode.length > 0) {
-        const addressInfo = geocode[0];
+      const addressInfo = geocode[0];
+      if (addressInfo) {
         const formattedAddress = [
           addressInfo.name || '',
           addressInfo.street || '',

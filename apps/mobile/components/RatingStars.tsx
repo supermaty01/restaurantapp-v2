@@ -8,18 +8,18 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import type { Control } from 'react-hook-form';
 
 interface RatingStarsProps {
-  control?: Control<any>;
-  name?: string;
-  value?: number | null;
-  readOnly?: boolean;
-  size?: number;
-  gap?: number;
+  control?: Control<any> | undefined;
+  name?: string | undefined;
+  value?: number | null | undefined;
+  readOnly?: boolean | undefined;
+  size?: number | undefined;
+  gap?: number | undefined;
 }
 
 interface RatingStarsDisplayProps {
   ratingValue: number;
   onChange: (value: number) => void;
-  value?: number | null;
+  value?: number | null | undefined;
   readOnly: boolean;
   size: number;
   gap: number;
