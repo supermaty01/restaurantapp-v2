@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  # Green checks — these must pass. TypeScript is strict and fully clean; tests
+  # cover the mappers, schemas and helpers that are risky to regress.
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run -w apps/mobile typecheck
+      - run: npm run -w apps/mobile test:ci
+
+  # Lint is reported but not yet blocking: the working tree still has the
+  # architecture-boundary violations that phase 1 removes with the repository
+  # layer, plus React-Compiler-readiness warnings. See docs/ESTADO.md. Flip
+  # `continue-on-error` to false once phase 1 lands.
+  lint:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run -w apps/mobile lint

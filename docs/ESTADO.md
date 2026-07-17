@@ -6,17 +6,17 @@ Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está
 
 ## Estado global
 
-| Fase                    | Estado                                  |
-| ----------------------- | --------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–13)                |
-| 0 — Puesta a punto      | 🟡 En curso (~90%): TS en 0, falta lint |
-| 1 — Esquema local       | ⬜ Siguiente                            |
-| 2 — Supabase + Auth     | ⬜ Bloqueada (credenciales)             |
-| 3 — Sync                | ⬜                                      |
-| 4 — Worker / Share      | ⬜ Bloqueada (credenciales)             |
-| 5 — Social              | ⬜                                      |
-| 6 — UI                  | ⬜                                      |
-| 7 — Asistente IA        | ⬜ Bloqueada (credenciales)             |
+| Fase                    | Estado                                               |
+| ----------------------- | ---------------------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–13)                             |
+| 0 — Puesta a punto      | 🟢 Casi lista: TS+CI verdes; lint pendiente = fase 1 |
+| 1 — Esquema local       | ⬜ Siguiente                                         |
+| 2 — Supabase + Auth     | ⬜ Bloqueada (credenciales)                          |
+| 3 — Sync                | ⬜                                                   |
+| 4 — Worker / Share      | ⬜ Bloqueada (credenciales)                          |
+| 5 — Social              | ⬜                                                   |
+| 6 — UI                  | ⬜                                                   |
+| 7 — Asistente IA        | ⬜ Bloqueada (credenciales)                          |
 
 ## Hecho
 
@@ -72,31 +72,27 @@ Todo el código portado pasa `strict` + `noUncheckedIndexedAccess` + `exactOptio
 - `ImportConflictModal` y `importService` usaban `existingEntity!`; ahora hay narrowing real.
 - DTOs: `deleted` pasa de opcional a `boolean` requerido, que es lo que dice la BD (NOT NULL DEFAULT false).
 
-### 🔴 ESLint: 208 errores + 16 avisos
+### 🟡 ESLint: de 208 errores a 40 errores + 76 avisos
 
-**41 son de la regla de fronteras de arquitectura que define [12 — Calidad](12-calidad.md)** (`no-restricted-imports`): las pantallas importan `services/db` y consultan Drizzle directamente. **Esto no es ruido: es la deuda que la [fase 1](10-roadmap.md#fase-1--refactor-del-esquema-local--crítica) debe saldar** al introducir la capa de repositorios. Se arregla ahí, no antes — moverlo dos veces sería trabajo tirado.
+Progreso saldado (todo con TS en 0, 17 tests y bundle verdes en cada paso):
 
-El resto son reglas modernas de `eslint-config-expo` (era React 19 / React Compiler) sobre código escrito para React 18:
+- **47 de promesas eliminadas** (`no-floating-promises` + `no-misused-promises`) — cada una era un fallo que se tragaba en silencio. `void` explícito en fire-and-forget; handlers JSX async permitidos (idiomático en RN, `checksVoidReturn.attributes:false`); botones de Alert envueltos en `void (async …)()`.
+- **42 `any` / `unsafe-assignment` eliminadas → 0.** Nuevo `services/places` con validación zod; hooks de Drizzle sin `any` (joins antes del where); `ImagesUploader` con narrowing de la unión discriminada; iconos tipados con `ComponentProps<typeof Ionicons>['name']`; `catch (error: any)` → `unknown`.
+- Logs, `clsx` (import nombrado), comillas JSX escapadas, `import/order`: limpiados.
 
-| Regla                                     | Nº  | Qué significa                                                           |
-| ----------------------------------------- | --- | ----------------------------------------------------------------------- |
-| `react-hooks/refs`                        | 33  | Lectura/escritura de refs durante el render                             |
-| `@typescript-eslint/no-misused-promises`  | 31  | `async` pasada donde se espera `void` (handlers): errores que se tragan |
-| `react-hooks/immutability`                | 29  | Mutación de valores que el compilador asume inmutables                  |
-| `@typescript-eslint/no-unsafe-assignment` | 24  | Asignaciones desde `any`                                                |
-| `@typescript-eslint/no-explicit-any`      | 18  | `any` explícito restante                                                |
-| `@typescript-eslint/no-floating-promises` | 16  | Promesas sin await ni catch: un fallo desaparece en silencio            |
-| `react-hooks/set-state-in-effect`         | 11  | `setState` en efectos (renders en cascada)                              |
-| `no-console` (aviso)                      | 11  | —                                                                       |
-| otros                                     | 14  | `no-unescaped-entities`, `no-named-as-default`, …                       |
+**Restante:**
 
-Los de promesas (`no-misused-promises` + `no-floating-promises` = 47) son los de mayor valor: cada uno es un error que hoy se traga en silencio. Recomendación de orden: promesas → `any` → reglas de react-hooks → fronteras (en fase 1).
+1. **40 errores — regla de fronteras** (`no-restricted-imports`): las pantallas consultan Drizzle directamente. **Deuda que salda la [fase 1](10-roadmap.md#fase-1--refactor-del-esquema-local--crítica)** con la capa de repositorios; moverlo antes sería trabajo tirado.
+2. **76 avisos — preparación para React Compiler** (`react-hooks/refs`, `immutability`, `set-state-in-effect`, `incompatible-library`, `preserve-manual-memoization`). **El compiler NO está activado** en `app.config.js` (solo `typedRoutes`), así que no afectan al runtime. Se dejan en `warn` a propósito: son deuda de preparación a saldar como **workstream propio con verificación en dispositivo**, no a ciegas. Al adoptar el compiler se re-suben a `error`. `rules-of-hooks` y `exhaustive-deps` siguen como error.
+
+### ✅ CI creada
+
+`.github/workflows/ci.yml`: job `verify` (bloqueante) corre `format:check` + `typecheck` + `test:ci` — todo en verde. Job `lint` informativo (`continue-on-error`) hasta que la fase 1 elimine las 40 de fronteras; entonces se vuelve bloqueante.
 
 ### Otros pendientes
 
-1. **`packages/shared` está vacío** — mover ahí los schemas zod.
-2. **CI (GitHub Actions) no creada.**
-3. **Verificación en emulador/dispositivo: no hecha.** El bundle compila, pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto.
+1. **`packages/shared` sigue vacío.** Decisión: se puebla al crear la API (fase 4), que es su primer consumidor real; moverlo ahora, con el app como único consumidor, es riesgo sin beneficio.
+2. **Verificación en emulador/dispositivo: no hecha.** El bundle compila (2959 módulos), pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto.
 
 ### ❓ Para decidir tú
 
