@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';

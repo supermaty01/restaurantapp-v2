@@ -35,7 +35,7 @@ export default function TagsScreen() {
       handleModalClose();
       return { success: true };
     } catch (error) {
-      console.log('Error in tag operation:', error);
+      console.error('Error in tag operation:', error);
       return { success: false, error: 'Error al procesar la etiqueta' };
     }
   };
@@ -47,7 +47,7 @@ export default function TagsScreen() {
       handleModalClose();
       return { success: true };
     } catch (error) {
-      console.log('Error deleting tag:', error);
+      console.error('Error deleting tag:', error);
       Alert.alert('Error', 'No se pudo eliminar la etiqueta');
       return { success: false, error: 'Error al eliminar la etiqueta' };
     }

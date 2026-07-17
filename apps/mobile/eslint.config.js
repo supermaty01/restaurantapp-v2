@@ -50,6 +50,22 @@ module.exports = tseslint.config(
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
+      // --- React Compiler readiness rules (eslint-plugin-react-hooks v6).
+      // React Compiler is NOT enabled in this build (see app.config.js — only
+      // typedRoutes is on), so these compiler-specific findings don't affect
+      // runtime. They flag real compiler-readiness debt (refs read in render,
+      // captured-value mutation, setState-in-effect cascades) worth fixing as a
+      // dedicated workstream *with* device verification, not blind en masse.
+      // Kept as 'warn' for visibility; the classic hooks rules below stay error.
+      // Re-raise to 'error' when adopting React Compiler. Tracked in docs/ESTADO.
+      'react-hooks/refs': 'warn',
+      'react-hooks/immutability': 'warn',
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/incompatible-library': 'warn',
+      'react-hooks/preserve-manual-memoization': 'warn',
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': 'error',
+
       // --- Silent failures are how data gets lost.
       'no-empty': ['error', { allowEmptyCatch: false }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],

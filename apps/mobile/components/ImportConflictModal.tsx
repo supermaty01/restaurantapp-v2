@@ -76,7 +76,8 @@ export default function ImportConflictModal({
           {/* Content */}
           <ScrollView className="max-h-80">
             <Text className={`text-base mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Ya tienes un restaurante llamado "{conflict.existingEntity?.name}" en tu lista.
+              Ya tienes un restaurante llamado &quot;{conflict.existingEntity?.name}&quot; en tu
+              lista.
             </Text>
 
             <Text className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
@@ -116,8 +117,8 @@ export default function ImportConflictModal({
                   Usar el restaurante existente
                 </Text>
                 <Text className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  Vincular el {getEntityTypeLabel().toLowerCase()} al restaurante "
-                  {conflict.existingEntity?.name}"
+                  Vincular el {getEntityTypeLabel().toLowerCase()} al restaurante &quot;
+                  {conflict.existingEntity?.name}&quot;
                 </Text>
               </View>
             </TouchableOpacity>

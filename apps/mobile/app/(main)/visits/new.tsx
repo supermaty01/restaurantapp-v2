@@ -85,7 +85,7 @@ export default function VisitCreateScreen() {
       router.back();
     } catch (error) {
       Alert.alert('Error', 'No se pudo crear la visita');
-      console.log(error);
+      console.error(error);
     } finally {
       setIsSubmitting(false);
     }

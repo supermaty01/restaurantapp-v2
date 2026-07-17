@@ -139,7 +139,7 @@ export default function DishEditScreen() {
       router.back();
     } catch (error) {
       Alert.alert('Error', 'No se pudo actualizar el plato');
-      console.log(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }

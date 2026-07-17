@@ -1,4 +1,4 @@
-import clsx from 'clsx';
+import { clsx } from 'clsx';
 import { Controller } from 'react-hook-form';
 import { View, Text, TextInput } from 'react-native';
 

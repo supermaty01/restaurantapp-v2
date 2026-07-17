@@ -135,7 +135,7 @@ export default function VisitEditScreen() {
       });
     } catch (error) {
       Alert.alert('Error', 'No se pudo actualizar la visita.');
-      console.log(error);
+      console.error(error);
     }
   };
 

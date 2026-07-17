@@ -3,8 +3,6 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
-
-import type { ComponentProps } from 'react';
 import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 
 import ImportConflictModal from '@/components/ImportConflictModal';
@@ -18,6 +16,8 @@ import {
   importVisitFile,
 } from '@/services/share/importService';
 import type { ShareFileData, ConflictResult, ConflictResolution } from '@/services/share/types';
+
+import type { ComponentProps } from 'react';
 
 export default function ImportScreen() {
   const router = useRouter();

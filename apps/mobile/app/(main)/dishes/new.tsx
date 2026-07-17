@@ -88,7 +88,7 @@ export default function DishCreateScreen() {
       }
     } catch (error) {
       Alert.alert('Error', 'No se pudo crear el plato');
-      console.log(error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
