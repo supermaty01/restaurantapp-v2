@@ -72,7 +72,7 @@ El visor propio incluye: paginado, pinch-zoom con clamp de bordes, doble-tap con
 
 ### Corrección a los docs a partir de lo aprendido
 
-- `react-native-pager-view` **vuelve** al proyecto, pero como dependencia de `@react-navigation/material-top-tabs`, no de imágenes. La decisión de [11](11-dependencias.md) se mantiene (nada de librerías de _imágenes_), pero la tabla debe reflejarlo.
+- La decisión de [11](11-dependencias.md) se cumplió **mejor de lo previsto**: al migrar a expo-router y sustituir las pestañas internas por `SegmentedTabs`, también salieron `react-native-pager-view`, `react-native-tab-view` y `@react-navigation/material-top-tabs`. La app ya **no depende de ninguna librería de carrusel, pager ni zoom**.
 - `expo-file-system`: el código portado usa la API **legacy** (`expo-file-system/legacy`), que SDK 57 sigue exportando. Decisión consciente: migrar a la API nueva a la vez que se toca ese código en fase 1, en vez de mezclar dos refactors sobre la ruta crítica de backups. **Deuda anotada.**
 
 ## Siguiente paso concreto
