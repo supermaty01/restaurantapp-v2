@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { eq } from 'drizzle-orm/sql';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
@@ -7,6 +6,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import RestaurantDetails from '@/features/restaurants/components/RestaurantDetails';
 import RestaurantDishes from '@/features/restaurants/components/RestaurantDishes';
@@ -16,8 +16,6 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { canDeleteRestaurantPermanently, softDeleteRestaurant } from '@/lib/helpers/soft-delete';
 import * as schema from '@/services/db/schema';
 import { exportRestaurant } from '@/services/share/exportService';
-
-const Tab = createMaterialTopTabNavigator();
 
 export default function RestaurantDetailScreen() {
   const router = useRouter();
@@ -144,28 +142,25 @@ export default function RestaurantDetailScreen() {
       )}
 
       <View className="bg-card dark:bg-dark-card mt-4 mx-4 rounded-xl flex-1 overflow-hidden mb-4">
-        <Tab.Navigator
-          screenOptions={{
-            tabBarActiveTintColor: isDarkMode ? '#7A9455' : '#93AE72',
-            tabBarInactiveTintColor: isDarkMode ? '#a0a0a0' : '#6b7280',
-            tabBarIndicatorStyle: {
-              backgroundColor: isDarkMode ? '#7A9455' : '#93AE72',
-              height: 3,
+        <SegmentedTabs
+          tabs={[
+            {
+              key: 'details',
+              label: 'Detalles',
+              render: () => <RestaurantDetails restaurant={restaurant} />,
             },
-            tabBarLabelStyle: { fontSize: 16, fontWeight: 'bold' },
-            tabBarStyle: { backgroundColor: isDarkMode ? '#2A2A2A' : 'white' },
-          }}
-        >
-          <Tab.Screen name="Details" options={{ tabBarLabel: 'Detalles' }}>
-            {() => <RestaurantDetails restaurant={restaurant} />}
-          </Tab.Screen>
-          <Tab.Screen name="Visits" options={{ tabBarLabel: 'Visitas' }}>
-            {() => <RestaurantVisits restaurant={restaurant} />}
-          </Tab.Screen>
-          <Tab.Screen name="Dishes" options={{ tabBarLabel: 'Platos' }}>
-            {() => <RestaurantDishes restaurant={restaurant} />}
-          </Tab.Screen>
-        </Tab.Navigator>
+            {
+              key: 'visits',
+              label: 'Visitas',
+              render: () => <RestaurantVisits restaurant={restaurant} />,
+            },
+            {
+              key: 'dishes',
+              label: 'Platos',
+              render: () => <RestaurantDishes restaurant={restaurant} />,
+            },
+          ]}
+        />
       </View>
     </View>
   );

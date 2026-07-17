@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
@@ -9,6 +8,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 
+import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import VisitDetails from '@/features/visits/components/VisitDetails';
 import VisitDishes from '@/features/visits/components/VisitDishes';
@@ -17,8 +17,6 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { canDeleteVisitPermanently, softDeleteVisit } from '@/lib/helpers/soft-delete';
 import * as schema from '@/services/db/schema';
 import { exportVisit } from '@/services/share/exportService';
-
-const Tab = createMaterialTopTabNavigator();
 
 export default function VisitDetailScreen() {
   const router = useRouter();
@@ -153,25 +151,12 @@ export default function VisitDetailScreen() {
       )}
 
       <View className="bg-card dark:bg-dark-card mt-4 mx-4 rounded-xl flex-1 overflow-hidden mb-4">
-        <Tab.Navigator
-          screenOptions={{
-            tabBarActiveTintColor: isDarkMode ? '#7A9455' : '#93AE72',
-            tabBarInactiveTintColor: isDarkMode ? '#a0a0a0' : '#6b7280',
-            tabBarIndicatorStyle: {
-              backgroundColor: isDarkMode ? '#7A9455' : '#93AE72',
-              height: 3,
-            },
-            tabBarLabelStyle: { fontSize: 16, fontWeight: 'bold' },
-            tabBarStyle: { backgroundColor: isDarkMode ? '#2A2A2A' : 'white' },
-          }}
-        >
-          <Tab.Screen name="Details" options={{ tabBarLabel: 'Detalles' }}>
-            {() => <VisitDetails visit={visit} />}
-          </Tab.Screen>
-          <Tab.Screen name="Dishes" options={{ tabBarLabel: 'Platos' }}>
-            {() => <VisitDishes visit={visit} />}
-          </Tab.Screen>
-        </Tab.Navigator>
+        <SegmentedTabs
+          tabs={[
+            { key: 'details', label: 'Detalles', render: () => <VisitDetails visit={visit} /> },
+            { key: 'dishes', label: 'Platos', render: () => <VisitDishes visit={visit} /> },
+          ]}
+        />
       </View>
     </View>
   );

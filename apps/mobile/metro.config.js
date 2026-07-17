@@ -7,15 +7,11 @@ const workspaceRoot = path.resolve(projectRoot, '../..');
 
 const config = getDefaultConfig(projectRoot);
 
-// Monorepo: watch the workspace root so packages/shared resolves, and read
-// modules from both the app and the hoisted root node_modules.
+// Monorepo: watch the workspace root so packages/shared resolves and hoisted
+// modules are picked up. Expo's default resolver already handles the rest.
 config.watchFolders = [workspaceRoot];
-config.resolver.nodeModulesPaths = [
-  path.resolve(projectRoot, 'node_modules'),
-  path.resolve(workspaceRoot, 'node_modules'),
-];
-config.resolver.disableHierarchicalLookup = true;
 
+// Lets Drizzle migration .sql files be imported as modules.
 config.resolver.sourceExts.push('sql');
 
 module.exports = withNativeWind(config, { input: './global.css' });

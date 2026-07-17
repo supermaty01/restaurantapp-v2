@@ -23,7 +23,6 @@
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-picker/picker": "2.11.4",
     "@react-navigation/bottom-tabs": "^7.18.10",
-    "@react-navigation/material-top-tabs": "^7.6.9",
     "@react-navigation/native": "^7.3.10",
     "@react-navigation/native-stack": "^7.18.2",
     "@restaurantapp/shared": "^2.0.0",
