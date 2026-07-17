@@ -62,7 +62,7 @@ export default function VisitsScreen() {
       date: formatVisitDate(item.visited_at),
       restaurantName: item.restaurant.name,
       comments: item.comments,
-      imageUrl: item.images && item.images.length > 0 ? item.images[0].uri : undefined,
+      imageUrl: item.images?.[0]?.uri,
     } as const;
   }, []);
 
@@ -118,7 +118,7 @@ export default function VisitsScreen() {
 
   const renderListItem = useCallback(
     ({ item }: { item: VisitListDTO }) => {
-      const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
+      const imageUrl = item.images?.[0]?.uri ?? null;
       const previewData = buildPreviewData(item);
       const formattedVisitDate = formatVisitDate(item.visited_at);
 
@@ -140,7 +140,7 @@ export default function VisitsScreen() {
 
   const renderGridItem = useCallback(
     ({ item }: { item: VisitListDTO }) => {
-      const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
+      const imageUrl = item.images?.[0]?.uri ?? null;
       const previewData = buildPreviewData(item);
       const formattedVisitDate = formatVisitDate(item.visited_at);
 

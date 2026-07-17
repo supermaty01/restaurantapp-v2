@@ -4,15 +4,19 @@ import { useState } from 'react';
 import { Controller } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 
-import type { Control } from 'react-hook-form';
+import type { Control, FieldPath, FieldValues } from 'react-hook-form';
 
-interface FormDatePickerProps {
-  control: Control<any>;
-  name: string;
+interface FormDatePickerProps<TFieldValues extends FieldValues> {
+  control: Control<TFieldValues>;
+  name: FieldPath<TFieldValues>;
   label?: string | undefined;
 }
 
-const FormDatePicker: React.FC<FormDatePickerProps> = ({ control, name, label }) => {
+function FormDatePicker<TFieldValues extends FieldValues>({
+  control,
+  name,
+  label,
+}: FormDatePickerProps<TFieldValues>) {
   const [showPicker, setShowPicker] = useState(false);
 
   return (
@@ -58,6 +62,6 @@ const FormDatePicker: React.FC<FormDatePickerProps> = ({ control, name, label })
       }}
     />
   );
-};
+}
 
 export default FormDatePicker;

@@ -21,7 +21,7 @@ export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) 
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
           // Toma la primera imagen del array si existe
-          const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : null;
+          const imageUrl = item.images?.[0]?.uri ?? null;
           return (
             <TouchableOpacity
               className="flex-row items-center py-3 border-b border-gray-200 dark:border-gray-700"

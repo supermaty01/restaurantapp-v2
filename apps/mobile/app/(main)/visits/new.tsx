@@ -33,7 +33,7 @@ export default function VisitCreateScreen() {
     defaultValues: {
       visited_at: getTodayLocalDateString(),
       comments: '',
-      restaurantId: routeRestaurantId ? Number(routeRestaurantId) : undefined,
+      ...(routeRestaurantId ? { restaurantId: Number(routeRestaurantId) } : {}),
       dishes: [],
     },
   });

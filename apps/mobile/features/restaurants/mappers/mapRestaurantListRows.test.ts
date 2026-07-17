@@ -32,6 +32,6 @@ describe('mapRestaurantListRows', () => {
     expect(restaurants).toHaveLength(1);
     expect(restaurants[0]!.tags).toHaveLength(1);
     expect(restaurants[0]!.images).toHaveLength(1);
-    expect(restaurants[0].images[0].uri).toBe('file:///documents/images/restaurant.jpg');
+    expect(restaurants[0]!.images[0]!.uri).toBe('file:///documents/images/restaurant.jpg');
   });
 });

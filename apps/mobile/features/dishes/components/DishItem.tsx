@@ -22,7 +22,7 @@ interface DishItemProps {
 
 const DishItem = React.memo<DishItemProps>(
   ({ name, comments, tags, rating, images, previewData, onPress }) => {
-    const imageUrl = images.length > 0 ? images[0].uri : null;
+    const imageUrl = images[0]?.uri ?? null;
 
     return (
       <PeekablePressable

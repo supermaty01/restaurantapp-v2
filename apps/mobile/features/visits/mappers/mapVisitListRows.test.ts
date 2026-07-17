@@ -30,6 +30,6 @@ describe('mapVisitListRows', () => {
     expect(visits).toHaveLength(1);
     expect(visits[0].restaurant.name).toBe('Parrilla');
     expect(visits[0]!.images).toHaveLength(1);
-    expect(visits[0].images[0].uri).toBe('file:///documents/images/visit.jpg');
+    expect(visits[0]!.images[0]!.uri).toBe('file:///documents/images/visit.jpg');
   });
 });

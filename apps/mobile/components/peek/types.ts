@@ -14,7 +14,7 @@ export interface RestaurantPeekData {
   comments: string | null;
   rating: number | null;
   tags: TagDTO[];
-  imageUrl?: string;
+  imageUrl?: string | undefined;
 }
 
 export interface DishPeekData {
@@ -24,7 +24,7 @@ export interface DishPeekData {
   comments: string | null;
   rating: number | null;
   tags: TagDTO[];
-  imageUrl?: string;
+  imageUrl?: string | undefined;
 }
 
 export interface VisitPeekData {
@@ -33,7 +33,7 @@ export interface VisitPeekData {
   date: string;
   restaurantName: string;
   comments: string | null;
-  imageUrl?: string;
+  imageUrl?: string | undefined;
 }
 
 export type PeekPreviewData = RestaurantPeekData | DishPeekData | VisitPeekData;

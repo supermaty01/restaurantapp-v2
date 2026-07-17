@@ -32,7 +32,7 @@ const buildPreviewData = (item: DishListDTO) => {
     comments: item.comments,
     rating: item.rating,
     tags: item.tags || [],
-    imageUrl: item.images && item.images.length > 0 ? item.images[0].uri : undefined,
+    imageUrl: item.images?.[0]?.uri,
   } as const;
 };
 
@@ -140,7 +140,7 @@ export default function DishesScreen() {
 
   const renderGridItem = useCallback(
     ({ item }: { item: DishListDTO }) => {
-      const imageUrl = item.images && item.images.length > 0 ? item.images[0].uri : undefined;
+      const imageUrl = item.images?.[0]?.uri;
       const previewData = buildPreviewData(item);
 
       return (

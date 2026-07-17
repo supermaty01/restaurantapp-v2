@@ -34,8 +34,6 @@ export default function RestaurantEditScreen() {
     defaultValues: {
       name: '',
       comments: '',
-      rating: undefined,
-      location: undefined,
     },
   });
 

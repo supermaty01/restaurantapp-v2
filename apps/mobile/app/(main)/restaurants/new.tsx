@@ -44,8 +44,6 @@ export default function RestaurantCreateScreen() {
     defaultValues: {
       name: (prefillName as string) || '',
       comments: '',
-      rating: undefined,
-      location: undefined,
     },
   });
 
