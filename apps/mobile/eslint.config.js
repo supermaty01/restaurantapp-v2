@@ -96,7 +96,15 @@ module.exports = tseslint.config(
           ],
           patterns: [
             {
-              group: ['**/services/db/**', '@/services/db/**'],
+              // Blocks the schema and query surface. Plain constants such as
+              // DATABASE_NAME carry no query power and the root layout needs
+              // them to configure SQLiteProvider, so they stay allowed.
+              group: [
+                '**/services/db/schema',
+                '@/services/db/schema',
+                '**/services/db/types',
+                '@/services/db/types',
+              ],
               message: 'Screens must not query the DB. Use a feature repository/hook instead.',
             },
           ],
