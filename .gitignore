@@ -1,0 +1,32 @@
+# Dependencias
+node_modules/
+
+# Entornos y secretos
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Expo / builds
+.expo/
+dist/
+web-build/
+android/app/build/
+ios/build/
+*.apk
+*.aab
+*.ipa
+
+# Cloudflare
+.wrangler/
+
+# Supabase local
+supabase/.temp/
+
+# Herramientas
+.DS_Store
+*.log
+coverage/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
