@@ -130,7 +130,7 @@ export default function ImportScreen() {
 
   useEffect(() => {
     if (uri) {
-      handleImport(decodeURIComponent(uri));
+      void handleImport(decodeURIComponent(uri));
     } else {
       setError('No se recibió ningún archivo');
       setLoading(false);
@@ -140,7 +140,7 @@ export default function ImportScreen() {
   const handleConflictResolve = (resolution: ConflictResolution) => {
     setShowConflictModal(false);
     if (shareData) {
-      performImport(shareData, resolution);
+      void performImport(shareData, resolution);
     }
   };
 

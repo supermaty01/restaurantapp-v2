@@ -59,23 +59,25 @@ export default function RestaurantDetailScreen() {
           {
             text: 'Eliminar',
             style: 'destructive',
-            onPress: async () => {
-              try {
-                if (canDeletePermanently) {
-                  // Eliminar permanentemente
-                  await drizzleDb
-                    .delete(schema.restaurants)
-                    .where(eq(schema.restaurants.id, Number(id)));
-                } else {
-                  // Soft delete
-                  await softDeleteRestaurant(drizzleDb, Number(id));
-                }
+            onPress: () => {
+              void (async () => {
+                try {
+                  if (canDeletePermanently) {
+                    // Eliminar permanentemente
+                    await drizzleDb
+                      .delete(schema.restaurants)
+                      .where(eq(schema.restaurants.id, Number(id)));
+                  } else {
+                    // Soft delete
+                    await softDeleteRestaurant(drizzleDb, Number(id));
+                  }
 
-                Alert.alert('Eliminado', 'Restaurante eliminado correctamente');
-                router.back();
-              } catch {
-                Alert.alert('Error', 'No se pudo eliminar el restaurante');
-              }
+                  Alert.alert('Eliminado', 'Restaurante eliminado correctamente');
+                  router.back();
+                } catch {
+                  Alert.alert('Error', 'No se pudo eliminar el restaurante');
+                }
+              })();
             },
           },
         ],

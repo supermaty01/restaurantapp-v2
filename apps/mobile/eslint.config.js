@@ -39,7 +39,14 @@ module.exports = tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': 'error',
+      // Passing an async handler to a JSX prop (onPress={async () => …}) is
+      // idiomatic in React Native — the returned promise is ignored by design.
+      // The genuine risk (floating promises in statements, async callbacks to
+      // library APIs) stays caught by `arguments` + no-floating-promises.
+      '@typescript-eslint/no-misused-promises': [
+        'error',
+        { checksVoidReturn: { attributes: false } },
+      ],
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 

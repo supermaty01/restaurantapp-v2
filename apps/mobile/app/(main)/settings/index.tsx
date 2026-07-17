@@ -86,27 +86,29 @@ export default function SettingsScreen() {
           {
             text: 'Continuar',
             style: 'destructive',
-            onPress: async () => {
-              try {
-                setIsImporting(true);
-                setImportProgress(0);
-
-                // Realizar la importación utilizando el servicio
-                await backupService.importData(fileUri, (progress) => {
-                  setImportProgress(progress);
-                });
-                bumpDb();
-              } catch (error) {
-                console.error('Error durante la importación:', error);
-                Alert.alert('Error', 'No se pudo completar la importación');
+            onPress: () => {
+              void (async () => {
                 try {
-                  await backupService.restoreBackup();
-                } catch (e) {
-                  console.error('Error al restaurar la copia de seguridad:', e);
+                  setIsImporting(true);
+                  setImportProgress(0);
+
+                  // Realizar la importación utilizando el servicio
+                  await backupService.importData(fileUri, (progress) => {
+                    setImportProgress(progress);
+                  });
+                  bumpDb();
+                } catch (error) {
+                  console.error('Error durante la importación:', error);
+                  Alert.alert('Error', 'No se pudo completar la importación');
+                  try {
+                    await backupService.restoreBackup();
+                  } catch (e) {
+                    console.error('Error al restaurar la copia de seguridad:', e);
+                  }
+                } finally {
+                  setIsImporting(false);
                 }
-              } finally {
-                setIsImporting(false);
-              }
+              })();
             },
           },
         ],

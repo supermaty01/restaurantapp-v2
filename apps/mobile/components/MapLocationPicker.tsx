@@ -93,7 +93,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       setMapRegion(newRegion);
       setSelectedLocation(location);
       mapRef.current?.animateToRegion(newRegion, 500);
-      fetchAddress(location.latitude, location.longitude);
+      void fetchAddress(location.latitude, location.longitude);
     } else {
       setSelectedLocation(null);
       setAddress('Ubicación no disponible');
@@ -117,7 +117,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       }
     };
 
-    loadSearchBiasLocation();
+    void loadSearchBiasLocation();
   }, []);
 
   const fetchAddress = async (latitude: number, longitude: number) => {
@@ -214,7 +214,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      searchPlaces(searchQuery);
+      void searchPlaces(searchQuery);
     }, 350);
 
     return () => clearTimeout(timeout);
@@ -291,7 +291,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     setSelectedLocation(coords);
     setSearchBiasLocation(coords);
     onLocationChange?.(coords);
-    fetchAddress(latitude, longitude);
+    void fetchAddress(latitude, longitude);
     setSuggestions([]);
   };
 
@@ -332,7 +332,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       onLocationChange?.(coords);
 
       mapRef.current?.animateToRegion(newRegion, 500);
-      fetchAddress(coords.latitude, coords.longitude);
+      void fetchAddress(coords.latitude, coords.longitude);
       setSuggestions([]);
     } catch {
       Alert.alert('Error', 'No se pudo obtener la ubicación actual.');

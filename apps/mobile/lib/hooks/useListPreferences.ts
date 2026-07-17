@@ -39,7 +39,7 @@ export function useListPreferences(entityType: ListEntityType) {
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const rows = await drizzleRef.current
           .select()
@@ -87,7 +87,7 @@ export function useListPreferences(entityType: ListEntityType) {
   const setIsGridView = useCallback(
     (value: boolean) => {
       setPrefs((p) => ({ ...p, isGridView: value }));
-      upsert(`${entityType}_view_mode`, value ? 'grid' : 'list');
+      void upsert(`${entityType}_view_mode`, value ? 'grid' : 'list');
     },
     [entityType, upsert],
   );
@@ -95,7 +95,7 @@ export function useListPreferences(entityType: ListEntityType) {
   const setSortField = useCallback(
     (value: SortField) => {
       setPrefs((p) => ({ ...p, sortField: value }));
-      upsert(`${entityType}_sort_field`, value);
+      void upsert(`${entityType}_sort_field`, value);
     },
     [entityType, upsert],
   );
@@ -103,7 +103,7 @@ export function useListPreferences(entityType: ListEntityType) {
   const setSortOrder = useCallback(
     (value: SortOrder) => {
       setPrefs((p) => ({ ...p, sortOrder: value }));
-      upsert(`${entityType}_sort_order`, value);
+      void upsert(`${entityType}_sort_order`, value);
     },
     [entityType, upsert],
   );

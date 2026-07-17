@@ -38,7 +38,7 @@ export function IntentHandler() {
       }
     };
 
-    checkInitialUrl();
+    void checkInitialUrl();
 
     // Listen for incoming URLs while app is running
     const subscription = Linking.addEventListener('url', ({ url }) => {

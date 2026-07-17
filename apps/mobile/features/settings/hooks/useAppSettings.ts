@@ -40,7 +40,7 @@ export const useAppSettings = () => {
   }, []);
 
   useEffect(() => {
-    getStorageInfo();
+    void getStorageInfo();
   }, []);
 
   const getStorageInfo = async () => {
@@ -76,7 +76,7 @@ export const useAppSettings = () => {
   );
 
   useEffect(() => {
-    initBackupService(appVersion);
+    void initBackupService(appVersion);
   }, [appVersion, initBackupService]);
 
   return {

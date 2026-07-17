@@ -60,21 +60,23 @@ export default function VisitDetailScreen() {
           {
             text: 'Eliminar',
             style: 'destructive',
-            onPress: async () => {
-              try {
-                if (canDeletePermanently) {
-                  // Eliminar permanentemente
-                  await drizzleDb.delete(schema.visits).where(eq(schema.visits.id, Number(id)));
-                } else {
-                  // Soft delete
-                  await softDeleteVisit(drizzleDb, Number(id));
-                }
+            onPress: () => {
+              void (async () => {
+                try {
+                  if (canDeletePermanently) {
+                    // Eliminar permanentemente
+                    await drizzleDb.delete(schema.visits).where(eq(schema.visits.id, Number(id)));
+                  } else {
+                    // Soft delete
+                    await softDeleteVisit(drizzleDb, Number(id));
+                  }
 
-                Alert.alert('Eliminada', 'Visita eliminada correctamente');
-                router.back();
-              } catch {
-                Alert.alert('Error', 'No se pudo eliminar la visita');
-              }
+                  Alert.alert('Eliminada', 'Visita eliminada correctamente');
+                  router.back();
+                } catch {
+                  Alert.alert('Error', 'No se pudo eliminar la visita');
+                }
+              })();
             },
           },
         ],

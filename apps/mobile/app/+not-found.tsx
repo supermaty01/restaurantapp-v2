@@ -65,7 +65,7 @@ export default function NotFoundScreen() {
       }
     };
 
-    checkIfFileImport();
+    void checkIfFileImport();
   }, [pathname, router]);
 
   if (checking || isFileImport) {

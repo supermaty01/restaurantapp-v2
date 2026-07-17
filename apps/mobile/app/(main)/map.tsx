@@ -180,7 +180,7 @@ export default function MapScreen() {
       setSelectedPoi({ name, coordinate });
       setLoadingPoi(true);
       showDrawer();
-      fetchPlaceDetails(placeId, name, coordinate);
+      void fetchPlaceDetails(placeId, name, coordinate);
     },
     [fetchPlaceDetails, showDrawer],
   );
@@ -213,7 +213,7 @@ export default function MapScreen() {
           'Se requieren permisos para acceder a la ubicación. ¿Deseas ir a la configuración para habilitarlos?',
           [
             { text: 'Cancelar', style: 'cancel' },
-            { text: 'Abrir Configuración', onPress: () => Linking.openSettings() },
+            { text: 'Abrir Configuración', onPress: () => void Linking.openSettings() },
           ],
         );
         setLocating(false);

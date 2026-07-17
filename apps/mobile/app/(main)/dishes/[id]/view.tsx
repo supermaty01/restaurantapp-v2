@@ -59,21 +59,23 @@ export default function DishDetailScreen() {
           {
             text: 'Eliminar',
             style: 'destructive',
-            onPress: async () => {
-              try {
-                if (canDeletePermanently) {
-                  // Eliminar permanentemente
-                  await drizzleDb.delete(schema.dishes).where(eq(schema.dishes.id, Number(id)));
-                } else {
-                  // Soft delete
-                  await softDeleteDish(drizzleDb, Number(id));
-                }
+            onPress: () => {
+              void (async () => {
+                try {
+                  if (canDeletePermanently) {
+                    // Eliminar permanentemente
+                    await drizzleDb.delete(schema.dishes).where(eq(schema.dishes.id, Number(id)));
+                  } else {
+                    // Soft delete
+                    await softDeleteDish(drizzleDb, Number(id));
+                  }
 
-                Alert.alert('Eliminado', 'Plato eliminado correctamente');
-                router.back();
-              } catch {
-                Alert.alert('Error', 'No se pudo eliminar el plato');
-              }
+                  Alert.alert('Eliminado', 'Plato eliminado correctamente');
+                  router.back();
+                } catch {
+                  Alert.alert('Error', 'No se pudo eliminar el plato');
+                }
+              })();
             },
           },
         ],
