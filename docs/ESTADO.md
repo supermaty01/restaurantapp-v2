@@ -6,17 +6,17 @@ Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está
 
 ## Estado global
 
-| Fase                    | Estado                      |
-| ----------------------- | --------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–13)    |
-| 0 — Puesta a punto      | 🟡 En curso (~85%)          |
-| 1 — Esquema local       | ⬜ Siguiente                |
-| 2 — Supabase + Auth     | ⬜ Bloqueada (credenciales) |
-| 3 — Sync                | ⬜                          |
-| 4 — Worker / Share      | ⬜ Bloqueada (credenciales) |
-| 5 — Social              | ⬜                          |
-| 6 — UI                  | ⬜                          |
-| 7 — Asistente IA        | ⬜ Bloqueada (credenciales) |
+| Fase                    | Estado                                  |
+| ----------------------- | --------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–13)                |
+| 0 — Puesta a punto      | 🟡 En curso (~90%): TS en 0, falta lint |
+| 1 — Esquema local       | ⬜ Siguiente                            |
+| 2 — Supabase + Auth     | ⬜ Bloqueada (credenciales)             |
+| 3 — Sync                | ⬜                                      |
+| 4 — Worker / Share      | ⬜ Bloqueada (credenciales)             |
+| 5 — Social              | ⬜                                      |
+| 6 — UI                  | ⬜                                      |
+| 7 — Asistente IA        | ⬜ Bloqueada (credenciales)             |
 
 ## Hecho
 
@@ -61,25 +61,46 @@ El visor propio incluye: paginado, pinch-zoom con clamp de bordes, doble-tap con
 
 ## ⚠️ Fase 0 — lo que falta
 
-1. **13 errores de TypeScript** (venían de 133) y lint pendiente en el código portado de v1.
-   Son consecuencia _deseada_ de activar las reglas estrictas de [12 — Calidad](12-calidad.md) sobre código que no se escribió con ellas. **No son regresiones**: tests y bundle en verde en cada paso.
+### ✅ TypeScript: 0 errores (venían de 133)
 
-   Lo ya saldado no fue cosmético — salieron bugs reales:
-   - `exportService` asertaba `dishes[0].restaurantId!`. Un plato o visita huérfano (sin restaurante, que el esquema permite) habría petado al compartir. Ahora se trata explícitamente.
-   - `backupService` parseaba los JSON de `app_settings` con un cast. Es un borde no confiable (una versión vieja pudo escribir otra forma): ahora se validan con **zod**, según el estándar del doc 12.
-   - Las consultas de restaurantes **no seleccionaban `tags.deleted`** aunque el componente `Tag` lo pinta. Se añade al select y al tipo de fila.
-   - `FormInput`, `FormDatePicker`, `RestaurantPicker` y `DishPicker` usaban `Control<any>`: aceptaban cualquier nombre de campo sin avisar. Ahora son genéricos sobre el tipo del formulario, con `FieldPathByValue` restringiendo `name` al tipo real del campo (numérico para el picker de restaurante, `number[]` para el de platos).
-   - DTOs: `deleted` pasa de opcional a `boolean` requerido, que es lo que dice la BD (NOT NULL DEFAULT false).
+Todo el código portado pasa `strict` + `noUncheckedIndexedAccess` + `exactOptionalPropertyTypes`. No fue cosmético — salieron bugs reales:
 
-   **Restantes (13)**, medibles con `cd apps/mobile && npx tsc --noEmit`:
-   - 6 en formularios (`dishes/new`, `dishes/[id]/edit`, `visits/new`, `visits/[id]/edit`, `restaurants/new`, `restaurants/[id]/edit`): pasan `control` a los pickers ya genéricos, pero el prop sigue declarado como `Control<any>` en algún punto de la cadena. Se resuelven propagando el genérico.
-   - `map.tsx`: el prop `description` de `MapMarker` no admite `undefined` explícito → spread condicional.
-   - `PeekablePressable`: props de `Animated.View`.
-   - `ImportConflictModal`, `importService`, `DishPicker` (1 cada uno).
+- `exportService` asertaba `dishes[0].restaurantId!`. Un plato o visita sin restaurante (que el esquema permite) habría petado al compartir. Ahora se trata explícitamente.
+- `backupService` parseaba los JSON de `app_settings` con un cast. Es un borde no confiable (una versión vieja pudo escribir otra forma): ahora se validan con **zod**.
+- Las consultas de restaurantes **no seleccionaban `tags.deleted`** aunque el componente `Tag` lo pinta.
+- `FormInput`, `FormDatePicker`, `RestaurantPicker`, `DishPicker` y `RatingStars` usaban `Control<any>`: aceptaban cualquier nombre de campo sin avisar. Ahora son genéricos, con `FieldPathByValue` restringiendo `name` al tipo real del campo.
+- `ImportConflictModal` y `importService` usaban `existingEntity!`; ahora hay narrowing real.
+- DTOs: `deleted` pasa de opcional a `boolean` requerido, que es lo que dice la BD (NOT NULL DEFAULT false).
 
-2. **`packages/shared` está vacío** — mover ahí los schemas zod.
-3. **CI (GitHub Actions) no creada.**
-4. **Verificación en emulador/dispositivo: no hecha.** El bundle compila, pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto.
+### 🔴 ESLint: 208 errores + 16 avisos
+
+**41 son de la regla de fronteras de arquitectura que define [12 — Calidad](12-calidad.md)** (`no-restricted-imports`): las pantallas importan `services/db` y consultan Drizzle directamente. **Esto no es ruido: es la deuda que la [fase 1](10-roadmap.md#fase-1--refactor-del-esquema-local--crítica) debe saldar** al introducir la capa de repositorios. Se arregla ahí, no antes — moverlo dos veces sería trabajo tirado.
+
+El resto son reglas modernas de `eslint-config-expo` (era React 19 / React Compiler) sobre código escrito para React 18:
+
+| Regla                                     | Nº  | Qué significa                                                           |
+| ----------------------------------------- | --- | ----------------------------------------------------------------------- |
+| `react-hooks/refs`                        | 33  | Lectura/escritura de refs durante el render                             |
+| `@typescript-eslint/no-misused-promises`  | 31  | `async` pasada donde se espera `void` (handlers): errores que se tragan |
+| `react-hooks/immutability`                | 29  | Mutación de valores que el compilador asume inmutables                  |
+| `@typescript-eslint/no-unsafe-assignment` | 24  | Asignaciones desde `any`                                                |
+| `@typescript-eslint/no-explicit-any`      | 18  | `any` explícito restante                                                |
+| `@typescript-eslint/no-floating-promises` | 16  | Promesas sin await ni catch: un fallo desaparece en silencio            |
+| `react-hooks/set-state-in-effect`         | 11  | `setState` en efectos (renders en cascada)                              |
+| `no-console` (aviso)                      | 11  | —                                                                       |
+| otros                                     | 14  | `no-unescaped-entities`, `no-named-as-default`, …                       |
+
+Los de promesas (`no-misused-promises` + `no-floating-promises` = 47) son los de mayor valor: cada uno es un error que hoy se traga en silencio. Recomendación de orden: promesas → `any` → reglas de react-hooks → fronteras (en fase 1).
+
+### Otros pendientes
+
+1. **`packages/shared` está vacío** — mover ahí los schemas zod.
+2. **CI (GitHub Actions) no creada.**
+3. **Verificación en emulador/dispositivo: no hecha.** El bundle compila, pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto.
+
+### ❓ Para decidir tú
+
+`features/visits/schemas/visit-schema.ts` declara `dishes: number[] | string[]`. La rama de strings parece **no intencionada** (los ids de plato son enteros; hoy `["a","b"]` pasaría la validación). No se ha tocado la validación sin tu visto bueno. Si se confirma, se elimina la unión y `DishPicker` recupera un constraint limpio de `number[]`.
 
 ### Corrección a los docs a partir de lo aprendido
 
