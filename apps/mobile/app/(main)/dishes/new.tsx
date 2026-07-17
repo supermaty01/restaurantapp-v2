@@ -75,6 +75,7 @@ export default function DishCreateScreen() {
           name: payload.name,
           comments: payload.comments,
           rating: payload.rating,
+          deleted: false, // recien creado
           tags: [], // No se necesitan
           images: [], // No se necesitan
         });

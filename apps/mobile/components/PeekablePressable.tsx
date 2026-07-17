@@ -168,7 +168,7 @@ const PeekablePressable: React.FC<PeekablePressableProps> = ({
       style={style}
     >
       <Animated.View
-        className={className}
+        {...(className ? { className } : {})}
         style={{
           opacity: baseOpacity * (isPressed && !isPeekingRef.current ? 0.8 : 1),
           transform: [{ scale: scaleAnim }],

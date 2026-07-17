@@ -20,7 +20,7 @@ import type {
 // TName is constrained to fields holding a list of dish ids.
 interface DishPickerProps<
   TFieldValues extends FieldValues,
-  TName extends FieldPathByValue<TFieldValues, number[]>,
+  TName extends FieldPathByValue<TFieldValues, number[] | string[]>,
   TTransformed = TFieldValues,
 > {
   control: Control<TFieldValues, unknown, TTransformed>;
@@ -34,7 +34,7 @@ interface DishPickerProps<
 
 function DishPicker<
   TFieldValues extends FieldValues,
-  TName extends FieldPathByValue<TFieldValues, number[]>,
+  TName extends FieldPathByValue<TFieldValues, number[] | string[]>,
   TTransformed = TFieldValues,
 >({
   name,
@@ -128,7 +128,9 @@ function DishPicker<
       </View>
 
       {errors?.[name] && (
-        <Text className="text-red-600 dark:text-red-400 mt-1">{errors[name].message}</Text>
+        <Text className="text-red-600 dark:text-red-400 mt-1">
+          {String(errors[name]?.message ?? '')}
+        </Text>
       )}
 
       <Modal visible={isModalVisible} animationType="slide" transparent={true}>

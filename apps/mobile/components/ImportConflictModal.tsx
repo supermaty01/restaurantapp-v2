@@ -106,7 +106,8 @@ export default function ImportConflictModal({
             <TouchableOpacity
               className={`flex-row items-center p-4 rounded-xl border ${isDarkMode ? 'bg-dark-muted border-gray-600' : 'bg-gray-50 border-gray-200'}`}
               onPress={() =>
-                onResolve({ type: 'use_existing', existingId: conflict.existingEntity!.id })
+                conflict.existingEntity &&
+                onResolve({ type: 'use_existing', existingId: conflict.existingEntity.id })
               }
             >
               <Ionicons name="link-outline" size={24} color={isDarkMode ? '#7A9455' : '#93AE72'} />

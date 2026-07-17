@@ -124,8 +124,9 @@ export async function checkRestaurantConflict(
   name: string,
 ): Promise<ConflictResult> {
   const similar = await findSimilarRestaurants(db, name);
-  if (similar.length > 0) {
-    return { hasConflict: true, existingEntity: similar[0], incomingName: name };
+  const existingEntity = similar[0];
+  if (existingEntity) {
+    return { hasConflict: true, existingEntity, incomingName: name };
   }
   return { hasConflict: false, incomingName: name };
 }

@@ -66,10 +66,12 @@ export interface ShareFileData {
 // Conflict detection result
 export interface ConflictResult {
   hasConflict: boolean;
-  existingEntity?: {
-    id: number | undefined;
-    name: string;
-  };
+  existingEntity?:
+    | {
+        id: number;
+        name: string;
+      }
+    | undefined;
   incomingName: string;
 }
 

@@ -5,11 +5,20 @@ import { View, TouchableOpacity, Text } from 'react-native';
 
 import { useTheme } from '@/lib/context/ThemeContext';
 
-import type { Control } from 'react-hook-form';
+import type { Control, FieldPathByValue, FieldValues } from 'react-hook-form';
 
-interface RatingStarsProps {
-  control?: Control<any> | undefined;
-  name?: string | undefined;
+// Either controlled (control + name, pointing at a numeric field) or plain
+// display (value). TName is constrained so a non-numeric field cannot be bound.
+interface RatingStarsProps<
+  TFieldValues extends FieldValues = FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number | null | undefined> = FieldPathByValue<
+    TFieldValues,
+    number | null | undefined
+  >,
+  TTransformed = TFieldValues,
+> {
+  control?: Control<TFieldValues, unknown, TTransformed> | undefined;
+  name?: TName | undefined;
   value?: number | null | undefined;
   readOnly?: boolean | undefined;
   size?: number | undefined;
@@ -56,10 +65,23 @@ const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
 
 RatingStarsDisplay.displayName = 'RatingStarsDisplay';
 
-function ControlledRatingStars({ control, name, readOnly, size, gap }: RatingStarsProps) {
+function ControlledRatingStars<
+  TFieldValues extends FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number | null | undefined>,
+  TTransformed = TFieldValues,
+>({
+  control,
+  name,
+  readOnly,
+  size,
+  gap,
+}: RatingStarsProps<TFieldValues, TName, TTransformed> & {
+  control: Control<TFieldValues, unknown, TTransformed>;
+  name: TName;
+}) {
   const {
     field: { onChange, value },
-  } = useController({ control: control!, name: name! });
+  } = useController({ control, name });
 
   return (
     <RatingStarsDisplay
@@ -73,14 +95,18 @@ function ControlledRatingStars({ control, name, readOnly, size, gap }: RatingSta
   );
 }
 
-export default function RatingStars({
+export default function RatingStars<
+  TFieldValues extends FieldValues,
+  TName extends FieldPathByValue<TFieldValues, number | null | undefined>,
+  TTransformed = TFieldValues,
+>({
   control,
   name,
   value,
   readOnly = false,
   size = 24,
   gap = 4,
-}: RatingStarsProps) {
+}: RatingStarsProps<TFieldValues, TName, TTransformed>) {
   if (control && name) {
     return (
       <ControlledRatingStars

@@ -63,6 +63,7 @@ export default function VisitEditScreen() {
           name: dish.name,
           comments: null,
           rating: null,
+          deleted: false,
           tags: [],
           images: [],
         })),

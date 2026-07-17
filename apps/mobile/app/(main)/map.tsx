@@ -258,7 +258,7 @@ export default function MapScreen() {
                 longitude: restaurant.longitude,
               }}
               title={restaurant.name}
-              description={restaurant.rating ? `⭐ ${restaurant.rating}/5` : undefined}
+              {...(restaurant.rating ? { description: `⭐ ${restaurant.rating}/5` } : {})}
               onCalloutPress={() =>
                 router.push({
                   pathname: '/restaurants/[id]/view',
