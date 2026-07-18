@@ -19,9 +19,9 @@ import type {
   ShareableImage,
   ShareableTag,
 } from './types';
-import type { drizzle } from 'drizzle-orm/expo-sqlite';
+import type { AppDatabase } from '@/services/db/types';
 
-type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
+type DrizzleDb = AppDatabase;
 
 // Convert image file to base64
 async function imageToBase64(imagePath: string): Promise<ShareableImage | null> {

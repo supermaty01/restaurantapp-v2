@@ -1,8 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { eq } from 'drizzle-orm/sql';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 
@@ -12,15 +9,18 @@ import RestaurantDetails from '@/features/restaurants/components/RestaurantDetai
 import RestaurantDishes from '@/features/restaurants/components/RestaurantDishes';
 import RestaurantVisits from '@/features/restaurants/components/RestaurantVisits';
 import { useRestaurantById } from '@/features/restaurants/hooks/useRestaurantById';
-import { canDeleteRestaurantPermanently, softDeleteRestaurant } from '@/lib/helpers/soft-delete';
-import * as schema from '@/services/db/schema';
+import {
+  canHardDeleteRestaurant,
+  hardDeleteRestaurant,
+  softDeleteRestaurant,
+} from '@/features/restaurants/repositories/restaurantRepository';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportRestaurant } from '@/services/share/exportService';
 
 export default function RestaurantDetailScreen() {
   const router = useRouter();
   const { id } = useGlobalSearchParams();
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const restaurant = useRestaurantById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
 
@@ -45,7 +45,7 @@ export default function RestaurantDetailScreen() {
   async function handleDelete() {
     try {
       // Verificar si el restaurante puede ser eliminado permanentemente
-      const canDeletePermanently = await canDeleteRestaurantPermanently(drizzleDb, Number(id));
+      const canDeletePermanently = await canHardDeleteRestaurant(drizzleDb, Number(id));
 
       const message = canDeletePermanently
         ? '¿Estás seguro de que deseas eliminar este restaurante? Esta acción no se puede deshacer.'
@@ -63,12 +63,8 @@ export default function RestaurantDetailScreen() {
               void (async () => {
                 try {
                   if (canDeletePermanently) {
-                    // Eliminar permanentemente
-                    await drizzleDb
-                      .delete(schema.restaurants)
-                      .where(eq(schema.restaurants.id, Number(id)));
+                    await hardDeleteRestaurant(drizzleDb, Number(id));
                   } else {
-                    // Soft delete
                     await softDeleteRestaurant(drizzleDb, Number(id));
                   }
 

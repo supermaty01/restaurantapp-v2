@@ -1,8 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
@@ -12,13 +10,14 @@ import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
+import { createRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
 import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
 import { restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { uploadImages } from '@/lib/helpers/upload-images';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -55,26 +54,21 @@ export default function RestaurantCreateScreen() {
   const [isTagModalVisible, setTagModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setNewRestaurantId } = useNewRestaurant();
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const onSubmit: SubmitHandler<RestaurantFormData> = async (data) => {
     setLoading(true);
     try {
-      const payload = {
-        name: data.name.trim(),
-        comments: data.comments?.trim() || '',
-        rating: data.rating || null,
-        latitude: location?.latitude || null,
-        longitude: location?.longitude || null,
-      };
-
-      const response = await drizzleDb.insert(schema.restaurants).values(payload);
-      const restaurantId = response.lastInsertRowId;
-
-      // Asociar etiquetas
-      for (const tag of selectedTags) {
-        await drizzleDb.insert(schema.restaurantTags).values({ restaurantId, tagId: tag.id });
-      }
+      const restaurantId = await createRestaurant(
+        drizzleDb,
+        {
+          name: data.name.trim(),
+          comments: data.comments?.trim() || '',
+          rating: data.rating || null,
+          latitude: location?.latitude || null,
+          longitude: location?.longitude || null,
+        },
+        selectedTags.map((tag) => tag.id),
+      );
 
       if (selectedImages.length > 0) {
         await uploadImages(drizzleDb, selectedImages, 'RESTAURANT', restaurantId);

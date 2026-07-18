@@ -122,9 +122,10 @@ describe('migration 0007 — sync columns', () => {
     seedV1(db);
     applyMigrations(db, { from: 7 });
 
-    const existing = (db.prepare('SELECT uuid FROM restaurants LIMIT 1').get() as { uuid: string })
-      .uuid;
-    expect(() => db.prepare('UPDATE restaurants SET uuid = ? WHERE id = 2').run(existing)).toThrow(
+    // Take row 1's uuid and try to force it onto row 2 (a different row, so
+    // this is a genuine collision — not a no-op self-assignment).
+    const row1 = db.prepare('SELECT uuid FROM restaurants WHERE id = 1').get() as { uuid: string };
+    expect(() => db.prepare('UPDATE restaurants SET uuid = ? WHERE id = 2').run(row1.uuid)).toThrow(
       /UNIQUE/i,
     );
   });

@@ -1,8 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
@@ -10,6 +8,7 @@ import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } fr
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
+import { createDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
 import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
@@ -18,7 +17,7 @@ import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { uploadImages } from '@/lib/helpers/upload-images';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -43,8 +42,7 @@ export default function DishCreateScreen() {
   const [isTagModalVisible, setTagModalVisible] = useState(false);
   const { setNewDish } = useNewDish();
   const [loading, setLoading] = useState(false);
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const onSubmit: SubmitHandler<DishFormData> = async (data) => {
     setLoading(true);
     try {
@@ -56,13 +54,11 @@ export default function DishCreateScreen() {
         rating: data.rating || null,
       };
 
-      const response = await drizzleDb.insert(schema.dishes).values(payload);
-      const dishId = response.lastInsertRowId;
-
-      // Asociar etiquetas
-      for (const tag of selectedTags) {
-        await drizzleDb.insert(schema.dishTags).values({ dishId, tagId: tag.id });
-      }
+      const dishId = await createDish(
+        drizzleDb,
+        payload,
+        selectedTags.map((tag) => tag.id),
+      );
 
       if (selectedImages.length > 0) {
         await uploadImages(drizzleDb, selectedImages, 'DISH', dishId);

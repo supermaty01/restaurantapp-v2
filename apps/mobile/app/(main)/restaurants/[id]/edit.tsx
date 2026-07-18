@@ -1,9 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { and, eq } from 'drizzle-orm/sql';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
@@ -14,14 +11,15 @@ import RatingStars from '@/components/RatingStars';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useRestaurantById } from '@/features/restaurants/hooks/useRestaurantById';
+import { updateRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
 import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
 import { restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
-import { uploadImages } from '@/lib/helpers/upload-images';
-import * as schema from '@/services/db/schema';
+import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -44,8 +42,7 @@ export default function RestaurantEditScreen() {
   const [isTagModalVisible, setTagModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const restaurant = useRestaurantById(Number(id));
 
   useEffect(() => {
@@ -79,10 +76,13 @@ export default function RestaurantEditScreen() {
         latitude: location?.latitude || null,
         longitude: location?.longitude || null,
       };
-      await drizzleDb
-        .update(schema.restaurants)
-        .set(payload)
-        .where(eq(schema.restaurants.id, Number(id)));
+      // updateRestaurant replaces the whole tag set, so no add/remove diff.
+      await updateRestaurant(
+        drizzleDb,
+        Number(id),
+        payload,
+        selectedTags.map((tag) => tag.id),
+      );
 
       const newImages = selectedImages.filter((image) => !image.id);
       if (newImages.length > 0) {
@@ -94,47 +94,7 @@ export default function RestaurantEditScreen() {
         );
       }
 
-      // Eliminar etiquetas
-      const currentTags = restaurant?.tags.map((tag) => tag.id) || [];
-      const removedTags = currentTags.filter(
-        (tagId) => !selectedTags.some((tag) => tag.id === tagId),
-      );
-      const addedTags = selectedTags
-        .filter((tag) => !currentTags.includes(tag.id))
-        .map((tag) => tag.id);
-      if (removedTags.length > 0) {
-        await Promise.all(
-          removedTags.map((tagId) => {
-            return drizzleDb
-              .delete(schema.restaurantTags)
-              .where(
-                and(
-                  eq(schema.restaurantTags.restaurantId, Number(id)),
-                  eq(schema.restaurantTags.tagId, tagId),
-                ),
-              );
-          }),
-        );
-      }
-
-      // Agregar etiquetas
-      if (addedTags.length > 0) {
-        await Promise.all(
-          addedTags.map((tagId) => {
-            return drizzleDb
-              .insert(schema.restaurantTags)
-              .values({ restaurantId: Number(id), tagId });
-          }),
-        );
-      }
-
-      if (removedImages.length > 0) {
-        await Promise.all(
-          removedImages.map((imageId) => {
-            return drizzleDb.delete(schema.images).where(eq(schema.images.id, imageId));
-          }),
-        );
-      }
+      await deleteImages(drizzleDb, removedImages);
 
       Alert.alert('Éxito', 'Restaurante actualizado correctamente.');
       router.back();
