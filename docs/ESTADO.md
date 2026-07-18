@@ -1,22 +1,38 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-17
+**Última actualización:** 2026-07-18
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
 ## Estado global
 
-| Fase                    | Estado                                               |
-| ----------------------- | ---------------------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–13)                             |
-| 0 — Puesta a punto      | 🟢 Casi lista: TS+CI verdes; lint pendiente = fase 1 |
-| 1 — Esquema local       | ⬜ Siguiente                                         |
-| 2 — Supabase + Auth     | ⬜ Bloqueada (credenciales)                          |
-| 3 — Sync                | ⬜                                                   |
-| 4 — Worker / Share      | ⬜ Bloqueada (credenciales)                          |
-| 5 — Social              | ⬜                                                   |
-| 6 — UI                  | ⬜                                                   |
-| 7 — Asistente IA        | ⬜ Bloqueada (credenciales)                          |
+| Fase                    | Estado                                       |
+| ----------------------- | -------------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–13)                     |
+| 0 — Puesta a punto      | 🟢 Cerrada salvo verificación en dispositivo |
+| 1 — Esquema local       | 🟢 Cerrada salvo verificación en dispositivo |
+| 2 — Supabase + Auth     | 🔜 Siguiente · Bloqueada (credenciales)      |
+| 3 — Sync                | ⬜                                           |
+| 4 — Worker / Share      | ⬜ Bloqueada (credenciales)                  |
+| 5 — Social              | ⬜ (etiquetado de personas ya cimentado)     |
+| 6 — UI                  | ⬜                                           |
+| 7 — Asistente IA        | ⬜ Bloqueada (credenciales)                  |
+
+## Fase 1 — cerrada (esquema local + repositorios)
+
+Todo verificado con TS en 0, **38 tests** (22 app + 16 node contra SQLite real), lint sin errores y bundle de 2979 módulos.
+
+- **Estrategia de IDs revisada** (docs/02): PK entero local + columna `uuid` de sync, en vez de migrar el PK a UUID. Migración aditiva de bajo riesgo; la complejidad uuid↔id-local se confina al sync (fase 3).
+- **Esquema** (migración 0007): `uuid`/`created_at`/`updated_at` en tablas sincronizables, `visibility`, y tablas `people` / `visit_participant` / `change_log`. La migración que generó drizzle-kit **habría petado en el arranque de cada usuario** (ADD COLUMN con default no-constante); reescrita a ADD COLUMN nullable + UPDATE de backfill. **El harness de test la cazó.**
+- **Capa de repositorios** (`features/*/repositories/`): todas las escrituras pasan por aquí y conectan uuid/timestamps/`change_log`. Todas las pantallas migradas a `useDatabase()` — **0 violaciones de la frontera "nada de SQL en pantallas"**.
+- **Etiquetado de personas en visitas** (tarea social cimentada): `PeopleTagInput` + `visitRepository.setVisitParticipants`, con creación on-demand y `tagStatus='local'`.
+- **Importador**: `.restoshare` v1 se importa con backfill de columnas de sync (bug de uuid NULL corregido); backup completo v1 se cubre vía la migración al remontar; export = backupService v2.
+
+### Deuda anotada de fase 1
+
+- **Aislación cross-feature no enforced por lint**: `no-restricted-imports` no puede expresar "cualquier feature menos el propio". Necesita `eslint-plugin-boundaries` + reubicar piezas compartidas (componente `Tag`, `ImageDTO`/`TagDTO`) a un área común. La frontera de BD (la crítica) sí está enforced.
+- **`expo-file-system` API legacy**: sigue en uso; migrar a la nueva API cuando se toque esa ruta.
+- **Fixtures congelados de `.restoshare`**: el test de importación usa payloads v1 en código; un archivo `.restoshare` real congelado sería más robusto (polish).
 
 ## Hecho
 
@@ -59,7 +75,7 @@ Migrado a enrutado por ficheros puro:
 
 El visor propio incluye: paginado, pinch-zoom con clamp de bordes, doble-tap con foco en el punto tocado, arrastrar para cerrar con fade del fondo, contador. **Sin verificar en dispositivo** (ver bloqueos).
 
-## ⚠️ Fase 0 — lo que falta
+## Historial de calidad (fases 0–1)
 
 ### ✅ TypeScript: 0 errores (venían de 133)
 
@@ -80,36 +96,24 @@ Progreso saldado (todo con TS en 0, 17 tests y bundle verdes en cada paso):
 - **42 `any` / `unsafe-assignment` eliminadas → 0.** Nuevo `services/places` con validación zod; hooks de Drizzle sin `any` (joins antes del where); `ImagesUploader` con narrowing de la unión discriminada; iconos tipados con `ComponentProps<typeof Ionicons>['name']`; `catch (error: any)` → `unknown`.
 - Logs, `clsx` (import nombrado), comillas JSX escapadas, `import/order`: limpiados.
 
-**Restante:**
+**Estado actual del lint (tras fase 1): 0 errores + 76 avisos.**
 
-1. **40 errores — regla de fronteras** (`no-restricted-imports`): las pantallas consultan Drizzle directamente. **Deuda que salda la [fase 1](10-roadmap.md#fase-1--refactor-del-esquema-local--crítica)** con la capa de repositorios; moverlo antes sería trabajo tirado.
-2. **76 avisos — preparación para React Compiler** (`react-hooks/refs`, `immutability`, `set-state-in-effect`, `incompatible-library`, `preserve-manual-memoization`). **El compiler NO está activado** en `app.config.js` (solo `typedRoutes`), así que no afectan al runtime. Se dejan en `warn` a propósito: son deuda de preparación a saldar como **workstream propio con verificación en dispositivo**, no a ciegas. Al adoptar el compiler se re-suben a `error`. `rules-of-hooks` y `exhaustive-deps` siguen como error.
+- Las 40 de fronteras las **saldó la fase 1** con la capa de repositorios.
+- **76 avisos — preparación para React Compiler** (`react-hooks/refs`, `immutability`, `set-state-in-effect`, `incompatible-library`, `preserve-manual-memoization`). **El compiler NO está activado** en `app.config.js` (solo `typedRoutes`), así que no afectan al runtime. Se dejan en `warn` a propósito: workstream propio a saldar con verificación en dispositivo. `rules-of-hooks` y `exhaustive-deps` siguen como error.
 
 ### ✅ CI creada
 
-`.github/workflows/ci.yml`: job `verify` (bloqueante) corre `format:check` + `typecheck` + `test:ci` — todo en verde. Job `lint` informativo (`continue-on-error`) hasta que la fase 1 elimine las 40 de fronteras; entonces se vuelve bloqueante.
-
-### Otros pendientes
-
-1. **`packages/shared` sigue vacío.** Decisión: se puebla al crear la API (fase 4), que es su primer consumidor real; moverlo ahora, con el app como único consumidor, es riesgo sin beneficio.
-2. **Verificación en emulador/dispositivo: no hecha.** El bundle compila (2959 módulos), pero eso no prueba que la app _se vea bien_ ni que el visor de imágenes nuevo se sienta correcto.
+`.github/workflows/ci.yml`: job `verify` (bloqueante) corre `format:check` + `typecheck` + `test:ci` — todo en verde. Job `lint` informativo (`continue-on-error`) mientras queden los 76 avisos del compiler; al saldarlos se vuelve bloqueante.
 
 ### ❓ Para decidir tú
 
-`features/visits/schemas/visit-schema.ts` declara `dishes: number[] | string[]`. La rama de strings parece **no intencionada** (los ids de plato son enteros; hoy `["a","b"]` pasaría la validación). No se ha tocado la validación sin tu visto bueno. Si se confirma, se elimina la unión y `DishPicker` recupera un constraint limpio de `number[]`.
-
-### Corrección a los docs a partir de lo aprendido
-
-- La decisión de [11](11-dependencias.md) se cumplió **mejor de lo previsto**: al migrar a expo-router y sustituir las pestañas internas por `SegmentedTabs`, también salieron `react-native-pager-view`, `react-native-tab-view` y `@react-navigation/material-top-tabs`. La app ya **no depende de ninguna librería de carrusel, pager ni zoom**.
-- `expo-file-system`: el código portado usa la API **legacy** (`expo-file-system/legacy`), que SDK 57 sigue exportando. Decisión consciente: migrar a la API nueva a la vez que se toca ese código en fase 1, en vez de mezclar dos refactors sobre la ruta crítica de backups. **Deuda anotada.**
+`features/visits/schemas/visit-schema.ts` declara `dishes: number[] | string[]`. La rama de strings parece **no intencionada** (los ids de plato son enteros; hoy `["a","b"]` pasaría la validación). No se ha tocado sin tu visto bueno. Si se confirma, se elimina la unión y `DishPicker` recupera un constraint limpio de `number[]`.
 
 ## Siguiente paso concreto
 
-1. Arrancar la app en emulador (`npm run -w apps/mobile start`). **Prioridad máxima**: probar navegación por tabs, detalle de restaurante/visita (SegmentedTabs nuevo) y sobre todo el **carrusel + visor de imágenes propios** (pinch, doble-tap, arrastrar para cerrar).
-2. Saldar los 133 errores TS + lint (fichero a fichero, `app/**` primero).
-3. Mover schemas zod a `packages/shared`.
-4. CI en GitHub Actions con `npm run check`.
-5. Cerrar fase 0 y abrir [fase 1](10-roadmap.md#fase-1--refactor-del-esquema-local--crítica).
+1. **Verificación en emulador** (`npm run -w apps/mobile start`) — prioridad máxima, es lo único que falta para cerrar fases 0 y 1. Probar: navegación por tabs, `SegmentedTabs`, **carrusel/visor de imágenes** (pinch, doble-tap, arrastrar para cerrar), **etiquetado de personas** en visita, y sobre todo el **arranque de un usuario existente** (que la migración 0007 haga el backfill sin perder datos).
+2. **Fase 2 — Supabase + Auth** ([roadmap](10-roadmap.md#fase-2--supabase--login-opcional)): requiere que crees el proyecto Supabase y el OAuth de Google (ver [13 §3](13-despliegue.md)). El esquema espejo se deriva del schema local ya listo.
+3. Workstream de React Compiler (los 76 avisos) cuando haya dispositivo para verificar.
 
 ## Bloqueos conocidos
 
