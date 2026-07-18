@@ -3,7 +3,6 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo } from 'react';
 
 import * as schema from '@/services/db/schema';
-
 import type { AppDatabase } from '@/services/db/types';
 
 /**

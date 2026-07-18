@@ -2,10 +2,9 @@ import { eq } from 'drizzle-orm';
 
 import { makeTestDb } from '@/services/db/__tests__/test-db';
 import * as schema from '@/services/db/schema';
+import type { AppDatabase } from '@/services/db/types';
 
 import { createVisit, updateVisit, softDeleteVisit } from './visitRepository';
-
-import type { AppDatabase } from '@/services/db/types';
 
 async function seedRestaurant(db: AppDatabase) {
   const [r] = await db

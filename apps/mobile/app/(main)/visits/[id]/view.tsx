@@ -1,10 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { format, parse } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { eq } from 'drizzle-orm/sql';
 import { useGlobalSearchParams, useRouter } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, Text, TouchableOpacity, View } from 'react-native';
 
@@ -13,15 +10,14 @@ import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import VisitDetails from '@/features/visits/components/VisitDetails';
 import VisitDishes from '@/features/visits/components/VisitDishes';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
-import { canDeleteVisitPermanently, softDeleteVisit } from '@/lib/helpers/soft-delete';
-import * as schema from '@/services/db/schema';
+import { hardDeleteVisit, softDeleteVisit } from '@/features/visits/repositories/visitRepository';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportVisit } from '@/services/share/exportService';
 
 export default function VisitDetailScreen() {
   const router = useRouter();
   const { id } = useGlobalSearchParams();
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const visit = useVisitById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
 
@@ -46,7 +42,7 @@ export default function VisitDetailScreen() {
   async function handleDelete() {
     try {
       // Verificar si la visita puede ser eliminada permanentemente
-      const canDeletePermanently = await canDeleteVisitPermanently(drizzleDb, Number(id));
+      const canDeletePermanently = true; // visitas no son referenciadas por otras entidades
 
       const message = canDeletePermanently
         ? '¿Estás seguro de que deseas eliminar esta visita? Esta acción no se puede deshacer.'
@@ -65,7 +61,7 @@ export default function VisitDetailScreen() {
                 try {
                   if (canDeletePermanently) {
                     // Eliminar permanentemente
-                    await drizzleDb.delete(schema.visits).where(eq(schema.visits.id, Number(id)));
+                    await hardDeleteVisit(drizzleDb, Number(id));
                   } else {
                     // Soft delete
                     await softDeleteVisit(drizzleDb, Number(id));

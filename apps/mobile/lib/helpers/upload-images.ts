@@ -4,7 +4,6 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import { images } from '@/services/db/schema';
 import { newSyncValues, recordChange } from '@/services/db/sync-write';
-
 import type { AppDatabase } from '@/services/db/types';
 
 export async function uploadImages(

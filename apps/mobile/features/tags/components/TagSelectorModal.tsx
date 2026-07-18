@@ -1,16 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { clsx } from 'clsx';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, FlatList } from 'react-native';
 
 import Tag from '@/features/tags/components/Tag';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import CreateTagModal from './CreateTagModal';
 import { useTagsList } from '../hooks/useTagsList';
+import { createTag } from '../repositories/tagRepository';
 
 interface TagSelectorModalProps {
   visible: boolean;
@@ -26,8 +25,7 @@ export default function TagSelectorModal({
   onChangeSelected,
 }: TagSelectorModalProps) {
   const tags = useTagsList();
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const handleToggle = (selectedTag: TagDTO) => {
@@ -40,11 +38,9 @@ export default function TagSelectorModal({
 
   const handleCreateTag = async (tagData: { name: string; color: string }) => {
     try {
-      const result = await drizzleDb
-        .insert(schema.tags)
-        .values({ name: tagData.name, color: tagData.color });
+      const newId = await createTag(drizzleDb, { name: tagData.name, color: tagData.color });
       const newTag: TagDTO = {
-        id: result.lastInsertRowId,
+        id: newId,
         name: tagData.name,
         color: tagData.color,
         deleted: false,

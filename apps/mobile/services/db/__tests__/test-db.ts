@@ -2,10 +2,9 @@ import Database from 'better-sqlite3';
 import { drizzle } from 'drizzle-orm/better-sqlite3';
 
 import * as schema from '@/services/db/schema';
+import type { AppDatabase } from '@/services/db/types';
 
 import { applyMigrations } from './apply-migrations';
-
-import type { AppDatabase } from '@/services/db/types';
 
 /**
  * Builds an in-memory drizzle database (better-sqlite3) with all migrations

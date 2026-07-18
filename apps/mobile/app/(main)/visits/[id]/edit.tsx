@@ -1,8 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { eq } from 'drizzle-orm/sql';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
@@ -13,12 +10,17 @@ import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
+import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
+import {
+  getVisitParticipantNames,
+  updateVisit,
+} from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
 import { visitSchema } from '@/features/visits/schemas/visit-schema';
-import { uploadImages } from '@/lib/helpers/upload-images';
-import * as schema from '@/services/db/schema';
+import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -40,9 +42,9 @@ export default function VisitEditScreen() {
   const [selectedDishes, setSelectedDishes] = useState<DishListDTO[]>([]);
   const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
   const [removedImages, setRemovedImages] = useState<number[]>([]);
+  const [participants, setParticipants] = useState<string[]>([]);
 
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const visit = useVisitById(Number(id));
 
   const restaurantId = watch('restaurantId');
@@ -57,6 +59,7 @@ export default function VisitEditScreen() {
       });
 
       setSelectedImages(visit.images);
+      void getVisitParticipantNames(drizzleDb, Number(id)).then(setParticipants);
       setSelectedDishes(
         visit.dishes.map((dish) => ({
           id: dish.id,
@@ -69,7 +72,7 @@ export default function VisitEditScreen() {
         })),
       );
     }
-  }, [visit, reset]);
+  }, [visit, reset, drizzleDb, id]);
 
   useEffect(() => {
     if (restaurantId && visit && restaurantId !== visit?.restaurant.id) {
@@ -86,13 +89,9 @@ export default function VisitEditScreen() {
         restaurantId: data.restaurantId,
       };
 
-      // Actualizar la visita
-      await drizzleDb
-        .update(schema.visits)
-        .set(payload)
-        .where(eq(schema.visits.id, Number(id)));
+      const dishIds = (data.dishes ?? []).map((d) => (typeof d === 'string' ? parseInt(d) : d));
+      await updateVisit(drizzleDb, Number(id), payload, dishIds, participants);
 
-      // Manejar imágenes nuevas
       const newImages = selectedImages.filter((image) => !image.id);
       if (newImages.length > 0) {
         await uploadImages(
@@ -103,30 +102,7 @@ export default function VisitEditScreen() {
         );
       }
 
-      // Manejar imágenes eliminadas
-      if (removedImages.length > 0) {
-        await Promise.all(
-          removedImages.map((imageId) => {
-            return drizzleDb.delete(schema.images).where(eq(schema.images.id, imageId));
-          }),
-        );
-      }
-
-      // Manejar platos
-      // Primero eliminar todas las relaciones existentes
-      await drizzleDb.delete(schema.dishVisits).where(eq(schema.dishVisits.visitId, Number(id)));
-
-      // Luego agregar las nuevas relaciones
-      if (data.dishes && data.dishes.length > 0) {
-        await Promise.all(
-          data.dishes.map((dishId) => {
-            return drizzleDb.insert(schema.dishVisits).values({
-              visitId: Number(id),
-              dishId: typeof dishId === 'string' ? parseInt(dishId) : dishId,
-            });
-          }),
-        );
-      }
+      await deleteImages(drizzleDb, removedImages);
 
       Alert.alert('Éxito', 'Visita actualizada correctamente.');
       router.replace({
@@ -175,6 +151,8 @@ export default function VisitEditScreen() {
           selectedDishes={selectedDishes}
           setSelectedDishes={setSelectedDishes}
         />
+
+        <PeopleTagInput value={participants} onChange={setParticipants} />
 
         <ImagesUploader
           isEdit

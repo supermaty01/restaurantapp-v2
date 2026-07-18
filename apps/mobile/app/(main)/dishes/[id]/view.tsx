@@ -1,25 +1,25 @@
 import { Ionicons } from '@expo/vector-icons';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { eq } from 'drizzle-orm/sql';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
+import {
+  canHardDeleteDish,
+  hardDeleteDish,
+  softDeleteDish,
+} from '@/features/dishes/repositories/dishRepository';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import Tag from '@/features/tags/components/Tag';
 import { useTheme } from '@/lib/context/ThemeContext';
-import { canDeleteDishPermanently, softDeleteDish } from '@/lib/helpers/soft-delete';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportDish } from '@/services/share/exportService';
 
 export default function DishDetailScreen() {
   const router = useRouter();
   const { id } = useGlobalSearchParams(); // Obtiene el id desde la ruta
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const dish = useDishById(Number(id));
   const { isDarkMode } = useTheme();
   const [isSharing, setIsSharing] = useState(false);
@@ -45,7 +45,7 @@ export default function DishDetailScreen() {
   async function handleDelete() {
     try {
       // Verificar si el plato puede ser eliminado permanentemente
-      const canDeletePermanently = await canDeleteDishPermanently(drizzleDb, Number(id));
+      const canDeletePermanently = await canHardDeleteDish(drizzleDb, Number(id));
 
       const message = canDeletePermanently
         ? '¿Estás seguro de que deseas eliminar este plato? Esta acción no se puede deshacer.'
@@ -64,7 +64,7 @@ export default function DishDetailScreen() {
                 try {
                   if (canDeletePermanently) {
                     // Eliminar permanentemente
-                    await drizzleDb.delete(schema.dishes).where(eq(schema.dishes.id, Number(id)));
+                    await hardDeleteDish(drizzleDb, Number(id));
                   } else {
                     // Soft delete
                     await softDeleteDish(drizzleDb, Number(id));

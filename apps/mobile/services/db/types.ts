@@ -1,6 +1,6 @@
 import type * as schema from './schema';
-import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 import type { drizzle } from 'drizzle-orm/expo-sqlite';
+import type { BaseSQLiteDatabase } from 'drizzle-orm/sqlite-core';
 
 export type DrizzleDatabase = ReturnType<typeof drizzle<typeof schema>>;
 

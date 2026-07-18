@@ -135,24 +135,13 @@ module.exports = tseslint.config(
       ],
     },
   },
-  // Features must stay independent of each other; shared code goes to lib/.
-  {
-    files: ['features/*/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: ['@/features/*/*'],
-              message:
-                'Features must not import from other features. Lift shared code to lib/ or packages/shared.',
-            },
-          ],
-        },
-      ],
-    },
-  },
+  // NOTE: cross-feature isolation ("a feature must not import another feature's
+  // internals") is intentionally NOT enforced here. no-restricted-imports can't
+  // express "any feature except my own" — a single `@/features/*/*` pattern also
+  // flags same-feature imports, and extglob negation isn't supported by the
+  // rule's matcher (it silently matches nothing). Doing it right needs
+  // eslint-plugin-boundaries, plus relocating today's legitimately-shared pieces
+  // (the Tag component, ImageDTO/TagDTO) to a shared area. Tracked in docs/12.
 
   // --- Tests -------------------------------------------------------------
   {

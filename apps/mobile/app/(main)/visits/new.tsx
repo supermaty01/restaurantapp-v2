@@ -1,7 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
@@ -11,12 +9,14 @@ import FormInput from '@/components/FormInput';
 import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
+import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
+import { createVisit } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
 import { visitSchema } from '@/features/visits/schemas/visit-schema';
 import { getTodayLocalDateString } from '@/lib/helpers/date';
 import { uploadImages } from '@/lib/helpers/upload-images';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -40,10 +40,10 @@ export default function VisitCreateScreen() {
 
   const [selectedDishes, setSelectedDishes] = useState<DishListDTO[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [participants, setParticipants] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const restaurantId = watch('restaurantId');
 
   useEffect(() => {
@@ -59,23 +59,9 @@ export default function VisitCreateScreen() {
         restaurantId: data.restaurantId,
       };
 
-      // Insertar la visita
-      const response = await drizzleDb.insert(schema.visits).values(payload);
-      const visitId = response.lastInsertRowId;
+      const dishIds = (data.dishes ?? []).map((d) => (typeof d === 'string' ? parseInt(d) : d));
+      const visitId = await createVisit(drizzleDb, payload, dishIds, participants);
 
-      // Asociar platos a la visita
-      if (data.dishes && data.dishes.length > 0) {
-        await Promise.all(
-          data.dishes.map((dishId) => {
-            return drizzleDb.insert(schema.dishVisits).values({
-              visitId,
-              dishId: typeof dishId === 'string' ? parseInt(dishId) : dishId,
-            });
-          }),
-        );
-      }
-
-      // Subir imágenes
       if (selectedImages.length > 0) {
         await uploadImages(drizzleDb, selectedImages, 'VISIT', visitId);
       }
@@ -128,6 +114,8 @@ export default function VisitCreateScreen() {
           selectedDishes={selectedDishes}
           setSelectedDishes={setSelectedDishes}
         />
+
+        <PeopleTagInput value={participants} onChange={setParticipants} />
 
         <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
 

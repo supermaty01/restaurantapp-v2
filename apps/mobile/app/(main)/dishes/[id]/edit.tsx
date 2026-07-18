@@ -1,9 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { and, eq } from 'drizzle-orm/sql';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
@@ -11,6 +8,7 @@ import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } fr
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
+import { updateDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
 import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
@@ -20,8 +18,8 @@ import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
-import { uploadImages } from '@/lib/helpers/upload-images';
-import * as schema from '@/services/db/schema';
+import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -49,8 +47,7 @@ export default function DishEditScreen() {
   const [isTagModalVisible, setTagModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const dish = useDishById(Number(id));
 
   // Load dish data from local database
@@ -79,13 +76,14 @@ export default function DishEditScreen() {
         rating: data.rating || null,
       };
 
-      // Update dish record
-      await drizzleDb
-        .update(schema.dishes)
-        .set(payload)
-        .where(eq(schema.dishes.id, Number(id)));
+      // updateDish replaces the whole tag set, so no add/remove diff.
+      await updateDish(
+        drizzleDb,
+        Number(id),
+        payload,
+        selectedTags.map((tag) => tag.id),
+      );
 
-      // Handle new images upload
       const newImages = selectedImages.filter((image) => !image.id);
       if (newImages.length > 0) {
         await uploadImages(
@@ -96,44 +94,7 @@ export default function DishEditScreen() {
         );
       }
 
-      // Handle removed images
-      if (removedImages.length > 0) {
-        await Promise.all(
-          removedImages.map((imageId) => {
-            return drizzleDb.delete(schema.images).where(eq(schema.images.id, imageId));
-          }),
-        );
-      }
-
-      // Handle tags
-      // First, get current tags
-      const currentTags = dish?.tags.map((tag) => tag.id) || [];
-      const removedTags = currentTags.filter(
-        (tagId) => !selectedTags.some((tag) => tag.id === tagId),
-      );
-      const addedTags = selectedTags
-        .filter((tag) => !currentTags.includes(tag.id))
-        .map((tag) => tag.id);
-
-      // Remove tags that were unselected
-      if (removedTags.length > 0) {
-        await Promise.all(
-          removedTags.map((tagId) => {
-            return drizzleDb
-              .delete(schema.dishTags)
-              .where(and(eq(schema.dishTags.dishId, Number(id)), eq(schema.dishTags.tagId, tagId)));
-          }),
-        );
-      }
-
-      // Add new tags
-      if (addedTags.length > 0) {
-        await Promise.all(
-          addedTags.map((tagId) => {
-            return drizzleDb.insert(schema.dishTags).values({ dishId: Number(id), tagId });
-          }),
-        );
-      }
+      await deleteImages(drizzleDb, removedImages);
 
       Alert.alert('Éxito', 'Plato actualizado correctamente.');
       router.back();

@@ -1,19 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
-import { eq } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useState } from 'react';
 import { FlatList, TouchableOpacity, View, Text, Alert } from 'react-native';
 
 import CreateTagModal from '@/features/tags/components/CreateTagModal';
 import TagItem from '@/features/tags/components/TagItem';
 import { useTagsList } from '@/features/tags/hooks/useTagsList';
+import { createTag, softDeleteTag, updateTag } from '@/features/tags/repositories/tagRepository';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 export default function TagsScreen() {
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   // Solo mostrar etiquetas no eliminadas en la lista principal
   const tags = useTagsList(false);
   const [isModalVisible, setModalVisible] = useState(false);
@@ -22,14 +19,9 @@ export default function TagsScreen() {
   const handleSubmit = async (tagData: { id?: number; name: string; color: string }) => {
     try {
       if (selectedTag) {
-        // Actualizar etiqueta existente
-        await drizzleDb
-          .update(schema.tags)
-          .set({ name: tagData.name, color: tagData.color })
-          .where(eq(schema.tags.id, selectedTag.id));
+        await updateTag(drizzleDb, selectedTag.id, { name: tagData.name, color: tagData.color });
       } else {
-        // Crear nueva etiqueta
-        await drizzleDb.insert(schema.tags).values({ name: tagData.name, color: tagData.color });
+        await createTag(drizzleDb, { name: tagData.name, color: tagData.color });
       }
 
       handleModalClose();
@@ -43,7 +35,7 @@ export default function TagsScreen() {
   const handleDeleteTag = async (tagId: number) => {
     try {
       // Implementar soft delete en lugar de eliminación permanente
-      await drizzleDb.update(schema.tags).set({ deleted: true }).where(eq(schema.tags.id, tagId));
+      await softDeleteTag(drizzleDb, tagId);
       handleModalClose();
       return { success: true };
     } catch (error) {

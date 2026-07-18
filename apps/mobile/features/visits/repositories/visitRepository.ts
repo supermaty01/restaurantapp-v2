@@ -11,6 +11,19 @@ export interface VisitWriteInput {
   restaurantId: number;
 }
 
+/** Names of the people tagged on a visit (for pre-filling the edit form). */
+export async function getVisitParticipantNames(
+  db: AppDatabase,
+  visitId: number,
+): Promise<string[]> {
+  const rows = await db
+    .select({ name: schema.people.name })
+    .from(schema.visitParticipants)
+    .innerJoin(schema.people, eq(schema.visitParticipants.personId, schema.people.id))
+    .where(eq(schema.visitParticipants.visitId, visitId));
+  return rows.map((r) => r.name);
+}
+
 export async function createVisit(
   db: AppDatabase,
   input: VisitWriteInput,

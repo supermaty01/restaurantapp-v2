@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { makeTestDb } from '@/services/db/__tests__/test-db';
 import * as schema from '@/services/db/schema';
+import type { AppDatabase } from '@/services/db/types';
 
 import {
   canHardDeleteRestaurant,
@@ -9,8 +10,6 @@ import {
   softDeleteRestaurant,
   updateRestaurant,
 } from './restaurantRepository';
-
-import type { AppDatabase } from '@/services/db/types';
 
 const baseInput = {
   name: 'Guadalupe',

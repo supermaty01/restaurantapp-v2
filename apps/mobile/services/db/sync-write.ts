@@ -1,6 +1,5 @@
 import { newUuid } from '@/lib/helpers/uuid';
 import { changeLog } from '@/services/db/schema';
-
 import type { AppDatabase } from '@/services/db/types';
 
 /**

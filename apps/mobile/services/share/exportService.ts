@@ -8,6 +8,7 @@ import * as Sharing from 'expo-sharing';
 
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 import * as schema from '@/services/db/schema';
+import type { AppDatabase } from '@/services/db/types';
 
 import { SHARE_FILE_EXTENSION, CURRENT_SHARE_VERSION } from './types';
 
@@ -19,7 +20,6 @@ import type {
   ShareableImage,
   ShareableTag,
 } from './types';
-import type { AppDatabase } from '@/services/db/types';
 
 type DrizzleDb = AppDatabase;
 
