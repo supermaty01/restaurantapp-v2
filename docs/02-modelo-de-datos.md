@@ -6,22 +6,30 @@ Tablas: `restaurants`, `dishes`, `visits`, `tags`, `images`, uniones N:M (`resta
 
 ## Cambios estructurales
 
-### 1. UUIDs como identidad global
+### 1. Identidad de sync: PK entero local + `uuid` global ⭐ decisión revisada
 
-**Decisión:** toda entidad pasa a `id: uuid` (v4, generado en el cliente). Motivo: los IDs enteros locales colisionan al sincronizar entre dispositivos/usuarios. Un UUID generado offline es válido globalmente sin coordinación.
+**Decisión (revisada en implementación):** se **conserva el PK entero autoincremental local** y se añade una columna **`uuid text unique`** a cada tabla sincronizable, generada en el cliente. El `uuid` es la identidad global (la que viaja a Supabase); el entero sigue siendo la clave local y de las FKs.
 
-- En SQLite se almacena como `text`. En Postgres como `uuid`.
-- La migración v1→v2 genera UUIDs para las filas existentes y reescribe las FKs (ver [09](09-migracion-datos.md)).
+> **Por qué se cambió respecto al diseño inicial (`id: uuid` como PK).** Migrar el PK de entero a UUID obliga a reescribir *todos* los usos de IDs del código portado: cientos de `id: number`, `Number(id)`, tipos de params de rutas, DTOs y FKs. Es un cambio de blast radius enorme y **no verificable en dispositivo en esta fase** (el mayor riesgo: un `Number(uuid)` silencioso que devuelve `NaN`). El patrón "PK entero local + uuid de sync" es un enfoque local-first estándar que:
+> - logra el mismo objetivo (identidad global sin colisiones entre dispositivos),
+> - es una **migración puramente aditiva** (añadir columna + backfill), de riesgo bajo,
+> - deja intacto el código de la app (sigue con enteros), confinando la complejidad uuid↔id-local a la **capa de sync (fase 3)**, que es donde corresponde.
+>
+> Coste asumido: el motor de sync mantiene un mapeo uuid↔id-local y traduce las FKs al empujar/traer (detalle en [03](03-sync.md)). Es más lógica en la fase 3, pero localizada y testeable.
+
+- SQLite: `uuid` es `text unique not null`. Postgres (Supabase): la tabla espejo usa `uuid` como PK.
+- La migración v1→v2 hace backfill de un uuid por fila existente (ver [09](09-migracion-datos.md)); las FKs locales **no cambian**.
 
 ### 2. Columnas de sync en todas las tablas de datos
 
 ```
-id          text (uuid) PK
+id          integer PK autoincrement   ← se mantiene (clave local y de FKs)
+uuid        text unique not null       ← identidad global de sync (v4, cliente)
 ...campos propios...
-user_id     text (uuid, null en modo anónimo)
+user_id     integer null               ← null en modo anónimo (FK local a users)
 created_at  text (ISO 8601, UTC)
-updated_at  text (ISO 8601, UTC)   ← lo escribe siempre el cliente al modificar
-deleted     boolean                ← soft-delete, ya existía en v1
+updated_at  text (ISO 8601, UTC)       ← lo escribe siempre el cliente al modificar
+deleted     boolean                    ← soft-delete, ya existía en v1
 ```
 
 Los soft-deletes son permanentes hasta una purga explícita (los necesita el sync para propagar borrados).
@@ -38,15 +46,17 @@ Motivación: (a) etiquetar con quién fuiste a una visita (estilo BeReal), (b) h
 
 ```
 people
-  id          uuid
-  name        text          ← "Caro"
-  linked_user_id uuid null  ← si esa persona es un amigo con cuenta, se vincula
+  id          integer PK          ← entero local (como el resto)
+  uuid        text unique         ← identidad de sync
+  name        text                ← "Caro"
+  linked_user_id integer null     ← si esa persona es un amigo con cuenta, se vincula
   user_id, created_at, updated_at, deleted
 
 visit_participants (N:M)
-  visit_id    uuid → visits
-  person_id   uuid → people
+  visit_id    integer → visits
+  person_id   integer → people
   tag_status  text: 'local' | 'pending' | 'accepted' | 'rejected'
+  PK (visit_id, person_id)
 ```
 
 - En modo local, etiquetar a "Caro" solo crea/reutiliza una `person` local. `tag_status = 'local'`.
@@ -71,7 +81,7 @@ Dos grupos:
 
 ## Imágenes
 
-- Local: archivo en filesystem + fila `images` con `path` (igual que v1) y ahora `id` uuid + `remote_key` (clave en R2, null si no subida).
+- Local: archivo en filesystem + fila `images` con `path` (igual que v1) y ahora `uuid` + `remote_key` (clave en R2, null si no subida).
 - Cloud: solo metadatos en Postgres; el binario vive en R2 (`{user_id}/{image_id}.jpg`, comprimidas al subir).
 
 ## Diagrama (simplificado)
@@ -87,5 +97,5 @@ users/profiles ──< friendships
       └──< share_links / embeddings / ai_usage
 ```
 
-**Abierto:** ¿precio del plato como entero (centavos) o texto libre con moneda? La v1 usa entero sin moneda; decidir al detallar fase 1 (afecta a usuarios en distintos países).
+**Abierto:** ¿precio del plato como entero (centavos) o texto libre con moneda? La v1 usa entero sin moneda; **se pospone** — no bloquea el esquema de sync y tocarlo ahora añadiría churn a los formularios ya migrados. Se retoma con el rediseño de UI (fase 6).
 **Abierto:** purga de soft-deletes y de imágenes huérfanas en R2 (job periódico del Worker con cron trigger, fase 4+).

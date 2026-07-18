@@ -10,6 +10,16 @@
 - **Unidad de sync: la fila.** Estrategia de conflicto: **last-write-wins por fila** usando `updated_at` (reloj del cliente, ISO UTC). Para un diario personal esto es suficiente; no hay edición concurrente real de la misma fila por dos personas.
 - **Soft-deletes** se propagan como updates (`deleted = true`).
 
+### Identidad: uuid global vs PK entero local
+
+La app usa PK entero autoincremental local; el `uuid` (columna única por fila) es la identidad global (ver [02](02-modelo-de-datos.md#1-identidad-de-sync-pk-entero-local--uuid-global--decisión-revisada)). El motor de sync es el único que traduce:
+
+- **Push:** para cada fila del `change_log`, se envía su `uuid` y sus campos; **las FKs se traducen de id-local → uuid** de la fila referenciada (un join local). Supabase usa `uuid` como PK.
+- **Pull:** llega una fila keyed por `uuid`. Se busca localmente por `uuid` (índice único): si existe → update de ese id-local; si no → insert con nuevo id-local autoincremental. **Las FKs entrantes (uuid) se traducen a id-local**; si el referenciado aún no está local, se resuelve en orden de dependencia o se difiere.
+- El mapeo `uuid ↔ id-local` se resuelve por consulta sobre la propia columna `uuid` (no hace falta tabla de mapeo aparte).
+
+Esto mantiene el código de la app en enteros y confina toda la complejidad de uuid a esta capa.
+
 ## Protocolo
 
 ### Push

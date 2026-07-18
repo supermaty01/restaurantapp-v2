@@ -1,6 +1,39 @@
 import { relations, sql } from 'drizzle-orm';
 import { sqliteTable, text, integer, real, primaryKey, blob } from 'drizzle-orm/sqlite-core';
 
+/**
+ * Sync columns (see docs/02-modelo-de-datos.md).
+ *
+ * Identity strategy: the integer PK stays the local key; `uuid` is the global
+ * sync identity that travels to Supabase. The SQL defaults below are a safety
+ * net so a raw insert (or a backfill) never leaves a NULL — the repositories
+ * still generate the uuid in TS so the value is known at insert time for the
+ * change log.
+ *
+ * `uuidDefault` builds a canonical v4 uuid in pure SQLite (ADD COLUMN can't use
+ * expression defaults, but CREATE TABLE — which the migration rebuild uses —
+ * can).
+ */
+const uuidDefault = sql`(
+  lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' ||
+  substr(hex(randomblob(2)), 2) || '-' ||
+  substr('89ab', abs(random()) % 4 + 1, 1) ||
+  substr(hex(randomblob(2)), 2) || '-' || hex(randomblob(6)))
+)`;
+
+const nowIso = sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`;
+
+const syncColumns = () => ({
+  uuid: text('uuid').notNull().unique().default(uuidDefault),
+  createdAt: text('created_at').notNull().default(nowIso),
+  updatedAt: text('updated_at').notNull().default(nowIso),
+});
+
+const visibilityColumn = () =>
+  text('visibility', { enum: ['private', 'friends', 'public'] })
+    .notNull()
+    .default('private');
+
 // Tabla de usuarios
 export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -15,7 +48,9 @@ export const restaurants = sqliteTable('restaurants', {
   comments: text('comments'),
   rating: integer('rating'),
   userId: integer('user_id').references(() => users.id),
+  visibility: visibilityColumn(),
   deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+  ...syncColumns(),
 });
 
 // Tabla de visitas
@@ -25,7 +60,9 @@ export const visits = sqliteTable('visits', {
   comments: text('comments'),
   restaurantId: integer('restaurant_id').references(() => restaurants.id),
   userId: integer('user_id').references(() => users.id),
+  visibility: visibilityColumn(),
   deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+  ...syncColumns(),
 });
 
 // Tabla de platos
@@ -37,7 +74,9 @@ export const dishes = sqliteTable('dishes', {
   comments: text('comments'),
   restaurantId: integer('restaurant_id').references(() => restaurants.id),
   userId: integer('user_id').references(() => users.id),
+  visibility: visibilityColumn(),
   deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+  ...syncColumns(),
 });
 
 // Tabla de etiquetas
@@ -47,12 +86,25 @@ export const tags = sqliteTable('tags', {
   color: text('color').notNull(),
   userId: integer('user_id').references(() => users.id),
   deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+  ...syncColumns(),
+});
+
+// Tabla de personas (con quién se comparte una visita). Una persona no tiene
+// por qué ser usuaria de la app; si lo es, se vincula con linkedUserId.
+export const people = sqliteTable('people', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  name: text('name').notNull(),
+  linkedUserId: integer('linked_user_id').references(() => users.id),
+  userId: integer('user_id').references(() => users.id),
+  deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),
+  ...syncColumns(),
 });
 
 export const images = sqliteTable('images', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   path: text('path').notNull(), // Ruta del archivo en el dispositivo
   description: text('description'), // Descripción opcional
+  remoteKey: text('remote_key'), // Clave en R2 (null si aún no subida)
   uploadedAt: text('uploaded_at')
     .notNull()
     .default(sql`CURRENT_TIMESTAMP`),
@@ -61,6 +113,7 @@ export const images = sqliteTable('images', {
   restaurantId: integer('restaurant_id').references(() => restaurants.id),
   visitId: integer('visit_id').references(() => visits.id),
   dishId: integer('dish_id').references(() => dishes.id),
+  ...syncColumns(),
 });
 
 export const imagesRelations = relations(images, ({ one }) => ({
@@ -99,6 +152,39 @@ export const dishVisits = sqliteTable(
   (table) => [primaryKey({ columns: [table.visitId, table.dishId] })],
 );
 
+// Personas etiquetadas en una visita. tagStatus modela el flujo social:
+// 'local' (persona sin cuenta) | 'pending' | 'accepted' | 'rejected'.
+export const visitParticipants = sqliteTable(
+  'visit_participant',
+  {
+    visitId: integer('visit_id')
+      .notNull()
+      .references(() => visits.id),
+    personId: integer('person_id')
+      .notNull()
+      .references(() => people.id),
+    tagStatus: text('tag_status', {
+      enum: ['local', 'pending', 'accepted', 'rejected'],
+    })
+      .notNull()
+      .default('local'),
+  },
+  (table) => [primaryKey({ columns: [table.visitId, table.personId] })],
+);
+
+// Cola de salida del sync: una fila por cambio local pendiente de enviar.
+// row_uuid se guarda desnormalizado para que un borrado siga sabiendo la
+// identidad global. Ver docs/03-sync.md.
+export const changeLog = sqliteTable('change_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  tableName: text('table_name').notNull(),
+  rowId: integer('row_id').notNull(),
+  rowUuid: text('row_uuid').notNull(),
+  operation: text('operation', { enum: ['insert', 'update', 'delete'] }).notNull(),
+  changedAt: text('changed_at').notNull().default(nowIso),
+  synced: integer('synced', { mode: 'boolean' }).notNull().default(false),
+});
+
 // Definición de relaciones con Drizzle
 export const usersRelations = relations(users, ({ many }) => ({
   restaurants: many(restaurants),
@@ -118,6 +204,7 @@ export const visitsRelations = relations(visits, ({ one, many }) => ({
   user: one(users, { fields: [visits.userId], references: [users.id] }),
   restaurant: one(restaurants, { fields: [visits.restaurantId], references: [restaurants.id] }),
   dishes: many(dishVisits),
+  participants: many(visitParticipants),
 }));
 
 export const dishesRelations = relations(dishes, ({ one, many }) => ({
@@ -131,6 +218,17 @@ export const tagsRelations = relations(tags, ({ one, many }) => ({
   user: one(users, { fields: [tags.userId], references: [users.id] }),
   restaurantTags: many(restaurantTags),
   dishTags: many(dishTags),
+}));
+
+export const peopleRelations = relations(people, ({ one, many }) => ({
+  user: one(users, { fields: [people.userId], references: [users.id] }),
+  linkedUser: one(users, { fields: [people.linkedUserId], references: [users.id] }),
+  visits: many(visitParticipants),
+}));
+
+export const visitParticipantsRelations = relations(visitParticipants, ({ one }) => ({
+  visit: one(visits, { fields: [visitParticipants.visitId], references: [visits.id] }),
+  person: one(people, { fields: [visitParticipants.personId], references: [people.id] }),
 }));
 
 // Tabla de configuración
