@@ -1,13 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 
 import ImportConflictModal from '@/components/ImportConflictModal';
 import { useTheme } from '@/lib/context/ThemeContext';
-import * as schema from '@/services/db/schema';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 import {
   parseShareFile,
   checkRestaurantConflict,
@@ -22,8 +20,7 @@ import type { ComponentProps } from 'react';
 export default function ImportScreen() {
   const router = useRouter();
   const { uri } = useLocalSearchParams<{ uri: string }>();
-  const db = useSQLiteContext();
-  const drizzleDb = drizzle(db, { schema });
+  const drizzleDb = useDatabase();
   const { isDarkMode } = useTheme();
 
   const [loading, setLoading] = useState(true);

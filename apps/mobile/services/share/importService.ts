@@ -7,6 +7,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import * as schema from '@/services/db/schema';
+import { newSyncValues, recordChange } from '@/services/db/sync-write';
+import type { AppDatabase } from '@/services/db/types';
 
 import { CURRENT_SHARE_VERSION } from './types';
 
@@ -20,9 +22,26 @@ import type {
   ConflictResolution,
   ImportResult,
 } from './types';
-import type { drizzle } from 'drizzle-orm/expo-sqlite';
 
-type DrizzleDb = ReturnType<typeof drizzle<typeof schema>>;
+type DrizzleDb = AppDatabase;
+
+/**
+ * Inserts an image row with sync columns (uuid/timestamps) + change_log.
+ * Every import insert must set these so imported rows are valid sync rows and
+ * never leave a NULL uuid (docs/02, docs/09).
+ */
+async function insertImageRow(
+  db: DrizzleDb,
+  path: string,
+  target: { restaurantId?: number; dishId?: number; visitId?: number },
+): Promise<void> {
+  const sync = newSyncValues();
+  const [row] = await db
+    .insert(schema.images)
+    .values({ path, uploadedAt: new Date().toISOString(), ...sync, ...target })
+    .returning({ id: schema.images.id });
+  if (row) await recordChange(db, 'images', row.id, sync.uuid, 'insert');
+}
 
 // Copy content:// URI to a local file for reading
 async function copyToLocalFile(uri: string): Promise<string | null> {
@@ -155,8 +174,14 @@ async function getOrCreateTag(db: DrizzleDb, tag: ShareableTag): Promise<number>
   const existingTag = existing[0];
   if (existingTag) return existingTag.id;
 
-  const result = await db.insert(schema.tags).values({ name: tag.name, color: tag.color });
-  return result.lastInsertRowId;
+  const sync = newSyncValues();
+  const [row] = await db
+    .insert(schema.tags)
+    .values({ name: tag.name, color: tag.color, ...sync })
+    .returning({ id: schema.tags.id });
+  if (!row) throw new Error('No se pudo crear la etiqueta');
+  await recordChange(db, 'tags', row.id, sync.uuid, 'insert');
+  return row.id;
 }
 
 // Import a restaurant
@@ -172,14 +197,21 @@ export async function importRestaurant(
     }
 
     // Create new restaurant
-    const result = await db.insert(schema.restaurants).values({
-      name: restaurant.name,
-      latitude: restaurant.latitude,
-      longitude: restaurant.longitude,
-      comments: restaurant.comments,
-      rating: restaurant.rating,
-    });
-    const restaurantId = result.lastInsertRowId;
+    const sync = newSyncValues();
+    const [row] = await db
+      .insert(schema.restaurants)
+      .values({
+        name: restaurant.name,
+        latitude: restaurant.latitude,
+        longitude: restaurant.longitude,
+        comments: restaurant.comments,
+        rating: restaurant.rating,
+        ...sync,
+      })
+      .returning({ id: schema.restaurants.id });
+    if (!row) return null;
+    const restaurantId = row.id;
+    await recordChange(db, 'restaurants', restaurantId, sync.uuid, 'insert');
 
     // Add tags
     for (const tag of restaurant.tags) {
@@ -190,11 +222,7 @@ export async function importRestaurant(
     // Save images
     for (const image of restaurant.images) {
       const path = await saveBase64Image(image);
-      if (path) {
-        await db
-          .insert(schema.images)
-          .values({ path, restaurantId, uploadedAt: new Date().toISOString() });
-      }
+      if (path) await insertImageRow(db, path, { restaurantId });
     }
 
     return restaurantId;
@@ -210,14 +238,21 @@ export async function importDish(
   restaurantId: number,
 ): Promise<number | null> {
   try {
-    const result = await db.insert(schema.dishes).values({
-      name: dish.name,
-      price: dish.price,
-      rating: dish.rating,
-      comments: dish.comments,
-      restaurantId,
-    });
-    const dishId = result.lastInsertRowId;
+    const sync = newSyncValues();
+    const [row] = await db
+      .insert(schema.dishes)
+      .values({
+        name: dish.name,
+        price: dish.price,
+        rating: dish.rating,
+        comments: dish.comments,
+        restaurantId,
+        ...sync,
+      })
+      .returning({ id: schema.dishes.id });
+    if (!row) return null;
+    const dishId = row.id;
+    await recordChange(db, 'dishes', dishId, sync.uuid, 'insert');
 
     // Add tags
     for (const tag of dish.tags) {
@@ -228,11 +263,7 @@ export async function importDish(
     // Save images
     for (const image of dish.images) {
       const path = await saveBase64Image(image);
-      if (path) {
-        await db
-          .insert(schema.images)
-          .values({ path, dishId, uploadedAt: new Date().toISOString() });
-      }
+      if (path) await insertImageRow(db, path, { dishId });
     }
 
     return dishId;
@@ -251,8 +282,14 @@ export async function importVisit(
   dishIds: number[],
 ): Promise<number | null> {
   try {
-    const result = await db.insert(schema.visits).values({ visitedAt, comments, restaurantId });
-    const visitId = result.lastInsertRowId;
+    const sync = newSyncValues();
+    const [row] = await db
+      .insert(schema.visits)
+      .values({ visitedAt, comments, restaurantId, ...sync })
+      .returning({ id: schema.visits.id });
+    if (!row) return null;
+    const visitId = row.id;
+    await recordChange(db, 'visits', visitId, sync.uuid, 'insert');
 
     // Associate dishes
     for (const dishId of dishIds) {
@@ -262,11 +299,7 @@ export async function importVisit(
     // Save images
     for (const image of images) {
       const path = await saveBase64Image(image);
-      if (path) {
-        await db
-          .insert(schema.images)
-          .values({ path, visitId, uploadedAt: new Date().toISOString() });
-      }
+      if (path) await insertImageRow(db, path, { visitId });
     }
 
     return visitId;
