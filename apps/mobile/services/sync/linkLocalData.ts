@@ -4,7 +4,6 @@ import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { column, SYNC_TABLES } from '@/services/sync/tables';
 
-
 /**
  * Enqueues every existing local row for the next push, so a first login uploads
  * the data the user already has (docs/04, "subir tus datos a tu cuenta"). Safe

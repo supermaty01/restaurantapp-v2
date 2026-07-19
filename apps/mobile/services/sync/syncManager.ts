@@ -2,7 +2,6 @@ import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
 
-
 export interface SyncOutcome {
   ok: boolean;
   error: string | null;
