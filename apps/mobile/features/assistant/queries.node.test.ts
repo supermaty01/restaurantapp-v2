@@ -11,7 +11,6 @@ import {
   searchDishes,
 } from './queries';
 
-
 /**
  * Seeds the diary with the scenarios from docs/07: carbonaras in Rome and
  * elsewhere, and meals with Caro on known dates.

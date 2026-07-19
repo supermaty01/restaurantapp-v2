@@ -6,7 +6,6 @@ import type { AppDatabase } from '@/services/db/types';
 
 import { ASSISTANT_TOOLS, runTool, toolSpecs } from './tools';
 
-
 async function seed(db: AppDatabase) {
   const roma = await createRestaurant(db, {
     name: 'Roma',
