@@ -10,7 +10,8 @@ Tablas: `restaurants`, `dishes`, `visits`, `tags`, `images`, uniones N:M (`resta
 
 **Decisión (revisada en implementación):** se **conserva el PK entero autoincremental local** y se añade una columna **`uuid text unique`** a cada tabla sincronizable, generada en el cliente. El `uuid` es la identidad global (la que viaja a Supabase); el entero sigue siendo la clave local y de las FKs.
 
-> **Por qué se cambió respecto al diseño inicial (`id: uuid` como PK).** Migrar el PK de entero a UUID obliga a reescribir *todos* los usos de IDs del código portado: cientos de `id: number`, `Number(id)`, tipos de params de rutas, DTOs y FKs. Es un cambio de blast radius enorme y **no verificable en dispositivo en esta fase** (el mayor riesgo: un `Number(uuid)` silencioso que devuelve `NaN`). El patrón "PK entero local + uuid de sync" es un enfoque local-first estándar que:
+> **Por qué se cambió respecto al diseño inicial (`id: uuid` como PK).** Migrar el PK de entero a UUID obliga a reescribir _todos_ los usos de IDs del código portado: cientos de `id: number`, `Number(id)`, tipos de params de rutas, DTOs y FKs. Es un cambio de blast radius enorme y **no verificable en dispositivo en esta fase** (el mayor riesgo: un `Number(uuid)` silencioso que devuelve `NaN`). El patrón "PK entero local + uuid de sync" es un enfoque local-first estándar que:
+>
 > - logra el mismo objetivo (identidad global sin colisiones entre dispositivos),
 > - es una **migración puramente aditiva** (añadir columna + backfill), de riesgo bajo,
 > - deja intacto el código de la app (sigue con enteros), confinando la complejidad uuid↔id-local a la **capa de sync (fase 3)**, que es donde corresponde.

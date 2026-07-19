@@ -41,10 +41,17 @@ Variables (`apps/mobile/.env`):
 
 ## 3. Supabase 🚧 (fase 2)
 
+Migraciones ya escritas en `supabase/migrations/` (aplicar en orden):
+
+- `0001_data_mirror.sql` — espejo de datos (uuid PK, FKs por uuid) + profiles.
+- `0002_rls_and_lww.sql` — RLS de dueño en todas las tablas + trigger de last-write-wins.
+- `0003_share_and_ai.sql` — `share_links` + `ai_usage` (usadas por el Worker).
+- `0004_social.sql` — friendships, `are_friends`, lectura para amigos, vista `feed`.
+
 ```bash
 # Local (desarrollo)
 npx supabase start                      # Postgres + Auth + Studio en Docker
-npx supabase db reset                   # aplica supabase/migrations/*
+npx supabase db reset                   # aplica supabase/migrations/* en orden
 
 # Producción
 npx supabase link --project-ref <ref>

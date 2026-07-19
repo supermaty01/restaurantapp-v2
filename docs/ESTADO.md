@@ -6,17 +6,38 @@ Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está
 
 ## Estado global
 
-| Fase                    | Estado                                       |
-| ----------------------- | -------------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–13)                     |
-| 0 — Puesta a punto      | 🟢 Cerrada salvo verificación en dispositivo |
-| 1 — Esquema local       | 🟢 Cerrada salvo verificación en dispositivo |
-| 2 — Supabase + Auth     | 🔜 Siguiente · Bloqueada (credenciales)      |
-| 3 — Sync                | ⬜                                           |
-| 4 — Worker / Share      | ⬜ Bloqueada (credenciales)                  |
-| 5 — Social              | ⬜ (etiquetado de personas ya cimentado)     |
-| 6 — UI                  | ⬜                                           |
-| 7 — Asistente IA        | ⬜ Bloqueada (credenciales)                  |
+Leyenda: 🟢 código completo y testeado · 🟡 código escrito, necesita servicio/dispositivo para verificarse · ⬜ pendiente.
+
+| Fase                    | Estado                                                               |
+| ----------------------- | -------------------------------------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–13)                                             |
+| 0 — Puesta a punto      | 🟢 Cerrada salvo verificación en dispositivo                         |
+| 1 — Esquema local       | 🟢 Cerrada salvo verificación en dispositivo                         |
+| 2 — Supabase + Auth     | 🟡 Cliente, AuthContext, pantalla; OAuth necesita tus credenciales   |
+| 3 — Sync                | 🟢 Motor testeado (28 tests) · 🟡 transporte Supabase sin servicio   |
+| 4 — Worker / Share      | 🟡 Worker completo, 15 tests; bindings R2/AI/Supabase sin desplegar  |
+| 5 — Social              | 🟡 Esquema + RLS + feed escritos; UI de amigos/feed pendiente        |
+| 6 — UI                  | ⬜ Necesita import de Claude Design + dispositivo                    |
+| 7 — Asistente IA        | 🟢 Tools de consulta testeadas (16 tests) · 🟡 agente/voz/embeddings |
+
+**Verificación transversal en cada commit:** TypeScript en 0, **72 tests** (24 app-mobile + 33 node-mobile + 15 worker), lint sin errores, bundle Android 3082 módulos, expo-doctor 20/20.
+
+## Qué falta para que sea "todo" (mi parte vs la tuya)
+
+**Solo requieren tus servicios/dispositivo (no más código mío para el camino feliz):**
+
+- Crear proyecto Supabase y aplicar `supabase/migrations/0001–0004` (`supabase db reset`).
+- Configurar OAuth Google/Apple en Supabase.
+- Desplegar el Worker (`wrangler deploy`), crear bucket R2 y AI Gateway, cargar secrets.
+- Rellenar `EXPO_PUBLIC_SUPABASE_URL/ANON_KEY` y `EXPO_PUBLIC_API_URL`.
+- Verificar en emulador: migración de un usuario existente, sync entre dos dispositivos, share link, y el asistente respondiendo.
+
+**Código mío que aún falta (necesita servicios/dispositivo/diseño para hacerse bien):**
+
+- **Fase 5 UI**: pantallas de perfil, búsqueda/solicitudes de amigos y feed (el esquema y las policies ya están; la UI se construye sobre el diseño de la fase 6).
+- **Fase 6**: sistema de diseño e IA de navegación desde el proyecto de Claude Design — necesita importarlo y un dispositivo para iterar visualmente.
+- **Fase 7 restante**: agente de registro conversacional ("estoy en Guadalupe con Irene…"), **voz** (STT nativo + Whisper), e **indexación de embeddings** (búsqueda semántica) — todo requiere el Worker AI y/o dispositivo.
+- **Sync de tablas de unión** (tags↔restaurante, etc.): el esquema y el motor lo contemplan; falta el paso por miembros-uuid (follow-up de fase 3).
 
 ## Fase 1 — cerrada (esquema local + repositorios)
 
