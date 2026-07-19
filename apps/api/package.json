@@ -1,0 +1,25 @@
+{
+  "name": "@restaurantapp/api",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run",
+    "test:ci": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.6.14",
+    "nanoid": "^5.0.9"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4",
+    "wrangler": "^3.95.0"
+  }
+}

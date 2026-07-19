@@ -1,0 +1,31 @@
+# Cloudflare Worker config (docs/05, docs/13). Bindings are declared here;
+# secrets are set with `wrangler secret put` and never committed.
+name = "restaurantapp-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-27"
+compatibility_flags = ["nodejs_compat"]
+
+# Images live in R2 (10 GB free, no egress), not Supabase Storage.
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "restaurantapp-images"
+
+# Workers AI, routed through an AI Gateway for caching + rate limiting + cost
+# visibility (docs/07). Gateway id is set via the AI_GATEWAY var.
+[ai]
+binding = "AI"
+
+[vars]
+# Public base URL of this worker, used to build share links.
+PUBLIC_BASE_URL = "https://restaurantapp-api.example.workers.dev"
+# AI Gateway slug (create in the Cloudflare dashboard). Empty = call AI directly.
+AI_GATEWAY = ""
+
+# Cron: purge expired share links + orphaned R2 objects (docs/05).
+[triggers]
+crons = ["0 3 * * *"]
+
+# Secrets (set with `wrangler secret put <NAME>`), documented for reference:
+#   SUPABASE_URL                 - project URL
+#   SUPABASE_JWT_SECRET          - to verify user JWTs
+#   SUPABASE_SERVICE_ROLE_KEY    - server-only ops (account deletion, quotas)
