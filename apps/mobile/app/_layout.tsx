@@ -10,8 +10,10 @@ import { ActivityIndicator } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { IntentHandler } from '@/components/IntentHandler';
+import { SyncRunner } from '@/components/SyncRunner';
 import migrations from '@/drizzle/migrations';
 import '../global.css';
+import { AuthProvider } from '@/lib/context/AuthContext';
 import { NewDishProvider } from '@/lib/context/NewDishContext';
 import { NewRestaurantProvider } from '@/lib/context/NewRestaurantContext';
 import { ThemeProvider } from '@/lib/context/ThemeContext';
@@ -51,14 +53,17 @@ export default function RootLayout() {
             useSuspense
           >
             <MigrationsRunner>
-              <ThemeProvider>
-                <NewRestaurantProvider>
-                  <NewDishProvider>
-                    <IntentHandler />
-                    <Slot />
-                  </NewDishProvider>
-                </NewRestaurantProvider>
-              </ThemeProvider>
+              <AuthProvider>
+                <ThemeProvider>
+                  <NewRestaurantProvider>
+                    <NewDishProvider>
+                      <IntentHandler />
+                      <SyncRunner />
+                      <Slot />
+                    </NewDishProvider>
+                  </NewRestaurantProvider>
+                </ThemeProvider>
+              </AuthProvider>
             </MigrationsRunner>
           </SQLiteProvider>
         </Suspense>

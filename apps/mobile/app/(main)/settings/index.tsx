@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
+import { useRouter } from 'expo-router';
 import { useContext, useState } from 'react';
-import { View, Text, ScrollView, Alert } from 'react-native';
+import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
 
 import { DBVersionContext } from '@/app/_layout';
 import ExportCard from '@/features/settings/components/ExportCard';
@@ -9,9 +11,12 @@ import InfoCard from '@/features/settings/components/InfoCard';
 import ThemeCard from '@/features/settings/components/ThemeCard';
 import ThemeSelectionModal from '@/features/settings/components/ThemeSelectionModal';
 import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
+import { useAuth } from '@/lib/context/AuthContext';
 
 export default function SettingsScreen() {
   const bumpDb = useContext(DBVersionContext);
+  const router = useRouter();
+  const { session } = useAuth();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const {
     isExporting,
@@ -132,6 +137,20 @@ export default function SettingsScreen() {
         <InfoCard appVersion={appVersion} storageUsed={storageInfo.used} lastExport={lastExport} />
 
         {/* Tema */}
+        {/* Cuenta y sincronización (opcional) */}
+        <TouchableOpacity
+          onPress={() => router.push('/account')}
+          className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4 flex-row items-center justify-between"
+        >
+          <View className="flex-row items-center">
+            <Ionicons name="person-circle-outline" size={24} color="#905c36" />
+            <Text className="text-lg font-bold text-text dark:text-dark-text ml-2">
+              {session ? 'Tu cuenta' : 'Cuenta y sincronización'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#905c36" />
+        </TouchableOpacity>
+
         <ThemeCard onPress={handleThemePress} />
 
         {/* Exportar datos */}
