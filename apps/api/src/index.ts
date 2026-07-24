@@ -19,11 +19,21 @@ app.use('*', cors());
 
 app.get('/health', (c) => c.json({ ok: true }));
 
-// Public paths (no auth): share resolution and image reads.
-const PUBLIC = [/^\/health$/, /^\/s\//, /^\/share\/[^/]+\/data$/, /^\/images\/[^/]+\/[^/]+$/];
+// Public endpoints (no auth): share resolution and image reads. Entries are
+// method-aware on purpose — a path-only allowlist would silently expose any
+// future write sharing the same shape (e.g. DELETE /images/:user/:id).
+const PUBLIC: { method: string; pattern: RegExp }[] = [
+  { method: 'GET', pattern: /^\/health$/ },
+  { method: 'GET', pattern: /^\/s\/[^/]+$/ },
+  { method: 'GET', pattern: /^\/share\/[^/]+\/data$/ },
+  { method: 'GET', pattern: /^\/images\/[^/]+\/[^/]+$/ },
+];
 
 app.use('*', async (c, next) => {
-  if (PUBLIC.some((re) => re.test(c.req.path))) return next();
+  const isPublic = PUBLIC.some(
+    ({ method, pattern }) => c.req.method === method && pattern.test(c.req.path),
+  );
+  if (isPublic) return next();
 
   const user = await verifySupabaseJwt(c.req.header('authorization'), c.env.SUPABASE_JWT_SECRET);
   if (!user) return c.json({ error: 'unauthorized' }, 401);

@@ -15,7 +15,9 @@ export const secureStorage = {
     if (countRaw === null) return null;
 
     const count = Number(countRaw);
-    if (!Number.isInteger(count) || count <= 0) return null;
+    if (!Number.isInteger(count) || count < 0) return null;
+    // Zero chunks is a stored empty string, not an absent key.
+    if (count === 0) return '';
 
     const parts: string[] = [];
     for (let i = 0; i < count; i++) {
