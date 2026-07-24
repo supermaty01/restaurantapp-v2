@@ -44,3 +44,60 @@ export function getTodayLocalDateString(): string {
 
   return `${year}-${month}-${day}`;
 }
+
+const SPANISH_MONTHS_SHORT = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+];
+
+/**
+ * Compact date for cards and list rows: "12 ago", or "12 ago 2024" once the
+ * year stops being obvious. Accepts both the `YYYY-MM-DD` the local database
+ * stores and the ISO timestamps the server returns.
+ */
+export function formatDate(dateValue: string, now: Date = new Date()): string {
+  const parsed = parseDateOnlyAsLocal(dateValue) ?? new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return dateValue;
+  }
+
+  const day = parsed.getDate();
+  const month = SPANISH_MONTHS_SHORT[parsed.getMonth()];
+  return parsed.getFullYear() === now.getFullYear()
+    ? `${day} ${month}`
+    : `${day} ${month} ${parsed.getFullYear()}`;
+}
+
+/**
+ * How long ago something happened, for the feed. Falls back to an absolute date
+ * after a week, where "hace 23 días" stops being easier to read than "3 jul".
+ */
+export function formatRelativeDate(dateValue: string, now: Date = new Date()): string {
+  const parsed = parseDateOnlyAsLocal(dateValue) ?? new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return dateValue;
+  }
+
+  const minutes = Math.floor((now.getTime() - parsed.getTime()) / 60000);
+  if (minutes < 1) return 'ahora';
+  if (minutes < 60) return `hace ${minutes} min`;
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `hace ${hours} h`;
+
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'ayer';
+  if (days < 7) return `hace ${days} días`;
+
+  return formatDate(dateValue, now);
+}

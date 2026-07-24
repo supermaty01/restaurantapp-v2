@@ -173,12 +173,12 @@ export default function ImportScreen() {
 
   return (
     <View
-      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}
+      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-canvas'}`}
     >
       {loading ? (
         <View className="items-center">
           <ActivityIndicator size="large" color={isDarkMode ? '#7A9455' : '#93AE72'} />
-          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
             Importando {getEntityTypeLabel().toLowerCase()}...
           </Text>
         </View>
@@ -186,15 +186,15 @@ export default function ImportScreen() {
         <View className="items-center">
           <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
           <Text
-            className={`mt-4 text-lg text-center ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+            className={`mt-4 text-lg text-center ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}
           >
             {error}
           </Text>
           <TouchableOpacity
-            className="mt-6 bg-primary dark:bg-dark-primary px-6 py-3 rounded-xl"
+            className="mt-6 bg-primary px-6 py-3 rounded-xl"
             onPress={() => router.replace('/')}
           >
-            <Text className="text-white font-semibold">Volver al inicio</Text>
+            <Text className="text-on-primary font-semibold">Volver al inicio</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -204,7 +204,7 @@ export default function ImportScreen() {
             size={64}
             color={isDarkMode ? '#7A9455' : '#93AE72'}
           />
-          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
             Procesando...
           </Text>
         </View>

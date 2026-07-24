@@ -71,10 +71,10 @@ export default function NotFoundScreen() {
   if (checking || isFileImport) {
     return (
       <View
-        className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}
+        className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-muted' : 'bg-canvas'}`}
       >
         <ActivityIndicator size="large" color={isDarkMode ? '#7A9455' : '#93AE72'} />
-        <Text className={`mt-4 text-base ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+        <Text className={`mt-4 text-base ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
           Procesando...
         </Text>
       </View>
@@ -83,22 +83,22 @@ export default function NotFoundScreen() {
 
   return (
     <View
-      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-muted'}`}
+      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-canvas'}`}
     >
       <Ionicons name="alert-circle-outline" size={64} color={isDarkMode ? '#888' : '#666'} />
-      <Text className={`mt-4 text-xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+      <Text className={`mt-4 text-xl font-bold ${isDarkMode ? 'text-on-primary' : 'text-ink'}`}>
         Página no encontrada
       </Text>
       <Text
-        className={`mt-2 text-base text-center ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}
+        className={`mt-2 text-base text-center ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}
       >
         La página que buscas no existe.
       </Text>
       <TouchableOpacity
-        className="mt-6 bg-primary dark:bg-dark-primary px-6 py-3 rounded-xl"
+        className="mt-6 bg-primary px-6 py-3 rounded-xl"
         onPress={() => router.replace('/')}
       >
-        <Text className="text-white font-semibold">Volver al inicio</Text>
+        <Text className="text-on-primary font-semibold">Volver al inicio</Text>
       </TouchableOpacity>
     </View>
   );

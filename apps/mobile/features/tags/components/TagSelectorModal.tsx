@@ -55,10 +55,8 @@ export default function TagSelectorModal({
   return (
     <Modal visible={visible} transparent onRequestClose={onClose}>
       <View className="flex-1 bg-black/50 justify-center items-center">
-        <View className="bg-white dark:bg-dark-card w-10/12 rounded-md p-4 max-h-[60%]">
-          <Text className="text-lg font-bold mb-2 text-gray-800 dark:text-gray-200">
-            Seleccionar Etiquetas
-          </Text>
+        <View className="bg-surface w-10/12 rounded-md p-4 max-h-[60%]">
+          <Text className="text-lg font-bold mb-2 text-ink">Seleccionar Etiquetas</Text>
           <FlatList
             data={tags}
             keyExtractor={(item) => item.id.toString()}
@@ -72,9 +70,7 @@ export default function TagSelectorModal({
                   <View
                     className={clsx(
                       'size-6 mr-2 rounded-md',
-                      isSelected
-                        ? 'bg-primary dark:bg-dark-primary'
-                        : 'bg-gray-300 dark:bg-gray-700',
+                      isSelected ? 'bg-primary' : 'bg-gray-300',
                     )}
                   >
                     {isSelected && <Ionicons name="checkmark" size={20} />}
@@ -85,25 +81,20 @@ export default function TagSelectorModal({
             }}
             ListEmptyComponent={
               <View className="flex-1 justify-center items-center mt-10">
-                <Text className="text-base text-gray-800 dark:text-gray-200">
-                  No se encontraron etiquetas.
-                </Text>
+                <Text className="text-base text-ink">No se encontraron etiquetas.</Text>
               </View>
             }
           />
           <View className="flex-row justify-between mt-4">
             <TouchableOpacity
               onPress={() => setShowCreateModal(true)}
-              className="flex-row items-center px-4 py-2 bg-primary dark:bg-dark-primary rounded-md"
+              className="flex-row items-center px-4 py-2 bg-primary rounded-md"
             >
               <Ionicons name="add" size={18} color="#fff" />
-              <Text className="text-white ml-1 font-semibold">Crear</Text>
+              <Text className="text-on-primary ml-1 font-semibold">Crear</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onClose}
-              className="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-md"
-            >
-              <Text className="text-gray-800 dark:text-gray-200">Cerrar</Text>
+            <TouchableOpacity onPress={onClose} className="px-4 py-2 bg-gray-300 rounded-md">
+              <Text className="text-ink">Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>

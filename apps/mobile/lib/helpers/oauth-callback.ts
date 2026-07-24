@@ -47,8 +47,7 @@ function collectParams(redirectUrl: string): Map<string, string> {
   const params = new Map<string, string>();
 
   const fragmentStart = redirectUrl.indexOf('#');
-  const beforeFragment =
-    fragmentStart === -1 ? redirectUrl : redirectUrl.slice(0, fragmentStart);
+  const beforeFragment = fragmentStart === -1 ? redirectUrl : redirectUrl.slice(0, fragmentStart);
 
   const queryStart = beforeFragment.indexOf('?');
   if (queryStart !== -1) parseParams(beforeFragment.slice(queryStart + 1), params);

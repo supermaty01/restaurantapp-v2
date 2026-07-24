@@ -13,19 +13,19 @@ interface InfoCardProps {
 
 const InfoCard: React.FC<InfoCardProps> = ({ appVersion, storageUsed, lastExport }) => {
   return (
-    <View className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4">
-      <Text className="text-lg font-bold text-text dark:text-dark-text mb-2">Información</Text>
+    <View className="bg-surface p-4 rounded-xl mb-4">
+      <Text className="text-lg font-bold text-ink mb-2">Información</Text>
       <View className="flex-row justify-between mb-2">
-        <Text className="text-gray-600 dark:text-gray-400">Versión</Text>
-        <Text className="text-text dark:text-dark-text">{appVersion}</Text>
+        <Text className="text-ink-muted">Versión</Text>
+        <Text className="text-ink">{appVersion}</Text>
       </View>
       <View className="flex-row justify-between mb-2">
-        <Text className="text-gray-600 dark:text-gray-400">Almacenamiento usado</Text>
-        <Text className="text-text dark:text-dark-text">{formatBytes(storageUsed)}</Text>
+        <Text className="text-ink-muted">Almacenamiento usado</Text>
+        <Text className="text-ink">{formatBytes(storageUsed)}</Text>
       </View>
       <View className="flex-row justify-between">
-        <Text className="text-gray-600 dark:text-gray-400">Última exportación</Text>
-        <Text className="text-text dark:text-dark-text">{formatDate(lastExport?.date)}</Text>
+        <Text className="text-ink-muted">Última exportación</Text>
+        <Text className="text-ink">{formatDate(lastExport?.date)}</Text>
       </View>
     </View>
   );

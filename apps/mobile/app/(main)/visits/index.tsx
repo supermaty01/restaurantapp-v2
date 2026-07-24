@@ -159,13 +159,13 @@ export default function VisitsScreen() {
               cachePolicy="memory-disk"
             />
           ) : (
-            <View style={{ width: '100%', height: 100 }} className="bg-gray-200 dark:bg-gray-700" />
+            <View style={{ width: '100%', height: 100 }} className="bg-sunken" />
           )}
           <View className="p-2">
-            <Text className="text-sm font-bold text-gray-800 dark:text-gray-200" numberOfLines={1}>
+            <Text className="text-sm font-bold text-ink" numberOfLines={1}>
               {item.restaurant.name}
             </Text>
-            <Text className="text-xs text-gray-500 dark:text-gray-400">{formattedVisitDate}</Text>
+            <Text className="text-xs text-ink-subtle">{formattedVisitDate}</Text>
           </View>
         </GridPeekItem>
       );
@@ -176,18 +176,16 @@ export default function VisitsScreen() {
   const listEmptyComponent = useMemo(
     () => (
       <View className="flex-1 justify-center items-center mt-10">
-        <Text className="text-base text-gray-800 dark:text-gray-200">
-          No se encontraron visitas.
-        </Text>
+        <Text className="text-base text-ink">No se encontraron visitas.</Text>
       </View>
     ),
     [],
   );
 
   return (
-    <View className="flex-1 bg-muted dark:bg-dark-muted px-4 pt-2 relative">
+    <View className="flex-1 bg-canvas px-4 pt-2 relative">
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200">Visitas</Text>
+        <Text className="text-2xl font-bold text-ink">Visitas</Text>
         <View className="flex-row items-center" style={{ gap: 12 }}>
           <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
             <Ionicons
@@ -212,17 +210,17 @@ export default function VisitsScreen() {
                 }
               />
               {hasActiveFilters && (
-                <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary dark:bg-dark-primary rounded-full" />
+                <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
               )}
             </View>
           </TouchableOpacity>
         </View>
       </View>
       <View className="mb-3">
-        <View className="flex-row items-center bg-card dark:bg-dark-card rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-700">
+        <View className="flex-row items-center bg-surface rounded-lg px-3 py-2 border border-line">
           <Ionicons name="search" size={18} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
           <TextInput
-            className="flex-1 ml-2 text-sm text-gray-800 dark:text-gray-200"
+            className="flex-1 ml-2 text-sm text-ink"
             placeholder="Buscar por nombre..."
             placeholderTextColor={isDarkMode ? '#6b7280' : '#9ca3af'}
             value={searchQuery}
@@ -253,7 +251,7 @@ export default function VisitsScreen() {
       />
       <TouchableOpacity
         onPress={() => router.push('/visits/new')}
-        className="absolute bottom-5 right-5 w-12 h-12 bg-primary dark:bg-dark-primary rounded-full items-center justify-center"
+        className="absolute bottom-5 right-5 w-12 h-12 bg-primary rounded-full items-center justify-center"
       >
         <Ionicons name="add" size={24} color="#fff" />
       </TouchableOpacity>

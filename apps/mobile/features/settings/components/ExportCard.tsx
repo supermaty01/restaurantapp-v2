@@ -22,7 +22,7 @@ const ExportCard: React.FC<ExportCardProps> = ({
   const { isDarkMode } = useTheme();
   return (
     <TouchableOpacity
-      className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4"
+      className="bg-surface p-4 rounded-xl mb-4"
       onPress={onPress}
       disabled={disabled}
       style={{ opacity: disabled ? 0.7 : 1 }}
@@ -35,13 +35,11 @@ const ExportCard: React.FC<ExportCardProps> = ({
             color={isDarkMode ? '#B27A4D' : '#905c36'}
             className="mr-2"
           />
-          <Text className="text-lg font-bold text-text dark:text-dark-text ml-2">
-            Exportar datos
-          </Text>
+          <Text className="text-lg font-bold text-ink ml-2">Exportar datos</Text>
         </View>
         <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? '#777' : '#999'} />
       </View>
-      <Text className="text-gray-600 dark:text-gray-400 mt-1">
+      <Text className="text-ink-muted mt-1">
         Crea una copia de seguridad de todos tus datos e imágenes
       </Text>
 

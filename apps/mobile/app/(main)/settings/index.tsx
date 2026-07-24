@@ -131,9 +131,9 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-muted dark:bg-dark-muted">
+    <ScrollView className="flex-1 bg-canvas">
       <View className="p-4">
-        <Text className="text-2xl font-bold text-text dark:text-dark-text mb-6">Configuración</Text>
+        <Text className="text-2xl font-bold text-ink mb-6">Configuración</Text>
 
         {/* Información de la app */}
         <InfoCard appVersion={appVersion} storageUsed={storageInfo.used} lastExport={lastExport} />
@@ -142,11 +142,11 @@ export default function SettingsScreen() {
         {/* Cuenta y sincronización (opcional) */}
         <TouchableOpacity
           onPress={() => router.push('/account')}
-          className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4 flex-row items-center justify-between"
+          className="bg-surface p-4 rounded-xl mb-4 flex-row items-center justify-between"
         >
           <View className="flex-row items-center">
             <Ionicons name="person-circle-outline" size={24} color="#905c36" />
-            <Text className="text-lg font-bold text-text dark:text-dark-text ml-2">
+            <Text className="text-lg font-bold text-ink ml-2">
               {session ? 'Tu cuenta' : 'Cuenta y sincronización'}
             </Text>
           </View>

@@ -22,7 +22,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
   const dishesWithDetails = useDishesDetails(dishIds);
 
   return (
-    <View className="p-4 h-full bg-white dark:bg-dark-card">
+    <View className="p-4 h-full bg-surface">
       <FlatList
         data={dishesWithDetails}
         keyExtractor={(item) => item.id.toString()}
@@ -31,7 +31,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
           const imageUrl = item.images?.[0]?.uri ?? null;
           return (
             <TouchableOpacity
-              className="flex-row items-center py-3 border-b border-gray-200 dark:border-gray-700"
+              className="flex-row items-center py-3 border-b border-line"
               onPress={() =>
                 router.push({ pathname: '/dishes/[id]/view', params: { id: item.id } })
               }
@@ -45,22 +45,18 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
                   cachePolicy="memory-disk"
                 />
               ) : (
-                <View className="w-14 h-14 rounded bg-gray-300 dark:bg-gray-700 mr-3" />
+                <View className="w-14 h-14 rounded bg-gray-300 mr-3" />
               )}
               <View className="flex-1">
                 <View className="flex-row items-center">
-                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 flex-1">
-                    {item.name}
-                  </Text>
+                  <Text className="text-base font-bold text-ink flex-1">{item.name}</Text>
                   {item.deleted && (
                     <View className="bg-red-100 px-2 py-0.5 rounded mr-1">
-                      <Text className="text-red-600 text-xs">Eliminado</Text>
+                      <Text className="text-danger text-xs">Eliminado</Text>
                     </View>
                   )}
                 </View>
-                {item.comments && (
-                  <Text className="text-sm text-gray-500 dark:text-gray-400">{item.comments}</Text>
-                )}
+                {item.comments && <Text className="text-sm text-ink-subtle">{item.comments}</Text>}
               </View>
               <Ionicons
                 name="chevron-forward-outline"
@@ -73,9 +69,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-base text-gray-800 dark:text-gray-200">
-              No se encontraron platos.
-            </Text>
+            <Text className="text-base text-ink">No se encontraron platos.</Text>
           </View>
         }
       />

@@ -1,8 +1,11 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
+import { colorScheme } from 'nativewind';
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
 
+import { darkColors, lightColors } from '@/lib/design/tokens';
+import type { ThemeColors } from '@/lib/design/tokens';
 import * as schema from '@/services/db/schema';
 import { getSetting, setSetting } from '@/services/db/settings-repository';
 
@@ -18,12 +21,19 @@ function isThemeMode(value: string): value is ThemeMode {
 interface ThemeContextData {
   themeMode: ThemeMode;
   isDarkMode: boolean;
+  /**
+   * Raw colour values, for props that take a colour string — icons, StatusBar,
+   * map styling. Anything styled with className should use the semantic classes
+   * (`bg-surface`, `text-ink`) instead, which already follow the scheme.
+   */
+  colors: ThemeColors;
   setThemeMode: (mode: ThemeMode) => Promise<void>;
 }
 
 export const ThemeContext = createContext<ThemeContextData>({
   themeMode: 'system',
   isDarkMode: false,
+  colors: lightColors,
   setThemeMode: async () => {},
 });
 
@@ -39,6 +49,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
 
   const isDarkMode = themeMode === 'system' ? systemColorScheme === 'dark' : themeMode === 'dark';
+
+  // NativeWind keeps its own notion of the scheme, and that is what resolves
+  // the CSS variables behind every class. Without this the in-app light/dark
+  // setting moved only the values read from `colors` — picking "dark" on a
+  // phone set to light produced a half-dark screen.
+  useEffect(() => {
+    colorScheme.set(themeMode);
+  }, [themeMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -75,7 +93,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   );
 
   const value = useMemo(
-    () => ({ themeMode, isDarkMode, setThemeMode }),
+    () => ({
+      themeMode,
+      isDarkMode,
+      colors: isDarkMode ? darkColors : lightColors,
+      setThemeMode,
+    }),
     [themeMode, isDarkMode, setThemeMode],
   );
 

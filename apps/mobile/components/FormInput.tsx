@@ -44,8 +44,8 @@ function FormInput<TFieldValues extends FieldValues, TTransformed = TFieldValues
           {label && (
             <Text
               className={clsx(
-                'text-base mb-2 text-gray-800 dark:text-gray-200',
-                error ? 'text-red-600 dark:text-red-400' : '',
+                'text-base mb-2 text-ink',
+                error ? 'text-danger dark:text-red-400' : '',
               )}
             >
               {label}
@@ -56,7 +56,7 @@ function FormInput<TFieldValues extends FieldValues, TTransformed = TFieldValues
             onChangeText={onChange}
             value={keyboardType === 'numeric' ? String(value ?? '') : (value ?? '')}
             className={clsx(
-              'w-full min-h-12 px-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-800 dark:text-gray-200',
+              'w-full min-h-12 px-4 border border-line rounded-lg bg-surface text-ink',
               inputClassName,
             )}
             placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
@@ -64,7 +64,7 @@ function FormInput<TFieldValues extends FieldValues, TTransformed = TFieldValues
             accessibilityLabel={label ?? rest.placeholder}
             {...rest}
           />
-          {error && <Text className="text-red-600 dark:text-red-400 mt-1">{error.message}</Text>}
+          {error && <Text className="text-danger dark:text-red-400 mt-1">{error.message}</Text>}
         </View>
       )}
     />

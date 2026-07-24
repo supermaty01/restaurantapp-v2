@@ -39,10 +39,10 @@ export default function AccountScreen() {
 
   if (!isConfigured) {
     return (
-      <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4">
-        <View className="bg-card dark:bg-dark-card p-4 rounded-xl">
-          <Text className="text-lg font-bold text-text dark:text-dark-text mb-2">Modo local</Text>
-          <Text className="text-gray-600 dark:text-gray-400">
+      <ScrollView className="flex-1 bg-canvas p-4">
+        <View className="bg-surface p-4 rounded-xl">
+          <Text className="text-lg font-bold text-ink mb-2">Modo local</Text>
+          <Text className="text-ink-muted">
             La app funciona completamente sin cuenta: tus datos viven en este dispositivo. Las
             cuentas y la sincronización se activan cuando se configura el servicio.
           </Text>
@@ -71,17 +71,15 @@ export default function AccountScreen() {
 
   if (session && accountUuid) {
     return (
-      <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4">
-        <View className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4">
-          <Text className="text-lg font-bold text-text dark:text-dark-text">Tu cuenta</Text>
-          <Text className="text-gray-600 dark:text-gray-400 mt-1">{session.user.email}</Text>
+      <ScrollView className="flex-1 bg-canvas p-4">
+        <View className="bg-surface p-4 rounded-xl mb-4">
+          <Text className="text-lg font-bold text-ink">Tu cuenta</Text>
+          <Text className="text-ink-muted mt-1">{session.user.email}</Text>
         </View>
 
-        <View className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4">
-          <Text className="text-base font-bold text-text dark:text-dark-text mb-2">
-            Sincronización
-          </Text>
-          <Text className="text-gray-600 dark:text-gray-400 mb-3">
+        <View className="bg-surface p-4 rounded-xl mb-4">
+          <Text className="text-base font-bold text-ink mb-2">Sincronización</Text>
+          <Text className="text-ink-muted mb-3">
             {status === 'syncing'
               ? 'Sincronizando…'
               : lastOutcome
@@ -92,36 +90,31 @@ export default function AccountScreen() {
           </Text>
           <TouchableOpacity
             onPress={() => void syncNow()}
-            className="flex-row items-center bg-primary dark:bg-dark-primary rounded-md px-4 py-2 self-start"
+            className="flex-row items-center bg-primary rounded-md px-4 py-2 self-start"
           >
             <Ionicons name="sync" size={18} color="#fff" />
-            <Text className="text-white font-semibold ml-2">Sincronizar ahora</Text>
+            <Text className="text-on-primary font-semibold ml-2">Sincronizar ahora</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => void handleLink()} className="mt-3 self-start">
-            <Text className="text-secondary dark:text-dark-secondary">Subir mis datos locales</Text>
+            <Text className="text-primary">Subir mis datos locales</Text>
           </TouchableOpacity>
         </View>
 
         <TouchableOpacity
           onPress={() => void signOut()}
-          className="bg-destructive dark:bg-dark-destructive rounded-md px-4 py-3 items-center"
+          className="bg-danger rounded-md px-4 py-3 items-center"
         >
-          <Text className="text-white font-semibold">Cerrar sesión</Text>
+          <Text className="text-on-primary font-semibold">Cerrar sesión</Text>
         </TouchableOpacity>
       </ScrollView>
     );
   }
 
   return (
-    <ScrollView
-      className="flex-1 bg-muted dark:bg-dark-muted p-4"
-      keyboardShouldPersistTaps="handled"
-    >
-      <View className="bg-card dark:bg-dark-card p-4 rounded-xl">
-        <Text className="text-lg font-bold text-text dark:text-dark-text mb-1">
-          Crear cuenta o iniciar sesión
-        </Text>
-        <Text className="text-gray-600 dark:text-gray-400 mb-4">
+    <ScrollView className="flex-1 bg-canvas p-4" keyboardShouldPersistTaps="handled">
+      <View className="bg-surface p-4 rounded-xl">
+        <Text className="text-lg font-bold text-ink mb-1">Crear cuenta o iniciar sesión</Text>
+        <Text className="text-ink-muted mb-4">
           Opcional. Sincroniza tus datos entre dispositivos y habilita amigos y compartir.
         </Text>
 
@@ -131,25 +124,25 @@ export default function AccountScreen() {
           placeholder="Correo"
           autoCapitalize="none"
           keyboardType="email-address"
-          className="min-h-12 px-4 mb-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-800 dark:text-gray-200"
+          className="min-h-12 px-4 mb-3 border border-line rounded-lg bg-surface text-ink"
         />
         <TextInput
           value={password}
           onChangeText={setPassword}
           placeholder="Contraseña"
           secureTextEntry
-          className="min-h-12 px-4 mb-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-800 dark:text-gray-200"
+          className="min-h-12 px-4 mb-4 border border-line rounded-lg bg-surface text-ink"
         />
 
         <TouchableOpacity
           disabled={busy}
           onPress={() => void runAuth(() => signInWithEmail(email.trim(), password))}
-          className="bg-primary dark:bg-dark-primary rounded-md py-3 items-center mb-2"
+          className="bg-primary rounded-md py-3 items-center mb-2"
         >
           {busy ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text className="text-white font-semibold">Iniciar sesión</Text>
+            <Text className="text-on-primary font-semibold">Iniciar sesión</Text>
           )}
         </TouchableOpacity>
         <TouchableOpacity
@@ -157,7 +150,7 @@ export default function AccountScreen() {
           onPress={() => void runAuth(() => signUpWithEmail(email.trim(), password))}
           className="py-2 items-center mb-4"
         >
-          <Text className="text-secondary dark:text-dark-secondary">Crear cuenta nueva</Text>
+          <Text className="text-primary">Crear cuenta nueva</Text>
         </TouchableOpacity>
 
         {(['google', 'apple'] as OAuthProvider[]).map((provider) => (
@@ -165,10 +158,10 @@ export default function AccountScreen() {
             key={provider}
             disabled={busy}
             onPress={() => void runAuth(() => signInWithOAuth(provider))}
-            className="flex-row items-center justify-center border border-gray-300 dark:border-gray-600 rounded-md py-3 mb-2"
+            className="flex-row items-center justify-center border border-line rounded-md py-3 mb-2"
           >
             <Ionicons name={`logo-${provider}`} size={20} color="#905c36" />
-            <Text className="text-text dark:text-dark-text font-semibold ml-2">
+            <Text className="text-ink font-semibold ml-2">
               Continuar con {provider === 'google' ? 'Google' : 'Apple'}
             </Text>
           </TouchableOpacity>

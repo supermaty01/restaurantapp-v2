@@ -83,19 +83,19 @@ function DishPicker<
 
   return (
     <View>
-      <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 mt-2">Platos</Text>
+      <Text className="text-xl font-semibold text-ink mt-2">Platos</Text>
 
       {selectedDishes.length > 0 && (
         <View className="mt-3">
           {selectedDishes.map((dish) => (
             <View key={dish.id} className="flex-row items-center w-full mb-3">
-              <Text className="flex-1 py-2 px-4 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-lg">
+              <Text className="flex-1 py-2 px-4 border border-line text-ink rounded-lg">
                 {dish.name}
               </Text>
 
               <TouchableOpacity
                 onPress={() => handleRemoveDish(dish.id)}
-                className="ml-3 p-2 bg-destructive dark:bg-dark-destructive rounded-lg"
+                className="ml-3 p-2 bg-danger rounded-lg"
               >
                 <Ionicons name="close" size={23} color="white" />
               </TouchableOpacity>
@@ -106,15 +106,15 @@ function DishPicker<
 
       <View className="flex-row justify-between mt-3">
         <TouchableOpacity
-          className={`bg-primary dark:bg-dark-primary py-3 px-4 rounded-md ${!restaurantId ? 'opacity-50' : ''}`}
+          className={`bg-primary py-3 px-4 rounded-md ${!restaurantId ? 'opacity-50' : ''}`}
           onPress={() => setIsModalVisible(true)}
           disabled={!restaurantId}
         >
-          <Text className="text-white font-bold">Añadir existente</Text>
+          <Text className="text-on-primary font-bold">Añadir existente</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          className={`bg-primary dark:bg-dark-primary py-3 px-4 rounded-md ${!restaurantId ? 'opacity-50' : ''}`}
+          className={`bg-primary py-3 px-4 rounded-md ${!restaurantId ? 'opacity-50' : ''}`}
           onPress={() =>
             router.push({
               pathname: '/dishes/new',
@@ -123,12 +123,12 @@ function DishPicker<
           }
           disabled={!restaurantId}
         >
-          <Text className="text-white font-bold">Crear nuevo plato</Text>
+          <Text className="text-on-primary font-bold">Crear nuevo plato</Text>
         </TouchableOpacity>
       </View>
 
       {errors?.[name] && (
-        <Text className="text-red-600 dark:text-red-400 mt-1">
+        <Text className="text-danger dark:text-red-400 mt-1">
           {String(errors[name]?.message ?? '')}
         </Text>
       )}
@@ -138,27 +138,23 @@ function DishPicker<
           className="flex-1 justify-center items-center"
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
         >
-          <View className="bg-white dark:bg-dark-card w-4/5 p-4 rounded-md">
-            <Text className="text-lg font-bold mb-3 text-gray-800 dark:text-gray-200">
-              Seleccionar Platos
-            </Text>
+          <View className="bg-surface w-4/5 p-4 rounded-md">
+            <Text className="text-lg font-bold mb-3 text-ink">Seleccionar Platos</Text>
 
             {isLoading ? (
               <ActivityIndicator size="large" color={isDarkMode ? '#B27A4D' : '#905c36'} />
             ) : dishes.length === 0 ? (
-              <Text className="text-gray-500 dark:text-gray-400 text-center mt-4">
-                No hay platos disponibles
-              </Text>
+              <Text className="text-ink-subtle text-center mt-4">No hay platos disponibles</Text>
             ) : (
               <FlatList
                 data={dishes}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                   <TouchableOpacity
-                    className="flex-row justify-between items-center p-3 border-b border-gray-200 dark:border-gray-700"
+                    className="flex-row justify-between items-center p-3 border-b border-line"
                     onPress={() => handleAddDish(item)}
                   >
-                    <Text className="text-gray-800 dark:text-gray-200">{item.name}</Text>
+                    <Text className="text-ink">{item.name}</Text>
                     {selectedDishes.some((d) => d.id === item.id) && (
                       <Ionicons name="checkmark-circle" size={19} color="green" />
                     )}
@@ -168,10 +164,10 @@ function DishPicker<
             )}
 
             <TouchableOpacity
-              className="bg-primary dark:bg-dark-primary py-3 px-4 rounded-md mt-4"
+              className="bg-primary py-3 px-4 rounded-md mt-4"
               onPress={() => setIsModalVisible(false)}
             >
-              <Text className="text-white text-center font-bold">Cerrar</Text>
+              <Text className="text-on-primary text-center font-bold">Cerrar</Text>
             </TouchableOpacity>
           </View>
         </View>

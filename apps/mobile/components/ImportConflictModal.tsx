@@ -52,7 +52,7 @@ export default function ImportConflictModal({
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View className="flex-1 justify-center items-center bg-black/50 px-4">
         <View
-          className={`w-full max-w-sm rounded-2xl p-5 ${isDarkMode ? 'bg-dark-card' : 'bg-white'}`}
+          className={`w-full max-w-sm rounded-2xl p-5 ${isDarkMode ? 'bg-dark-card' : 'bg-surface'}`}
         >
           {/* Header */}
           <View className="flex-row items-center justify-between mb-4">
@@ -63,7 +63,7 @@ export default function ImportConflictModal({
                 color={isDarkMode ? '#FFA500' : '#F59E0B'}
               />
               <Text
-                className={`text-lg font-bold ml-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}
+                className={`text-lg font-bold ml-2 ${isDarkMode ? 'text-on-primary' : 'text-ink'}`}
               >
                 Restaurante Similar Encontrado
               </Text>
@@ -75,27 +75,29 @@ export default function ImportConflictModal({
 
           {/* Content */}
           <ScrollView className="max-h-80">
-            <Text className={`text-base mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <Text className={`text-base mb-4 ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
               Ya tienes un restaurante llamado &quot;{conflict.existingEntity?.name}&quot; en tu
               lista.
             </Text>
 
-            <Text className={`text-base mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <Text className={`text-base mb-2 ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
               Estás importando: <Text className="font-bold">{getEntityTypeLabel()}</Text>
             </Text>
-            <Text className={`text-base mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+            <Text className={`text-base mb-4 ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
               Nombre: <Text className="font-bold">{getEntityName()}</Text>
             </Text>
 
             {shareData.type !== 'restaurant' && (
-              <Text className={`text-base mb-4 ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              <Text
+                className={`text-base mb-4 ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}
+              >
                 Restaurante incluido:{' '}
                 <Text className="font-bold">{getIncomingRestaurantName()}</Text>
               </Text>
             )}
 
             <Text
-              className={`text-base font-semibold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}
+              className={`text-base font-semibold mb-3 ${isDarkMode ? 'text-on-primary' : 'text-ink'}`}
             >
               ¿Qué deseas hacer?
             </Text>
@@ -105,7 +107,7 @@ export default function ImportConflictModal({
           <View className="mt-4 gap-3">
             {/* Use existing */}
             <TouchableOpacity
-              className={`flex-row items-center p-4 rounded-xl border ${isDarkMode ? 'bg-dark-muted border-gray-600' : 'bg-gray-50 border-gray-200'}`}
+              className={`flex-row items-center p-4 rounded-xl border ${isDarkMode ? 'bg-dark-muted border-gray-600' : 'bg-sunken border-line'}`}
               onPress={() =>
                 conflict.existingEntity &&
                 onResolve({ type: 'use_existing', existingId: conflict.existingEntity.id })
@@ -113,10 +115,10 @@ export default function ImportConflictModal({
             >
               <Ionicons name="link-outline" size={24} color={isDarkMode ? '#7A9455' : '#93AE72'} />
               <View className="ml-3 flex-1">
-                <Text className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                <Text className={`font-bold ${isDarkMode ? 'text-on-primary' : 'text-ink'}`}>
                   Usar el restaurante existente
                 </Text>
-                <Text className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Text className={`text-sm ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
                   Vincular el {getEntityTypeLabel().toLowerCase()} al restaurante &quot;
                   {conflict.existingEntity?.name}&quot;
                 </Text>
@@ -125,7 +127,7 @@ export default function ImportConflictModal({
 
             {/* Create new */}
             <TouchableOpacity
-              className={`flex-row items-center p-4 rounded-xl border ${isDarkMode ? 'bg-dark-muted border-gray-600' : 'bg-gray-50 border-gray-200'}`}
+              className={`flex-row items-center p-4 rounded-xl border ${isDarkMode ? 'bg-dark-muted border-gray-600' : 'bg-sunken border-line'}`}
               onPress={() => onResolve({ type: 'create_new' })}
             >
               <Ionicons
@@ -134,10 +136,10 @@ export default function ImportConflictModal({
                 color={isDarkMode ? '#7A9455' : '#93AE72'}
               />
               <View className="ml-3 flex-1">
-                <Text className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                <Text className={`font-bold ${isDarkMode ? 'text-on-primary' : 'text-ink'}`}>
                   Crear nuevo restaurante
                 </Text>
-                <Text className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                <Text className={`text-sm ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
                   Crear una copia del restaurante con todos sus datos
                 </Text>
               </View>
@@ -145,11 +147,11 @@ export default function ImportConflictModal({
 
             {/* Cancel */}
             <TouchableOpacity
-              className={`p-3 rounded-xl ${isDarkMode ? 'bg-gray-700' : 'bg-gray-200'}`}
+              className={`p-3 rounded-xl ${isDarkMode ? 'bg-surface' : 'bg-sunken'}`}
               onPress={onClose}
             >
               <Text
-                className={`text-center font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}
+                className={`text-center font-semibold ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}
               >
                 Cancelar
               </Text>

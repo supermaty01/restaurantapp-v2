@@ -468,7 +468,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
         {editable && !selectedLocation && (
           <TouchableOpacity
-            className="bg-primary dark:bg-dark-primary"
+            className="bg-primary"
             style={{
               flexDirection: 'row',
               paddingHorizontal: 14,
@@ -499,7 +499,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
               borderRadius: 8,
               marginTop: 8,
             }}
-            className="bg-destructive dark:bg-dark-destructive"
+            className="bg-danger"
             onPress={handleClearSelection}
           >
             <Text style={{ color: 'white', fontWeight: '600' }}>Borrar selección</Text>

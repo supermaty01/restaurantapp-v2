@@ -1,3 +1,18 @@
+/**
+ * Clay design system (docs/14).
+ *
+ * Colours resolve through the CSS variables in global.css, so `bg-surface`
+ * means the right thing in both schemes and no element needs a `dark:` twin.
+ * The palette itself is defined once in lib/design/tokens.ts.
+ *
+ * `darkMode: 'class'` is deliberate: the app has a light/dark/system setting,
+ * so the scheme has to be settable, not just inherited from the OS.
+ * ThemeContext drives it through NativeWind's `colorScheme.set`.
+ */
+
+/** Binds a semantic name to its CSS variable, keeping Tailwind's `/opacity`. */
+const themed = (name) => `rgb(var(--color-${name}) / <alpha-value>)`;
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -10,32 +25,47 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Light mode colors
-        primary: '#93AE72',
-        secondary: '#905C36',
-        muted: '#E5EAE0',
-        destructive: '#B04A3A',
-        foreground: '#E5EAE0',
-        accent: '#DFE2CF',
-        'light-brown': '#CDC8B8',
-        background: '#FFFFFF',
-        card: '#FFFFFF',
-        text: '#333333',
-        border: '#E0E0E0',
-        // Dark mode specific colors
-        dark: {
-          primary: '#7A9455',
-          secondary: '#B27A4D',
-          muted: '#2E3731',
-          destructive: '#D05A48',
-          foreground: '#2E3731',
-          accent: '#111c16',
-          'light-brown': '#4A4840',
-          background: '#1A1A1A',
-          card: '#2A2A2A',
-          text: '#E0E0E0',
-          border: '#444444',
+        canvas: themed('canvas'),
+        surface: {
+          DEFAULT: themed('surface'),
+          alt: themed('surface-alt'),
         },
+        sunken: themed('sunken'),
+        line: {
+          DEFAULT: themed('line'),
+          strong: themed('line-strong'),
+        },
+        ink: {
+          DEFAULT: themed('ink'),
+          muted: themed('ink-muted'),
+          subtle: themed('ink-subtle'),
+        },
+        primary: {
+          DEFAULT: themed('primary'),
+          pressed: themed('primary-pressed'),
+        },
+        'on-primary': themed('on-primary'),
+        accent: themed('accent'),
+        sage: themed('sage'),
+        danger: themed('danger'),
+        inverse: themed('inverse'),
+        'on-inverse': themed('on-inverse'),
+      },
+      fontFamily: {
+        // Newsreader for anything editorial, Plus Jakarta Sans for the rest.
+        display: ['Newsreader_500Medium'],
+        'display-semi': ['Newsreader_600SemiBold'],
+        sans: ['PlusJakartaSans_400Regular'],
+        medium: ['PlusJakartaSans_500Medium'],
+        semi: ['PlusJakartaSans_600SemiBold'],
+        bold: ['PlusJakartaSans_700Bold'],
+      },
+      borderRadius: {
+        sm: '9px',
+        md: '11px',
+        lg: '13px',
+        xl: '16px',
+        pill: '100px',
       },
     },
   },

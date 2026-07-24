@@ -34,7 +34,7 @@ export function PeopleTagInput({ value, onChange, label = 'Con quién' }: People
 
   return (
     <View className="mb-4">
-      <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-2">{label}</Text>
+      <Text className="text-xl font-semibold text-ink mb-2">{label}</Text>
 
       <View className="flex-row items-center gap-2">
         <TextInput
@@ -44,11 +44,11 @@ export function PeopleTagInput({ value, onChange, label = 'Con quién' }: People
           placeholder="Añade a alguien y pulsa +"
           placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
           returnKeyType="done"
-          className="flex-1 min-h-12 px-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card text-gray-800 dark:text-gray-200"
+          className="flex-1 min-h-12 px-4 border border-line rounded-lg bg-surface text-ink"
         />
         <TouchableOpacity
           onPress={addPerson}
-          className="bg-primary dark:bg-dark-primary rounded-full p-2"
+          className="bg-primary rounded-full p-2"
           accessibilityRole="button"
           accessibilityLabel="Añadir persona"
         >
@@ -62,11 +62,11 @@ export function PeopleTagInput({ value, onChange, label = 'Con quién' }: People
             <Pressable
               key={name}
               onPress={() => removePerson(name)}
-              className="flex-row items-center bg-secondary/20 dark:bg-dark-secondary/30 rounded-full px-3 py-1 mr-2 mb-2"
+              className="flex-row items-center bg-primary/20/30 rounded-full px-3 py-1 mr-2 mb-2"
               accessibilityRole="button"
               accessibilityLabel={`Quitar a ${name}`}
             >
-              <Text className="text-secondary dark:text-dark-secondary mr-1">{name}</Text>
+              <Text className="text-primary mr-1">{name}</Text>
               <Ionicons name="close" size={16} color={isDarkMode ? '#B27A4D' : '#905c36'} />
             </Pressable>
           ))}

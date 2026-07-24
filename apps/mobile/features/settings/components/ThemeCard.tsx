@@ -38,7 +38,7 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ onPress }) => {
   };
 
   return (
-    <TouchableOpacity className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4" onPress={onPress}>
+    <TouchableOpacity className="bg-surface p-4 rounded-xl mb-4" onPress={onPress}>
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Ionicons
@@ -47,14 +47,14 @@ const ThemeCard: React.FC<ThemeCardProps> = ({ onPress }) => {
             color={isDarkMode ? '#B27A4D' : '#905c36'}
             className="mr-2"
           />
-          <Text className="text-lg font-bold text-text dark:text-dark-text ml-2">Tema</Text>
+          <Text className="text-lg font-bold text-ink ml-2">Tema</Text>
         </View>
         <View className="flex-row items-center">
-          <Text className="text-gray-600 dark:text-gray-400 mr-2">{getThemeDisplayText()}</Text>
+          <Text className="text-ink-muted mr-2">{getThemeDisplayText()}</Text>
           <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? '#777' : '#999'} />
         </View>
       </View>
-      <Text className="text-gray-600 dark:text-gray-400 mt-1">
+      <Text className="text-ink-muted mt-1">
         Cambia entre tema claro, oscuro o usa la configuración del sistema
       </Text>
     </TouchableOpacity>

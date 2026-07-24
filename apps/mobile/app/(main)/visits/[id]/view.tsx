@@ -85,8 +85,8 @@ export default function VisitDetailScreen() {
 
   if (!visit) {
     return (
-      <View className="flex-1 justify-center items-center bg-muted dark:bg-dark-muted p-4">
-        <Text className="text-base text-gray-800 dark:text-gray-200">No se encontró la visita</Text>
+      <View className="flex-1 justify-center items-center bg-canvas p-4">
+        <Text className="text-base text-ink">No se encontró la visita</Text>
       </View>
     );
   }
@@ -95,14 +95,12 @@ export default function VisitDetailScreen() {
   const formattedDate = format(parsedDate, "dd 'de' MMMM, yyyy", { locale: es });
 
   return (
-    <View className="flex-1 bg-muted dark:bg-dark-muted">
+    <View className="flex-1 bg-canvas">
       <ImageDisplay images={visit.images} />
 
       <View className="flex-row items-center justify-between px-4 mt-4">
         <View className="flex-1 mr-2">
-          <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200">
-            {formattedDate}
-          </Text>
+          <Text className="text-2xl font-bold text-ink">{formattedDate}</Text>
         </View>
         <View className="flex-row">
           <TouchableOpacity
@@ -116,16 +114,10 @@ export default function VisitDetailScreen() {
               <Ionicons name="share-outline" size={20} color="#fff" />
             )}
           </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-primary dark:bg-dark-primary p-2 rounded-full mr-2"
-            onPress={handleEdit}
-          >
+          <TouchableOpacity className="bg-primary p-2 rounded-full mr-2" onPress={handleEdit}>
             <Ionicons name="create-outline" size={20} color="#fff" />
           </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-destructive dark:bg-dark-destructive p-2 rounded-full"
-            onPress={handleDelete}
-          >
+          <TouchableOpacity className="bg-danger p-2 rounded-full" onPress={handleDelete}>
             <Ionicons name="trash-outline" size={20} color="#fff" />
           </TouchableOpacity>
         </View>
@@ -134,7 +126,7 @@ export default function VisitDetailScreen() {
       {visit.deleted && (
         <View className="mt-3 mx-4 bg-red-100 px-2 py-2 rounded flex-row gap-2 border-red-600 border-[1px]">
           <Ionicons className="flex" name="warning-outline" size={16} color="#dc2626" />
-          <Text className="flex text-red-600 text-sm">Esta visita ha sido eliminada</Text>
+          <Text className="flex text-danger text-sm">Esta visita ha sido eliminada</Text>
         </View>
       )}
       {visit.restaurant.deleted && (
@@ -146,7 +138,7 @@ export default function VisitDetailScreen() {
         </View>
       )}
 
-      <View className="bg-card dark:bg-dark-card mt-4 mx-4 rounded-xl flex-1 overflow-hidden mb-4">
+      <View className="bg-surface mt-4 mx-4 rounded-xl flex-1 overflow-hidden mb-4">
         <SegmentedTabs
           tabs={[
             { key: 'details', label: 'Detalles', render: () => <VisitDetails visit={visit} /> },

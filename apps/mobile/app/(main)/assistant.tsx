@@ -71,10 +71,10 @@ export default function AssistantScreen() {
 
   if (!canUse) {
     return (
-      <View className="flex-1 bg-muted dark:bg-dark-muted p-4 justify-center">
-        <View className="bg-card dark:bg-dark-card p-4 rounded-xl">
-          <Text className="text-lg font-bold text-text dark:text-dark-text mb-2">Asistente</Text>
-          <Text className="text-gray-600 dark:text-gray-400">
+      <View className="flex-1 bg-canvas p-4 justify-center">
+        <View className="bg-surface p-4 rounded-xl">
+          <Text className="text-lg font-bold text-ink mb-2">Asistente</Text>
+          <Text className="text-ink-muted">
             El asistente necesita una cuenta y el servicio de IA configurado. Mientras tanto, la app
             funciona con normalidad de forma local.
           </Text>
@@ -86,10 +86,10 @@ export default function AssistantScreen() {
   const visible = history.filter((m) => m.role === 'user' || m.role === 'assistant');
 
   return (
-    <View className="flex-1 bg-muted dark:bg-dark-muted">
+    <View className="flex-1 bg-canvas">
       <ScrollView ref={scrollRef} className="flex-1 p-4" contentContainerClassName="gap-3">
         {visible.length === 0 && (
-          <Text className="text-gray-500 dark:text-gray-400 text-center mt-8">
+          <Text className="text-ink-subtle text-center mt-8">
             Pregúntame sobre tus comidas. Por ejemplo: “¿cuántas carbonaras comí en Roma?”.
           </Text>
         )}
@@ -97,32 +97,28 @@ export default function AssistantScreen() {
           <View
             key={i}
             className={`max-w-[85%] rounded-2xl px-4 py-2 ${
-              m.role === 'user'
-                ? 'self-end bg-primary dark:bg-dark-primary'
-                : 'self-start bg-card dark:bg-dark-card'
+              m.role === 'user' ? 'self-end bg-primary' : 'self-start bg-surface'
             }`}
           >
-            <Text className={m.role === 'user' ? 'text-white' : 'text-text dark:text-dark-text'}>
-              {m.content}
-            </Text>
+            <Text className={m.role === 'user' ? 'text-on-primary' : 'text-ink'}>{m.content}</Text>
           </View>
         ))}
         {busy && <ActivityIndicator className="mt-2" color="#905c36" />}
       </ScrollView>
 
-      <View className="flex-row items-center gap-2 p-3 border-t border-gray-200 dark:border-gray-700">
+      <View className="flex-row items-center gap-2 p-3 border-t border-line">
         <TextInput
           value={input}
           onChangeText={setInput}
           onSubmitEditing={() => void ask()}
           placeholder="Escribe tu pregunta…"
           placeholderTextColor="#9ca3af"
-          className="flex-1 min-h-12 px-4 border border-gray-200 dark:border-gray-700 rounded-full bg-white dark:bg-dark-card text-gray-800 dark:text-gray-200"
+          className="flex-1 min-h-12 px-4 border border-line rounded-full bg-surface text-ink"
         />
         <TouchableOpacity
           onPress={() => void ask()}
           disabled={busy}
-          className="bg-primary dark:bg-dark-primary rounded-full w-12 h-12 items-center justify-center"
+          className="bg-primary rounded-full w-12 h-12 items-center justify-center"
           accessibilityRole="button"
           accessibilityLabel="Enviar"
         >

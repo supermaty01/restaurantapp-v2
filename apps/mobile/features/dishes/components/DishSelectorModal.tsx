@@ -27,14 +27,14 @@ const DishSelectorModal: React.FC<DishSelectorModalProps> = ({
   return (
     <Modal visible={visible} transparent={true} animationType="slide">
       <View className="flex-1 justify-center items-center bg-black/50">
-        <View className="w-4/5 bg-white rounded-lg p-5 items-center">
+        <View className="w-4/5 bg-surface rounded-lg p-5 items-center">
           <Text className="text-lg font-bold mb-5">Select a Dish</Text>
           <FlatList
             data={dishes}
             keyExtractor={(item) => item.id.toString()}
             renderItem={({ item }) => (
               <TouchableOpacity
-                className="p-3 border-b border-gray-300"
+                className="p-3 border-b border-line"
                 onPress={() => handleSelect(item)}
               >
                 <Text className="text-base">{item.name}</Text>
@@ -42,7 +42,7 @@ const DishSelectorModal: React.FC<DishSelectorModalProps> = ({
             )}
           />
           <TouchableOpacity className="mt-5 p-3 bg-blue-500 rounded" onPress={onClose}>
-            <Text className="text-white text-base">Close</Text>
+            <Text className="text-on-primary text-base">Close</Text>
           </TouchableOpacity>
         </View>
       </View>

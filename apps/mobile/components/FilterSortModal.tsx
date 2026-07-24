@@ -165,7 +165,7 @@ export default function FilterSortModal({
         <View className="flex-1 justify-end">
           <ReanimatedAnimated.View
             style={[animatedStyle, { maxHeight: '85%' }]}
-            className="bg-white dark:bg-dark-card rounded-t-3xl"
+            className="bg-surface rounded-t-3xl"
           >
             <GestureDetector gesture={panGesture}>
               <ReanimatedAnimated.View
@@ -182,10 +182,8 @@ export default function FilterSortModal({
               </ReanimatedAnimated.View>
             </GestureDetector>
             {/* Header */}
-            <View className="flex-row items-center justify-between px-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <Text className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                Filtros y Ordenación
-              </Text>
+            <View className="flex-row items-center justify-between px-4 pb-3 border-b border-line">
+              <Text className="text-lg font-bold text-ink">Filtros y Ordenación</Text>
               <TouchableOpacity onPress={onClose}>
                 <Ionicons name="close" size={24} color={isDarkMode ? '#fff' : '#333'} />
               </TouchableOpacity>
@@ -195,9 +193,7 @@ export default function FilterSortModal({
               {/* Tag Filter - Only for restaurants and dishes */}
               {(entityType === 'restaurant' || entityType === 'dish') && (
                 <View className="mb-6">
-                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                    Filtrar por etiquetas
-                  </Text>
+                  <Text className="text-base font-bold text-ink mb-3">Filtrar por etiquetas</Text>
                   <View className="flex-row flex-wrap">
                     {tags.map((tag) => {
                       const isSelected = localOptions.selectedTags.some((t) => t.id === tag.id);
@@ -212,9 +208,7 @@ export default function FilterSortModal({
                       );
                     })}
                     {tags.length === 0 && (
-                      <Text className="text-sm text-gray-500 dark:text-gray-400">
-                        No hay etiquetas disponibles
-                      </Text>
+                      <Text className="text-sm text-ink-subtle">No hay etiquetas disponibles</Text>
                     )}
                   </View>
                 </View>
@@ -223,9 +217,7 @@ export default function FilterSortModal({
               {/* Restaurant Filter - Only for visits */}
               {entityType === 'visit' && restaurants.length > 0 && (
                 <View className="mb-6">
-                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                    Filtrar por restaurante
-                  </Text>
+                  <Text className="text-base font-bold text-ink mb-3">Filtrar por restaurante</Text>
                   <View className="flex-row flex-wrap">
                     {restaurants.map((restaurant) => {
                       const isSelected = localOptions.selectedRestaurantId === restaurant.id;
@@ -234,16 +226,12 @@ export default function FilterSortModal({
                           key={restaurant.id}
                           onPress={() => handleRestaurantSelect(restaurant.id)}
                           className={`px-3 py-2 mr-2 mb-2 rounded-lg ${
-                            isSelected
-                              ? 'bg-primary dark:bg-dark-primary'
-                              : 'bg-gray-200 dark:bg-gray-700'
+                            isSelected ? 'bg-primary' : 'bg-sunken'
                           }`}
                         >
                           <Text
                             className={`text-sm ${
-                              isSelected
-                                ? 'text-white font-bold'
-                                : 'text-gray-700 dark:text-gray-300'
+                              isSelected ? 'text-on-primary font-bold' : 'text-ink-muted'
                             }`}
                           >
                             {restaurant.name}
@@ -258,26 +246,22 @@ export default function FilterSortModal({
               {/* Rating Filter - For restaurants and dishes */}
               {(entityType === 'restaurant' || entityType === 'dish') && (
                 <View className="mb-6">
-                  <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                    Valoración mínima
-                  </Text>
+                  <Text className="text-base font-bold text-ink mb-3">Valoración mínima</Text>
                   <View className="flex-row items-center">
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <TouchableOpacity
                         key={rating}
                         onPress={() => handleRatingFilter(rating)}
                         className={`px-3 py-2 mr-2 rounded-lg ${
-                          localOptions.minRating === rating
-                            ? 'bg-primary dark:bg-dark-primary'
-                            : 'bg-gray-200 dark:bg-gray-700'
+                          localOptions.minRating === rating ? 'bg-primary' : 'bg-sunken'
                         }`}
                       >
                         <View className="flex-row items-center">
                           <Text
                             className={`text-sm mr-1 ${
                               localOptions.minRating === rating
-                                ? 'text-white font-bold'
-                                : 'text-gray-700 dark:text-gray-300'
+                                ? 'text-on-primary font-bold'
+                                : 'text-ink-muted'
                             }`}
                           >
                             {rating}+
@@ -296,25 +280,21 @@ export default function FilterSortModal({
 
               {/* Sort Options */}
               <View className="mb-6">
-                <Text className="text-base font-bold text-gray-800 dark:text-gray-200 mb-3">
-                  Ordenar por
-                </Text>
+                <Text className="text-base font-bold text-ink mb-3">Ordenar por</Text>
                 <View className="flex-row flex-wrap items-center">
                   {getSortOptions().map((option) => (
                     <TouchableOpacity
                       key={option.field}
                       onPress={() => handleSortFieldChange(option.field)}
                       className={`px-3 py-2 mr-2 mb-2 rounded-lg ${
-                        localOptions.sortField === option.field
-                          ? 'bg-primary dark:bg-dark-primary'
-                          : 'bg-gray-200 dark:bg-gray-700'
+                        localOptions.sortField === option.field ? 'bg-primary' : 'bg-sunken'
                       }`}
                     >
                       <Text
                         className={`text-sm ${
                           localOptions.sortField === option.field
-                            ? 'text-white font-bold'
-                            : 'text-gray-700 dark:text-gray-300'
+                            ? 'text-on-primary font-bold'
+                            : 'text-ink-muted'
                         }`}
                       >
                         {option.label}
@@ -325,14 +305,14 @@ export default function FilterSortModal({
                   {/* Sort Order Toggle */}
                   <TouchableOpacity
                     onPress={handleSortOrderToggle}
-                    className="px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 flex-row items-center"
+                    className="px-3 py-2 rounded-lg bg-sunken flex-row items-center"
                   >
                     <Ionicons
                       name={localOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
                       size={16}
                       color={isDarkMode ? '#fff' : '#333'}
                     />
-                    <Text className="text-sm text-gray-700 dark:text-gray-300 ml-1">
+                    <Text className="text-sm text-ink-muted ml-1">
                       {localOptions.sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}
                     </Text>
                   </TouchableOpacity>
@@ -341,20 +321,18 @@ export default function FilterSortModal({
             </ScrollView>
 
             {/* Footer Buttons */}
-            <View className="flex-row p-4 border-t border-gray-200 dark:border-gray-700">
+            <View className="flex-row p-4 border-t border-line">
               <TouchableOpacity
                 onPress={handleReset}
-                className="flex-1 py-3 mr-2 rounded-lg bg-gray-200 dark:bg-gray-700"
+                className="flex-1 py-3 mr-2 rounded-lg bg-sunken"
               >
-                <Text className="text-center text-gray-700 dark:text-gray-300 font-bold">
-                  Limpiar
-                </Text>
+                <Text className="text-center text-ink-muted font-bold">Limpiar</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleApply}
-                className="flex-1 py-3 ml-2 rounded-lg bg-primary dark:bg-dark-primary"
+                className="flex-1 py-3 ml-2 rounded-lg bg-primary"
               >
-                <Text className="text-center text-white font-bold">Aplicar</Text>
+                <Text className="text-center text-on-primary font-bold">Aplicar</Text>
               </TouchableOpacity>
             </View>
           </ReanimatedAnimated.View>

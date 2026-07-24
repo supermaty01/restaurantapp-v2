@@ -1,3 +1,57 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/*
+ * Clay theme variables. Generated from lib/design/tokens.ts — edit that file,
+ * not this one; lib/design/tokens.test.ts fails if the two disagree.
+ *
+ * Colours live here rather than in tailwind.config.js so one class name works
+ * in both schemes: `bg-surface` resolves through the variable, which the .dark
+ * block below redefines. That is what removes the `dark:` twin that used to
+ * hang off every styled element.
+ *
+ * Values are space-separated RGB channels so Tailwind's alpha modifiers still
+ * work (`bg-primary/10`).
+ */
+@layer base {
+  :root {
+    --color-canvas: 247 241 232;
+    --color-surface: 255 255 255;
+    --color-surface-alt: 255 253 248;
+    --color-sunken: 239 231 216;
+    --color-line: 239 231 216;
+    --color-line-strong: 230 221 206;
+    --color-ink: 42 33 28;
+    --color-ink-muted: 107 99 85;
+    --color-ink-subtle: 154 143 125;
+    --color-primary: 192 98 61;
+    --color-primary-pressed: 164 79 47;
+    --color-on-primary: 255 255 255;
+    --color-accent: 224 168 59;
+    --color-sage: 138 154 107;
+    --color-danger: 176 74 58;
+    --color-inverse: 42 33 28;
+    --color-on-inverse: 247 241 232;
+  }
+
+  .dark:root {
+    --color-canvas: 33 28 24;
+    --color-surface: 44 38 33;
+    --color-surface-alt: 44 38 33;
+    --color-sunken: 26 21 18;
+    --color-line: 58 51 44;
+    --color-line-strong: 74 65 57;
+    --color-ink: 240 233 221;
+    --color-ink-muted: 176 164 143;
+    --color-ink-subtle: 138 126 111;
+    --color-primary: 192 98 61;
+    --color-primary-pressed: 217 120 79;
+    --color-on-primary: 255 255 255;
+    --color-accent: 224 168 59;
+    --color-sage: 138 154 107;
+    --color-danger: 208 90 72;
+    --color-inverse: 247 241 232;
+    --color-on-inverse: 42 33 28;
+  }
+}

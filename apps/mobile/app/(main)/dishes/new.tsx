@@ -91,10 +91,10 @@ export default function DishCreateScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-muted dark:bg-dark-muted p-4">
-      <Text className="text-2xl font-bold mb-4 text-gray-800 dark:text-gray-200">Añadir plato</Text>
+    <ScrollView className="flex-1 bg-canvas p-4">
+      <Text className="text-2xl font-bold mb-4 text-ink">Añadir plato</Text>
 
-      <View className="bg-card dark:bg-dark-card p-4 rounded-md mb-8">
+      <View className="bg-surface p-4 rounded-md mb-8">
         {/* Nombre */}
         <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
 
@@ -129,21 +129,19 @@ export default function DishCreateScreen() {
         />
 
         {/* Rating (opcional) */}
-        <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200 my-2">
-          Calificación
-        </Text>
+        <Text className="text-xl font-semibold text-ink my-2">Calificación</Text>
         <View className="flex justify-center items-center">
           <RatingStars control={control} name="rating" />
         </View>
 
         {/* Tags */}
         <View className="flex-row items-center justify-between mt-4">
-          <Text className="text-xl font-semibold text-gray-800 dark:text-gray-200">Etiquetas</Text>
+          <Text className="text-xl font-semibold text-ink">Etiquetas</Text>
           <TouchableOpacity
             className="flex-row items-center"
             onPress={() => setTagModalVisible(true)}
           >
-            <View className="bg-primary dark:bg-dark-primary rounded-full p-2">
+            <View className="bg-primary rounded-full p-2">
               <Ionicons name="add" size={24} color="#fff" />
             </View>
           </TouchableOpacity>
@@ -168,13 +166,13 @@ export default function DishCreateScreen() {
         {/* Botón para crear plato */}
         <TouchableOpacity
           onPress={handleSubmit(onSubmit)}
-          className="mt-4 bg-primary dark:bg-dark-primary py-3 rounded-md items-center disabled:bg-primary/30 dark:disabled:bg-dark-primary/30"
+          className="mt-4 bg-primary py-3 rounded-md items-center disabled:bg-primary/30 dark:disabled:bg-dark-primary/30"
           disabled={loading}
         >
           {loading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text className="text-white font-bold">Guardar</Text>
+            <Text className="text-on-primary font-bold">Guardar</Text>
           )}
         </TouchableOpacity>
       </View>

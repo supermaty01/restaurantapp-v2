@@ -114,21 +114,21 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
 
   return (
     <View className="mt-4">
-      <Text className="text-xl font-bold mb-2 text-gray-800 dark:text-gray-200">Fotos</Text>
+      <Text className="text-xl font-bold mb-2 text-ink">Fotos</Text>
       <View className="flex-row gap-2 mb-4">
         <TouchableOpacity
-          className="bg-gray-300 dark:bg-gray-700 px-3 py-2 rounded-md"
+          className="bg-gray-300 px-3 py-2 rounded-md"
           onPress={pickFromGallery}
           disabled={disabled}
         >
-          <Text className="text-gray-800 dark:text-gray-200">Seleccionar archivos</Text>
+          <Text className="text-ink">Seleccionar archivos</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className="bg-gray-300 dark:bg-gray-700 px-3 py-2 rounded-md"
+          className="bg-gray-300 px-3 py-2 rounded-md"
           onPress={pickFromCamera}
           disabled={disabled}
         >
-          <Text className="text-gray-800 dark:text-gray-200">Abrir cámara</Text>
+          <Text className="text-ink">Abrir cámara</Text>
         </TouchableOpacity>
       </View>
       {isEdit
@@ -141,11 +141,11 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
               />
               <TouchableOpacity
                 onPress={() => removeImage(image)}
-                className="bg-destructive dark:bg-dark-destructive px-3 py-2 rounded-md w-28 flex-row justify-center"
+                className="bg-danger px-3 py-2 rounded-md w-28 flex-row justify-center"
                 disabled={disabled}
               >
                 <Ionicons name="trash-outline" size={16} color="#fff" className="mr-2" />
-                <Text className="text-white font-semibold">Eliminar</Text>
+                <Text className="text-on-primary font-semibold">Eliminar</Text>
               </TouchableOpacity>
             </View>
           ))
@@ -154,10 +154,10 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
               <Image source={{ uri }} className="w-full h-40 mb-1 rounded-md" resizeMode="cover" />
               <TouchableOpacity
                 onPress={() => removeImage(uri)}
-                className="bg-destructive dark:bg-dark-destructive px-3 py-2 rounded-md w-24 text-center"
+                className="bg-danger px-3 py-2 rounded-md w-24 text-center"
                 disabled={disabled}
               >
-                <Text className="text-white font-semibold">Eliminar</Text>
+                <Text className="text-on-primary font-semibold">Eliminar</Text>
               </TouchableOpacity>
             </View>
           ))}

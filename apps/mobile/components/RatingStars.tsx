@@ -38,7 +38,7 @@ const NOOP = () => {};
 
 const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
   ({ ratingValue, onChange, value, readOnly, size, gap }) => {
-    const { isDarkMode } = useTheme();
+    const { colors } = useTheme();
 
     const handlePress = (starIndex: number) => {
       if (readOnly) return;
@@ -46,7 +46,7 @@ const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
     };
 
     return value === null ? (
-      <Text className="text-base italic text-gray-500 dark:text-gray-400">Sin calificación</Text>
+      <Text className="text-[14px] italic text-ink-subtle">Sin calificación</Text>
     ) : (
       <View className="flex flex-row" style={{ gap }}>
         {[1, 2, 3, 4, 5].map((star) => (
@@ -54,7 +54,7 @@ const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
             <Ionicons
               name={star <= ratingValue ? 'star' : 'star-outline'}
               size={size}
-              color={isDarkMode ? '#f9c04a' : '#f4c430'}
+              color={star <= ratingValue ? colors.accent : colors.lineStrong}
             />
           </TouchableOpacity>
         ))}

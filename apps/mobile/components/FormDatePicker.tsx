@@ -30,15 +30,13 @@ function FormDatePicker<TFieldValues extends FieldValues>({
 
         return (
           <View className="mb-4">
-            {label && (
-              <Text className="text-base mb-2 text-gray-800 dark:text-gray-200">{label}</Text>
-            )}
+            {label && <Text className="text-base mb-2 text-ink">{label}</Text>}
 
             <TouchableOpacity
               onPress={() => setShowPicker(true)}
-              className="w-full min-h-12 px-4 border border-gray-200 dark:border-gray-700 rounded-lg bg-white dark:bg-dark-card flex justify-center"
+              className="w-full min-h-12 px-4 border border-line rounded-lg bg-surface flex justify-center"
             >
-              <Text className="text-gray-800 dark:text-gray-200">{formattedDate}</Text>
+              <Text className="text-ink">{formattedDate}</Text>
             </TouchableOpacity>
 
             {showPicker && (
@@ -56,7 +54,7 @@ function FormDatePicker<TFieldValues extends FieldValues>({
               />
             )}
 
-            {error && <Text className="text-red-600 dark:text-red-400 mt-1">{error.message}</Text>}
+            {error && <Text className="text-danger dark:text-red-400 mt-1">{error.message}</Text>}
           </View>
         );
       }}

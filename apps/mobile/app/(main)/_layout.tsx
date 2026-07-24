@@ -1,85 +1,83 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Stack, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Image, TouchableOpacity, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PeekProvider } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 
-import type { ImageSourcePropType } from 'react-native';
-
-// tsc can't resolve image modules through the path alias, so the asset is
-// required and given its proper RN type here instead of leaking `any`.
-const burgerLogo = require('@/assets/burger-logo.png') as ImageSourcePropType;
-
 /**
  * Routing is fully file-based: from SDK 56 expo-router no longer allows
  * declaring react-navigation navigators by hand, which is how v1 did it.
  * Screens are picked up from the folder structure instead.
+ *
+ * The header follows the Clay design (docs/14): a back chevron and the screen's
+ * own title, left aligned. v1 centred the burger logo on every screen, which
+ * looked pleasant and told you nothing about where you were.
  */
-
-interface CustomHeaderProps {
-  canGoBack: boolean;
-  showSettings: boolean;
-}
-
-function CustomHeader({ canGoBack, showSettings }: CustomHeaderProps) {
-  const { isDarkMode } = useTheme();
+function ScreenHeader({ title, canGoBack }: { title: string; canGoBack: boolean }) {
+  const { colors } = useTheme();
   const router = useRouter();
-  const iconColor = isDarkMode ? '#B27A4D' : '#905c36';
 
   return (
-    <View className="w-full flex-row items-center justify-between p-4 bg-accent dark:bg-dark-accent">
-      <View className="w-20">
-        {canGoBack && (
-          <TouchableOpacity
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Volver"
-            hitSlop={8}
-          >
-            <Ionicons name="arrow-back-outline" size={24} color={iconColor} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      <Image source={burgerLogo} className="w-12 h-12" />
-
-      <View className="w-20 items-end">
-        {showSettings && (
-          <TouchableOpacity
-            onPress={() => router.push('/settings')}
-            accessibilityRole="button"
-            accessibilityLabel="Configuración"
-            hitSlop={8}
-          >
-            <Ionicons name="settings-outline" size={28} color={iconColor} />
-          </TouchableOpacity>
-        )}
-      </View>
+    <View className="w-full flex-row items-center gap-3.5 bg-canvas px-5 pb-2.5 pt-3.5">
+      {canGoBack ? (
+        <Pressable
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
+          hitSlop={10}
+        >
+          <Ionicons name="chevron-back" size={24} color={colors.ink} />
+        </Pressable>
+      ) : null}
+      <Text className="flex-1 font-display text-[22px] text-ink" numberOfLines={1}>
+        {title}
+      </Text>
     </View>
   );
 }
 
 export default function MainLayout() {
-  const { isDarkMode } = useTheme();
+  const { isDarkMode, colors } = useTheme();
 
   return (
     <PeekProvider>
-      <SafeAreaView className="flex-1 bg-muted dark:bg-dark-muted">
+      <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'left', 'right']}>
         <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <Stack
           screenOptions={{
-            header: ({ navigation, route }) => (
-              <CustomHeader
+            contentStyle: { backgroundColor: colors.canvas },
+            header: ({ navigation, options, route }) => (
+              <ScreenHeader
+                title={options.title ?? route.name}
                 canGoBack={navigation.canGoBack()}
-                showSettings={route.name !== 'settings/index'}
               />
             ),
           }}
         >
-          <Stack.Screen name="(tabs)" />
+          {/* The tab bar carries its own headers. */}
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+
+          <Stack.Screen name="visits/index" options={{ title: 'Visitas' }} />
+          <Stack.Screen name="tags/index" options={{ title: 'Etiquetas' }} />
+          <Stack.Screen name="friends/index" options={{ title: 'Amigos' }} />
+          <Stack.Screen name="friends/search" options={{ title: 'Buscar personas' }} />
+          <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
+          <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />
+          <Stack.Screen name="map" options={{ title: 'Mapa' }} />
+          <Stack.Screen name="assistant" options={{ title: 'Asistente' }} />
+
+          <Stack.Screen name="restaurants/new" options={{ title: 'Nuevo restaurante' }} />
+          <Stack.Screen name="restaurants/[id]/view" options={{ title: 'Restaurante' }} />
+          <Stack.Screen name="restaurants/[id]/edit" options={{ title: 'Editar restaurante' }} />
+          <Stack.Screen name="dishes/new" options={{ title: 'Nuevo plato' }} />
+          <Stack.Screen name="dishes/[id]/view" options={{ title: 'Plato' }} />
+          <Stack.Screen name="dishes/[id]/edit" options={{ title: 'Editar plato' }} />
+          <Stack.Screen name="visits/new" options={{ title: 'Nueva visita' }} />
+          <Stack.Screen name="visits/[id]/view" options={{ title: 'Visita' }} />
+          <Stack.Screen name="visits/[id]/edit" options={{ title: 'Editar visita' }} />
         </Stack>
       </SafeAreaView>
     </PeekProvider>

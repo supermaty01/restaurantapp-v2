@@ -56,9 +56,9 @@ export default function TagsScreen() {
   };
 
   return (
-    <View className="flex-1 bg-muted dark:bg-dark-muted px-4 pt-2 relative">
+    <View className="flex-1 bg-canvas px-4 pt-2 relative">
       <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200">Etiquetas</Text>
+        <Text className="text-2xl font-bold text-ink">Etiquetas</Text>
       </View>
 
       <FlatList
@@ -75,9 +75,7 @@ export default function TagsScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View className="flex-1 justify-center items-center mt-10">
-            <Text className="text-base text-gray-800 dark:text-gray-200">
-              No se encontraron etiquetas.
-            </Text>
+            <Text className="text-base text-ink">No se encontraron etiquetas.</Text>
           </View>
         }
       />
@@ -87,7 +85,7 @@ export default function TagsScreen() {
           setSelectedTag(null);
           setModalVisible(true);
         }}
-        className="absolute bottom-5 right-5 w-12 h-12 bg-primary dark:bg-dark-primary rounded-full items-center justify-center"
+        className="absolute bottom-5 right-5 w-12 h-12 bg-primary rounded-full items-center justify-center"
       >
         <Ionicons name="add" size={24} color="#fff" />
       </TouchableOpacity>

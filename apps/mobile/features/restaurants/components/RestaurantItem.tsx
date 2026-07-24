@@ -29,7 +29,7 @@ const RestaurantItem = React.memo<RestaurantItemProps>(
         previewData={previewData}
         onPress={onPress}
         scaleValue={1.03}
-        className="bg-card dark:bg-dark-card p-4 rounded-xl mb-4 shadow-sm"
+        className="bg-surface p-4 rounded-xl mb-4 shadow-sm"
       >
         <View className="flex-row mb-2">
           {normalizedImageUrl ? (
@@ -43,19 +43,15 @@ const RestaurantItem = React.memo<RestaurantItemProps>(
           ) : null}
           <View className={`flex-1 ${normalizedImageUrl ? 'ml-3' : ''}`}>
             <View className="flex-row items-center justify-between">
-              <Text className="text-base font-bold text-gray-800 dark:text-gray-200 max-w-[85%]">
-                {name}
-              </Text>
+              <Text className="text-base font-bold text-ink max-w-[85%]">{name}</Text>
               <Ionicons name="chevron-forward-outline" size={20} color="#6b6b6b" />
             </View>
             {comments ? (
-              <Text className="text-sm text-gray-600 dark:text-gray-300 mb-1" numberOfLines={2}>
+              <Text className="text-sm text-ink-muted mb-1" numberOfLines={2}>
                 {comments}
               </Text>
             ) : (
-              <Text className="text-sm italic text-gray-600 dark:text-gray-300 mb-1">
-                Sin comentarios
-              </Text>
+              <Text className="text-sm italic text-ink-muted mb-1">Sin comentarios</Text>
             )}
           </View>
         </View>

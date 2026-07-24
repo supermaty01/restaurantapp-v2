@@ -233,7 +233,7 @@ export default function MapScreen() {
   const drawerVisible = selectedPoi !== null;
 
   return (
-    <View className="flex-1 bg-card dark:bg-dark-card">
+    <View className="flex-1 bg-surface">
       <View style={{ flex: 1 }}>
         <MapView
           ref={mapRef}
@@ -284,9 +284,7 @@ export default function MapScreen() {
             }}
           >
             <ActivityIndicator size="small" color={isDarkMode ? '#B27A4D' : '#905c36'} />
-            <Text className="text-gray-600 dark:text-gray-400 ml-2 text-sm">
-              Verificando lugar...
-            </Text>
+            <Text className="text-ink-muted ml-2 text-sm">Verificando lugar...</Text>
           </View>
         )}
 
@@ -330,7 +328,7 @@ export default function MapScreen() {
             shadowOpacity: 0.2,
             shadowRadius: 6,
           }}
-          className="bg-card dark:bg-dark-card"
+          className="bg-surface"
           pointerEvents={drawerVisible ? 'auto' : 'none'}
         >
           <View {...drawerPanResponder.panHandlers} style={styles.mapDrawerHandle}>
@@ -344,23 +342,17 @@ export default function MapScreen() {
               paddingHorizontal: 20,
               paddingBottom: 20,
             }}
-            className="bg-card dark:bg-dark-card"
+            className="bg-surface"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
               <Ionicons name="restaurant" size={18} color={isDarkMode ? '#B27A4D' : '#905c36'} />
-              <Text
-                numberOfLines={1}
-                className="text-gray-800 dark:text-gray-200 text-lg font-semibold ml-2 flex-1"
-              >
+              <Text numberOfLines={1} className="text-ink text-lg font-semibold ml-2 flex-1">
                 {selectedPoi?.name}
               </Text>
             </View>
 
             {selectedPoi?.address && (
-              <Text
-                numberOfLines={1}
-                className="text-gray-500 dark:text-gray-400 text-sm ml-7 mb-1"
-              >
+              <Text numberOfLines={1} className="text-ink-subtle text-sm ml-7 mb-1">
                 {selectedPoi.address}
               </Text>
             )}
@@ -376,13 +368,13 @@ export default function MapScreen() {
               {selectedPoi?.rating != null && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginRight: 12 }}>
                   <Ionicons name="star" size={14} color="#F59E0B" />
-                  <Text className="text-gray-600 dark:text-gray-300 text-sm ml-1">
+                  <Text className="text-ink-muted text-sm ml-1">
                     {selectedPoi.rating.toFixed(1)}
                   </Text>
                 </View>
               )}
               {selectedPoi?.priceLevel != null && (
-                <Text className="text-gray-500 dark:text-gray-400 text-sm">
+                <Text className="text-ink-subtle text-sm">
                   {PRICE_LABELS[selectedPoi.priceLevel] ?? ''}
                 </Text>
               )}
@@ -390,7 +382,7 @@ export default function MapScreen() {
 
             <TouchableOpacity
               onPress={handleCreateRestaurant}
-              className="bg-primary dark:bg-dark-primary py-3 rounded-md items-center flex-row justify-center"
+              className="bg-primary py-3 rounded-md items-center flex-row justify-center"
             >
               <Ionicons
                 name="add-circle-outline"
@@ -398,7 +390,7 @@ export default function MapScreen() {
                 color="#fff"
                 style={{ marginRight: 8 }}
               />
-              <Text className="text-white font-bold">Crear restaurante</Text>
+              <Text className="text-on-primary font-bold">Crear restaurante</Text>
             </TouchableOpacity>
           </View>
         </Animated.View>

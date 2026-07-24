@@ -67,8 +67,8 @@ function RestaurantPicker<
       {label && (
         <Text
           className={clsx(
-            'text-base text-gray-800 dark:text-gray-200 mb-2',
-            errors?.[name] ? 'text-red-600 dark:text-red-400' : '',
+            'text-base text-ink mb-2',
+            errors?.[name] ? 'text-danger dark:text-red-400' : '',
           )}
         >
           {label}
@@ -78,7 +78,7 @@ function RestaurantPicker<
         control={control}
         name={name}
         render={({ field: { onChange, value } }) => (
-          <View className="border border-gray-200 dark:border-gray-700 rounded-md">
+          <View className="border border-line rounded-md">
             <Picker
               selectedValue={value}
               onValueChange={(itemValue) => onChange(itemValue)}
@@ -103,7 +103,7 @@ function RestaurantPicker<
       />
 
       {errors?.[name] && (
-        <Text className="text-red-600 dark:text-red-400 mt-1">
+        <Text className="text-danger dark:text-red-400 mt-1">
           {String(errors[name]?.message ?? '')}
         </Text>
       )}
@@ -117,9 +117,7 @@ function RestaurantPicker<
             })
           }
         >
-          <Text className="text-primary dark:text-dark-primary">
-            ¿No lo encuentras? Añade uno nuevo
-          </Text>
+          <Text className="text-primary">¿No lo encuentras? Añade uno nuevo</Text>
         </TouchableOpacity>
       )}
     </View>

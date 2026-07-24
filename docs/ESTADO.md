@@ -1,6 +1,6 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-18
+**Última actualización:** 2026-07-24
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
@@ -43,6 +43,57 @@ Repaso en frío de todo lo escrito. Cada corrección lleva su test de regresión
 ### Riesgo conocido: sin transacciones
 
 Los repositorios escriben la fila y su entrada de `change_log` por separado. No se pueden usar transacciones agnósticas del driver (con better-sqlite3 un callback `async` en `transaction()` **crashea el proceso**; comprobado). Mitigación: `linkLocalData` (una consulta `NOT EXISTS` por tabla) corre al inicio de cada push y reencola cualquier fila sin entrada, convirtiendo una divergencia permanente en consistencia eventual. Cubierto por test.
+
+---
+
+## ⏸️ Pausa del 24 de julio de 2026 — dónde retomar
+
+Trabajo detenido a petición tuya a mitad del refactor visual. **El repo queda verde**: TypeScript en 0, 95 tests de app + 24 del worker, lint sin errores. Nada a medio aplicar.
+
+### Lo que se cerró en esta sesión
+
+**1. Capa social en Supabase (migraciones 0005 y 0006) — cerrada y probada de verdad.**
+
+Encontré tres agujeros que impedían que el sistema de amigos existiera:
+
+- **`profiles` estaba siempre vacía.** La tabla existía desde 0001 con su RLS, pero _nadie insertaba nunca una fila_: al registrarte no se creaba perfil, así que no había a quién buscar ni cómo saber quién hizo qué en el feed. 0005 añade el trigger de alta, el backfill de cuentas existentes, unicidad insensible a mayúsculas e índice de búsqueda por prefijo.
+- **El trigger no puede propagar excepciones.** Si un trigger sobre `auth.users` falla, Supabase rechaza el registro entero con _"Database error saving new user"_ y la cuenta queda inaccesible para siempre. Traga el error y deja `ensure_profile()` como reparación desde el cliente.
+- **🔴 SEGURIDAD: la vista `feed` de 0004 filtraba datos de todos los usuarios.** Una vista de Postgres se ejecuta con permisos de _quien la creó_ salvo que declare `security_invoker`, así que las políticas RLS de `visits`/`dishes`/`restaurants` **nunca se evaluaban**: cualquier usuario autenticado veía las filas `friends`/`public` de cualquier otro, sin ninguna amistad de por medio. Verificado reintroduciendo el bug — con la definición antigua un desconocido veía 2 filas ajenas; ahora ve 0.
+
+0006 añade las RPC que consume la app (búsqueda de usuarios, solicitudes, feed paginado ya denormalizado), en `security definer` y revocadas de `public` para que la clave anónima no las alcance.
+
+**Nuevo `npm run db:test`**: levanta una base de datos desechable en el contenedor local de Supabase, aplica las 6 migraciones desde cero sobre un stub de `auth`, y corre **26 aserciones** sobre el comportamiento real (perfiles automáticos, desduplicado de nombres, quién puede aceptar una solicitud, solicitudes cruzadas, y la regresión de la fuga). Necesita `supabase start` en marcha.
+
+**2. Sistema de diseño Clay.** Importado del proyecto de Claude Design. Paleta única en `lib/design/tokens.ts` (arcilla/papel, terracota como único acento, ámbar para valoraciones, salvia para categorías), tipografías Newsreader + Plus Jakarta Sans.
+
+El cambio estructural: los colores viven ahora en variables CSS (`global.css`), así que **una sola clase vale para claro y oscuro**. Eso elimina el `dark:` gemelo que colgaba de cada elemento (350 clases) y los ternarios `isDarkMode ? '#x' : '#y'` repartidos por 30 ficheros. `tokens.node.test.ts` falla si el CSS y el TypeScript se desincronizan.
+
+De paso arregla un bug latente: `darkMode: 'class'` estaba configurado pero **nadie llamaba nunca a `colorScheme.set()`**, así que elegir "oscuro" en ajustes con el móvil en claro dejaba media pantalla sin cambiar. `ThemeContext` ya lo conecta.
+
+**3. Nueva navegación y pantallas nuevas.** Cinco pestañas: **Inicio · Feed · Lugares · Platos · Perfil**. Visitas y Etiquetas dejan de ser pestañas y pasan a pantallas completas (desde Inicio y Perfil respectivamente) — nada se pierde, quedan a un toque. Cabecera nueva con chevron y título propio de cada pantalla, en lugar del logo centrado que no decía dónde estabas.
+
+Escritas de cero: `Inicio` (saludo, buscador, contadores, visitas recientes, acciones rápidas), `Feed`, `Perfil`, `Amigos` y `Buscar personas`, más los primitivos `Button`, `Card`, `Chip`, `Avatar`, `Thumbnail`, `Screen`, `EmptyState`, `SectionHeader`.
+
+**4. Login OAuth — diagnóstico.** El `oauth-code-missing` que viste era **un mensaje mío que tiraba a la basura la URL de vuelta**, justo donde está el diagnóstico. Además solo contemplaba una de las tres formas en que puede responder Supabase. Ahora `parseOAuthCallback` distingue código PKCE, tokens en el fragmento (flujo implícito, que antes fallaba pudiendo funcionar) y errores del proveedor, y `AuthContext` maneja las tres. **La causa raíz sigue sin confirmarse**: al reintentar el login, el mensaje dirá exactamente cuál de los tres casos es.
+
+### 🔜 Por dónde seguir, en orden
+
+1. **Reintentar el login con Google** y pasarme el mensaje de error nuevo. Desbloquea todo lo online.
+2. **Aplicar las migraciones 0005 y 0006** (`supabase db reset` o `supabase db push`), y correr `npm run db:test`.
+3. **Terminar el refactor visual** — es lo único a medias. Las clases de paleta ya están migradas en los ~50 ficheros de pantallas, pero quedan **28 ficheros que aún eligen colores a mano con `isDarkMode ? '#hex' : '#hex'`** para props (iconos, mapas, indicadores). Funcionan y se ven bien, pero usan la paleta vieja, así que conviven dos gamas. Hay un script preparado con el mapeo hex→token en el scratchpad de la sesión (`decolor.py`), sin ejecutar; se puede rehacer en 10 minutos. Después toca repasar pantalla a pantalla el detalle visual (formularios, detalles, ajustes), que la migración automática deja correctos pero no _rediseñados_.
+4. **Perfil editable** (`updateMyProfile` ya existe en `features/social/api.ts`, falta la pantalla) y **perfil de otro usuario** (`app/(main)/friends/[id].tsx` está declarado en el layout pero **el fichero no existe todavía** — navegar ahí daría 404).
+5. **Sync de las tablas puente** (`restaurant_tag`, `dish_tag`, `dish_visit`, `visit_participant`): el esquema y el motor lo anticipan, falta traducir uuids de miembros.
+6. **IA**: aparcada a propósito hasta el final, como pediste.
+
+### Pendientes menores anotados
+
+- **Etiquetar personas en una visita funciona, pero la persona no se muestra tras crearla.** Confirmado por ti en dispositivo; acordamos dejarlo para el rediseño de la sección de amigos.
+- **Visor de imágenes: pinch-zoom y doble-tap no responden** (ver y deslizar entre fotos sí). Probablemente los gestos `Pinch`/`Tap` no están compuestos con el `Pan` del carrusel (`Gesture.Simultaneous`/`Race`). Tarea #16.
+- **Swipe entre pestañas**: sigue sin estar; dijiste que no corre prisa y que se re-incluya con el refactor visual si encaja.
+- `jszip` sigue en `dependencies` aunque solo lo use un test; debería bajar a `devDependencies`.
+- 78 avisos de lint por _React Compiler readiness_ (el compilador no está activado). Workstream aparte.
+
+---
 
 ## Qué falta para que sea "todo" (mi parte vs la tuya)
 

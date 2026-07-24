@@ -29,7 +29,7 @@ function RestaurantPeekContent({
           />
         </View>
       ) : null}
-      <Text className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">{data.name}</Text>
+      <Text className="text-lg font-bold text-ink mb-2">{data.name}</Text>
       {data.rating !== null ? (
         <View className="flex-row items-center mb-2">
           <RatingStars value={data.rating} size={18} gap={2} readOnly />
@@ -42,9 +42,7 @@ function RestaurantPeekContent({
           ))}
         </View>
       ) : null}
-      {data.comments ? (
-        <Text className="text-sm text-gray-600 dark:text-gray-400">{data.comments}</Text>
-      ) : null}
+      {data.comments ? <Text className="text-sm text-ink-muted">{data.comments}</Text> : null}
     </>
   );
 }
@@ -62,7 +60,7 @@ function DishPeekContent({ data }: { data: Extract<PeekPreviewData, { type: 'dis
           />
         </View>
       ) : null}
-      <Text className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">{data.name}</Text>
+      <Text className="text-lg font-bold text-ink mb-2">{data.name}</Text>
       {data.rating !== null ? (
         <View className="flex-row items-center mb-2">
           <RatingStars value={data.rating} size={18} gap={2} readOnly />
@@ -75,9 +73,7 @@ function DishPeekContent({ data }: { data: Extract<PeekPreviewData, { type: 'dis
           ))}
         </View>
       ) : null}
-      {data.comments ? (
-        <Text className="text-sm text-gray-600 dark:text-gray-400">{data.comments}</Text>
-      ) : null}
+      {data.comments ? <Text className="text-sm text-ink-muted">{data.comments}</Text> : null}
     </>
   );
 }
@@ -97,14 +93,12 @@ function VisitPeekContent({ data }: { data: Extract<PeekPreviewData, { type: 'vi
           />
         </View>
       ) : null}
-      <Text className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-1">{data.date}</Text>
+      <Text className="text-lg font-bold text-ink mb-1">{data.date}</Text>
       <View className="flex-row items-center mb-2">
         <Ionicons name="restaurant-outline" size={14} color={isDarkMode ? '#aaa' : '#666'} />
-        <Text className="text-sm text-gray-600 dark:text-gray-400 ml-1">{data.restaurantName}</Text>
+        <Text className="text-sm text-ink-muted ml-1">{data.restaurantName}</Text>
       </View>
-      {data.comments ? (
-        <Text className="text-sm text-gray-600 dark:text-gray-400">{data.comments}</Text>
-      ) : null}
+      {data.comments ? <Text className="text-sm text-ink-muted">{data.comments}</Text> : null}
     </>
   );
 }
