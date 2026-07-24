@@ -16,6 +16,7 @@ import { restaurantSchema } from '@/features/restaurants/schemas/restaurant-sche
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
+import { reportError } from '@/lib/helpers/report-error';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
@@ -84,8 +85,8 @@ export default function RestaurantCreateScreen() {
           params: { id: restaurantId },
         });
       }
-    } catch {
-      Alert.alert('Error', 'No se pudo crear el restaurante');
+    } catch (error) {
+      reportError('No se pudo crear el restaurante', error);
       // Error already shown via Alert
     } finally {
       setLoading(false);

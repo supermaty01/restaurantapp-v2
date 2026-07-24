@@ -18,6 +18,7 @@ import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { reportError } from '@/lib/helpers/report-error';
 import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
@@ -98,8 +99,8 @@ export default function RestaurantEditScreen() {
 
       Alert.alert('Éxito', 'Restaurante actualizado correctamente.');
       router.back();
-    } catch {
-      Alert.alert('Error', 'No se pudo actualizar el restaurante');
+    } catch (error) {
+      reportError('No se pudo actualizar el restaurante', error);
     } finally {
       setLoading(false);
     }

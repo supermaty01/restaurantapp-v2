@@ -12,6 +12,7 @@ import ThemeCard from '@/features/settings/components/ThemeCard';
 import ThemeSelectionModal from '@/features/settings/components/ThemeSelectionModal';
 import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
 import { useAuth } from '@/lib/context/AuthContext';
+import { reportError } from '@/lib/helpers/report-error';
 
 export default function SettingsScreen() {
   const bumpDb = useContext(DBVersionContext);
@@ -53,12 +54,10 @@ export default function SettingsScreen() {
       try {
         await backupService.shareBackup(exportInfo.path);
       } catch (error) {
-        console.error('Error al compartir el archivo:', error);
-        Alert.alert('Error', 'No se pudo compartir el archivo');
+        reportError('No se pudo compartir el archivo', error);
       }
     } catch (error) {
-      console.error('Error durante la exportación:', error);
-      Alert.alert('Error', 'No se pudo completar la exportación');
+      reportError('No se pudo completar la exportación', error);
     } finally {
       setIsExporting(false);
     }
@@ -101,10 +100,8 @@ export default function SettingsScreen() {
                   await backupService.importData(fileUri, (progress) => {
                     setImportProgress(progress);
                   });
-                  bumpDb();
                 } catch (error) {
-                  console.error('Error durante la importación:', error);
-                  Alert.alert('Error', 'No se pudo completar la importación');
+                  reportError('No se pudo completar la importación', error);
                   try {
                     await backupService.restoreBackup();
                   } catch (e) {
@@ -112,6 +109,12 @@ export default function SettingsScreen() {
                   }
                 } finally {
                   setIsImporting(false);
+                  // Both import and restore swap the SQLite file underneath the
+                  // open connection, which leaves it stale ("attempt to write a
+                  // readonly database") until the provider is remounted. Always
+                  // reconnect — not only on success, or a failed import bricks
+                  // every later write.
+                  bumpDb();
                 }
               })();
             },
@@ -119,8 +122,7 @@ export default function SettingsScreen() {
         ],
       );
     } catch (error) {
-      console.error('Error al seleccionar archivo:', error);
-      Alert.alert('Error', 'No se pudo seleccionar el archivo');
+      reportError('No se pudo seleccionar el archivo', error);
     }
   };
 

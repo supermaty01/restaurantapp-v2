@@ -16,6 +16,7 @@ import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker
 import Tag from '@/features/tags/components/Tag';
 import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
+import { reportError } from '@/lib/helpers/report-error';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
@@ -83,8 +84,7 @@ export default function DishCreateScreen() {
         });
       }
     } catch (error) {
-      Alert.alert('Error', 'No se pudo crear el plato');
-      console.error(error);
+      reportError('No se pudo crear el plato', error);
     } finally {
       setLoading(false);
     }

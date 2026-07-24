@@ -19,6 +19,7 @@ import {
 } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
 import { visitSchema } from '@/features/visits/schemas/visit-schema';
+import { reportError } from '@/lib/helpers/report-error';
 import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
@@ -110,8 +111,7 @@ export default function VisitEditScreen() {
         params: { id },
       });
     } catch (error) {
-      Alert.alert('Error', 'No se pudo actualizar la visita.');
-      console.error(error);
+      reportError('No se pudo actualizar la visita.', error);
     }
   };
 

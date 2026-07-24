@@ -15,6 +15,7 @@ import { createVisit } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
 import { visitSchema } from '@/features/visits/schemas/visit-schema';
 import { getTodayLocalDateString } from '@/lib/helpers/date';
+import { reportError } from '@/lib/helpers/report-error';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
@@ -70,8 +71,7 @@ export default function VisitCreateScreen() {
 
       router.back();
     } catch (error) {
-      Alert.alert('Error', 'No se pudo crear la visita');
-      console.error(error);
+      reportError('No se pudo crear la visita', error);
     } finally {
       setIsSubmitting(false);
     }
