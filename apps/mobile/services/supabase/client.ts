@@ -26,6 +26,12 @@ if (isSupabaseConfigured) {
       persistSession: true,
       // React Native has no URL to parse a session from.
       detectSessionInUrl: false,
+      // PKCE is required for the native OAuth flow: it returns an
+      // authorization `code` in the redirect query, which is what
+      // exchangeCodeForSession consumes. supabase-js defaults to 'implicit',
+      // which instead returns tokens in the URL fragment and would make the
+      // Google/Apple login silently fail.
+      flowType: 'pkce',
     },
   });
 }

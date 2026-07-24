@@ -8,8 +8,17 @@ export interface Env {
   PUBLIC_BASE_URL: string;
   AI_GATEWAY: string;
   SUPABASE_URL: string;
+  /**
+   * Server-side Supabase key (`sb_secret_…`). Replaces the legacy service_role
+   * key, which Supabase deprecates through 2026. Not a JWT: it travels in the
+   * `apikey` header only (see shareStore).
+   */
+  SUPABASE_SECRET_KEY: string;
+  /**
+   * Legacy symmetric JWT secret. Only needed for projects created before
+   * Supabase moved to asymmetric signing keys; new projects verify via JWKS.
+   */
   SUPABASE_JWT_SECRET: string;
-  SUPABASE_SERVICE_ROLE_KEY: string;
 }
 
 /** The authenticated user, attached to the request context after auth. */

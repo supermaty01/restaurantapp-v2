@@ -1,6 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { extractAuthCode } from '@/lib/helpers/oauth-callback';
 import { getSupabase, isSupabaseConfigured } from '@/services/supabase/client';
 
 import type { Session } from '@supabase/supabase-js';
@@ -92,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_TO);
       if (result.type !== 'success') return { error: 'cancelled' };
 
-      const code = new URL(result.url).searchParams.get('code');
+      const code = extractAuthCode(result.url);
       if (!code) return { error: 'oauth-code-missing' };
 
       const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);

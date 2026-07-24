@@ -234,6 +234,26 @@ describe('SyncEngine', () => {
     expect(stillPending.map((c) => c.rowUuid)).toEqual(['queued-mid-push']);
   });
 
+  it('self-heals a row whose change_log entry was never written', async () => {
+    // Repositories write the row and its change_log entry as separate
+    // statements (no cross-driver transactions). If the app dies in between,
+    // push must still pick the row up rather than leave it unsynced forever.
+    const { db } = makeTestDb();
+    const server = new FakeServer();
+    await db.insert(schema.restaurants).values({
+      name: 'Huérfano',
+      uuid: 'orphan-uuid',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    expect(await db.select().from(schema.changeLog)).toHaveLength(0);
+
+    await engineFor(db, server).push();
+
+    expect(server.count('restaurants')).toBe(1);
+    expect(server.since('restaurants', null)[0]?.name).toBe('Huérfano');
+  });
+
   it('advances the cursor so a second pull is a no-op', async () => {
     const server = new FakeServer();
     const a = makeTestDb();

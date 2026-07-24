@@ -26,6 +26,11 @@ AI_GATEWAY = ""
 crons = ["0 3 * * *"]
 
 # Secrets (set with `wrangler secret put <NAME>`), documented for reference:
-#   SUPABASE_URL                 - project URL
-#   SUPABASE_JWT_SECRET          - to verify user JWTs
-#   SUPABASE_SERVICE_ROLE_KEY    - server-only ops (account deletion, quotas)
+#   SUPABASE_URL          - project URL; also where the JWKS endpoint lives, so
+#                           user JWTs are verified locally with the public keys
+#   SUPABASE_SECRET_KEY   - server-only key (`sb_secret_…`) for share links and
+#                           other admin operations. Replaces the legacy
+#                           service_role key
+#   SUPABASE_JWT_SECRET   - ONLY for legacy projects that still sign with a
+#                           shared HS256 secret. New projects (asymmetric
+#                           signing keys) do not need it

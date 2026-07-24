@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
+import { linkLocalData } from '@/services/sync/linkLocalData';
 import { applyRemoteRecord, toRemoteRecord } from '@/services/sync/records';
 import { column, SYNC_TABLES } from '@/services/sync/tables';
 import type { RemoteRecord, SyncTransport } from '@/services/sync/transport';
@@ -30,6 +31,11 @@ export class SyncEngine {
 
   /** Sends local changes to the server, then marks them synced. */
   async push(): Promise<void> {
+    // Self-heal first: a row whose change_log entry was never written (the two
+    // writes aren't transactional — see linkLocalData) would otherwise never
+    // reach the server.
+    await linkLocalData(this.db);
+
     const pending = await this.db
       .select()
       .from(schema.changeLog)

@@ -14,8 +14,8 @@ const ENV = {
   SUPABASE_JWT_SECRET: SECRET,
   PUBLIC_BASE_URL: 'https://x.app',
   SUPABASE_URL: 'https://supabase.invalid',
-  SUPABASE_SERVICE_ROLE_KEY: 'service-role',
-} as Env;
+  SUPABASE_SECRET_KEY: 'sb_secret_test',
+} as unknown as Env;
 
 function req(path: string, init: RequestInit = {}) {
   return app.request(path, init, ENV);

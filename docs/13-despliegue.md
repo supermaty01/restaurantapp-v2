@@ -30,12 +30,20 @@ La app arranca en **modo local**: SQLite en el dispositivo, sin cuenta, sin red.
 
 Variables (`apps/mobile/.env`):
 
-| Variable                        | Necesaria para                       | Notas                                                      |
-| ------------------------------- | ------------------------------------ | ---------------------------------------------------------- |
-| `GOOGLE_MAPS_API_KEY`           | Mapa y autocompletado de direcciones | Restringir la key por app id + SHA en la consola de Google |
-| `EXPO_PUBLIC_SUPABASE_URL`      | Cuentas y sync 🚧                    | Vacía = la app oculta el login                             |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Cuentas y sync 🚧                    | Es pública por diseño; la seguridad la da RLS              |
-| `EXPO_PUBLIC_API_URL`           | Share links, IA 🚧                   | URL del Worker                                             |
+| Variable                        | Necesaria para                       | Notas                                                                             |
+| ------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------- |
+| `GOOGLE_MAPS_API_KEY`           | Mapa y autocompletado de direcciones | Restringir la key por app id + SHA en la consola de Google                        |
+| `EXPO_PUBLIC_SUPABASE_URL`      | Cuentas y sync 🚧                    | Vacía = la app oculta el login                                                    |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Cuentas y sync 🚧                    | Usa la **publishable key** (`sb_publishable_…`); es pública por diseño, RLS manda |
+| `EXPO_PUBLIC_API_URL`           | Share links, IA 🚧                   | URL del Worker                                                                    |
+
+> **Claves de Supabase (importante).** Supabase está retirando las claves legacy
+> `anon` / `service_role` (JWT) a lo largo de 2026, sustituidas por
+> **publishable** (`sb_publishable_…`, cliente) y **secret** (`sb_secret_…`,
+> servidor). Usa las nuevas: el nombre de la variable se mantiene por
+> compatibilidad, pero pega la publishable key. Las secret keys **no son JWT**,
+> así que viajan en la cabecera `apikey`, nunca en `Authorization: Bearer` (el
+> Worker ya lo hace así).
 
 **Decisión:** si faltan las variables de Supabase/API, la app degrada a modo local en vez de fallar. Esto mantiene el principio de "la nube es opcional" también en el arranque de desarrollo.
 
@@ -63,7 +71,21 @@ Configuración en el dashboard:
 1. **Auth → Providers**: habilitar Email, Google (client id/secret de Google Cloud Console) y Apple (solo si se publica en iOS).
 2. **Auth → URL Configuration**: añadir el redirect del deep link (`restaurantapp://auth/callback`) y el del Worker.
 3. **Database → Extensions**: habilitar `vector` (pgvector) para la fase 7.
-4. Verificar que **RLS está activo en todas las tablas** (`supabase/migrations` lo hace, pero conviene comprobarlo: una tabla sin RLS es una fuga de datos de todos los usuarios).
+4. **API Keys**: copiar la **publishable key** para la app. La **secret key** solo va al Worker.
+5. Verificar que **RLS está activo en todas las tablas** (`supabase/migrations` lo hace, pero conviene comprobarlo: una tabla sin RLS es una fuga de datos de todos los usuarios).
+
+### Firma de JWT (asimétrica)
+
+Los proyectos creados desde octubre de 2025 firman los tokens con **claves
+asimétricas** (ES256/RS256) y publican las públicas en
+`https://<proyecto>.supabase.co/auth/v1/.well-known/jwks.json`. El Worker
+verifica contra ese endpoint —local, sin llamar a Auth y sin secreto
+compartido—, así que **no necesitas configurar `SUPABASE_JWT_SECRET`**. Solo
+hace falta si tu proyecto es antiguo y sigue con el secreto HS256; en ese caso
+el Worker cae automáticamente a ese modo.
+
+El login OAuth de la app usa **PKCE** (`flowType: 'pkce'`), que es lo que exige
+el flujo nativo con deep link.
 
 > Nota free tier: el proyecto se **pausa por inactividad**. El cron del Worker lo mantiene despierto, o se asume arranque frío.
 
@@ -80,9 +102,11 @@ npx wrangler deploy
 Secrets (nunca en el repo):
 
 ```bash
-npx wrangler secret put SUPABASE_URL
-npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY   # solo para operaciones de servidor (borrado de cuenta, cuotas)
-npx wrangler secret put SUPABASE_JWT_SECRET         # verificación de tokens
+npx wrangler secret put SUPABASE_URL          # también resuelve el JWKS para verificar tokens
+npx wrangler secret put SUPABASE_SECRET_KEY   # sb_secret_… : share links y operaciones de servidor
+
+# Solo si tu proyecto es antiguo y firma con el secreto HS256 compartido:
+# npx wrangler secret put SUPABASE_JWT_SECRET
 ```
 
 Desarrollo local: `npx wrangler dev` + `.dev.vars` (gitignored).

@@ -1,30 +1,37 @@
-import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { column, SYNC_TABLES } from '@/services/sync/tables';
 
 /**
- * Enqueues every existing local row for the next push, so a first login uploads
- * the data the user already has (docs/04, "subir tus datos a tu cuenta"). Safe
- * to run more than once: a row already queued and unsynced is not re-queued.
+ * Enqueues every local row that has no change_log entry, so it will be pushed.
+ *
+ * Two jobs:
+ *  - **First login**: uploads the data the user already had (docs/04).
+ *  - **Self-heal**: repositories write the row and its change_log entry as
+ *    separate statements — SQLite transactions can't be used here because the
+ *    sync (better-sqlite3) and async (expo-sqlite) drivers disagree on async
+ *    callbacks. If the app dies between the two writes, the row would never
+ *    sync; running this before each push turns that into eventual consistency.
+ *
+ * One query per table (NOT EXISTS), so it is cheap enough to run on every push.
  */
 export async function linkLocalData(db: AppDatabase): Promise<number> {
   let queued = 0;
 
   for (const cfg of SYNC_TABLES) {
-    const rows = (await db
-      .select({ id: column(cfg.table, 'id'), uuid: column(cfg.table, 'uuid') })
-      .from(cfg.table)) as { id: number; uuid: string }[];
+    const idColumn = column(cfg.table, 'id');
+    const uuidColumn = column(cfg.table, 'uuid');
 
-    for (const row of rows) {
-      const already = await db
-        .select({ id: schema.changeLog.id })
-        .from(schema.changeLog)
-        .where(eq(schema.changeLog.rowUuid, row.uuid))
-        .limit(1);
-      if (already.length > 0) continue;
+    const orphans = (await db
+      .select({ id: idColumn, uuid: uuidColumn })
+      .from(cfg.table)
+      .where(
+        sql`not exists (select 1 from ${schema.changeLog} where ${schema.changeLog.rowUuid} = ${uuidColumn})`,
+      )) as { id: number; uuid: string }[];
 
+    for (const row of orphans) {
       await db.insert(schema.changeLog).values({
         tableName: cfg.name,
         rowId: row.id,

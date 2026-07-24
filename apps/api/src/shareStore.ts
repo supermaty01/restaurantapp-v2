@@ -31,12 +31,18 @@ export function isLive(record: ShareRecord): boolean {
   return true;
 }
 
-/** Supabase REST-backed store (service role, bypasses RLS for public reads). */
+/**
+ * Supabase REST-backed store, using the server-side secret key so public link
+ * resolution can bypass RLS.
+ *
+ * The modern `sb_secret_…` key is not a JWT, so it must travel in the `apikey`
+ * header only — sending it as `Authorization: Bearer` gets rejected (that
+ * worked with the legacy service_role JWT).
+ */
 export function createSupabaseShareStore(env: Env): ShareStore {
   const base = `${env.SUPABASE_URL}/rest/v1/share_links`;
   const headers = {
-    apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-    authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    apikey: env.SUPABASE_SECRET_KEY,
     'content-type': 'application/json',
   };
 

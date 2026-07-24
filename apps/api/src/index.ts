@@ -35,7 +35,7 @@ app.use('*', async (c, next) => {
   );
   if (isPublic) return next();
 
-  const user = await verifySupabaseJwt(c.req.header('authorization'), c.env.SUPABASE_JWT_SECRET);
+  const user = await verifySupabaseJwt(c.req.header('authorization'), c.env);
   if (!user) return c.json({ error: 'unauthorized' }, 401);
   c.set('user', user);
   return next();
