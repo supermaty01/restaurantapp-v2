@@ -1,7 +1,8 @@
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
-import { extractAuthCode } from '@/lib/helpers/oauth-callback';
+import { devLog } from '@/lib/helpers/dev-log';
+import { parseOAuthCallback } from '@/lib/helpers/oauth-callback';
 import { getSupabase, isSupabaseConfigured } from '@/services/supabase/client';
 
 import type { Session } from '@supabase/supabase-js';
@@ -100,11 +101,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_TO);
       if (result.type !== 'success') return { error: 'cancelled' };
 
-      const code = extractAuthCode(result.url);
-      if (!code) return { error: 'oauth-code-missing' };
+      // The redirect can come back as a PKCE code, as ready-made tokens, or as
+      // an error — all three have to be handled or the login dead-ends.
+      const callback = parseOAuthCallback(result.url);
+      devLog('Auth', 'OAuth callback:', callback.type);
 
-      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-      return { error: exchangeError?.message ?? null };
+      switch (callback.type) {
+        case 'code': {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
+            callback.code,
+          );
+          return { error: exchangeError?.message ?? null };
+        }
+        case 'session': {
+          const { error: setError } = await supabase.auth.setSession({
+            access_token: callback.accessToken,
+            refresh_token: callback.refreshToken,
+          });
+          return { error: setError?.message ?? null };
+        }
+        case 'error':
+          return { error: callback.message };
+        case 'unrecognised':
+          return {
+            error: `El proveedor no devolvió ninguna credencial${
+              callback.params.length ? ` (recibido: ${callback.params.join(', ')})` : ''
+            }. Revisa que ${REDIRECT_TO} esté en las Redirect URLs de Supabase.`,
+          };
+      }
     },
     [supabase],
   );
