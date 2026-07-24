@@ -45,7 +45,8 @@ export default {
       backgroundColor: '#DFE2CF',
     },
     package: BUNDLE_ID,
-    edgeToEdgeEnabled: true,
+    // `edgeToEdgeEnabled` no longer exists: Android 16 makes edge-to-edge
+    // mandatory, so the option was removed from the Expo config.
     config: {
       googleMaps: { apiKey: process.env.GOOGLE_MAPS_API_KEY },
     },

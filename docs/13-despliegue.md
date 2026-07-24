@@ -34,7 +34,25 @@ npm start -- -c      # añade -c para limpiar la caché de Metro
 
 La app arranca en **modo local**: SQLite en el dispositivo, sin cuenta, sin red. Este modo debe funcionar siempre, incluso sin nada de lo que sigue configurado.
 
-Todas las dependencias son compatibles con **Expo Go**, así que basta escanear el QR — no hace falta development build.
+### Development build (recomendado) en vez de Expo Go
+
+```bash
+cd apps/mobile
+npx expo run:android      # compila e instala; deja Metro corriendo
+```
+
+**Por qué no Expo Go:** el proyecto declara _config plugins_ (permisos de
+ubicación, cámara y galería, `expo-secure-store`) y Expo Go **no puede
+aplicarlos** — trae un binario fijo. Un development build compila exactamente
+los módulos nativos que el proyecto declara y, sobre todo, **muestra el error
+real** en vez de cerrarse en silencio.
+
+Requisitos: Android Studio + SDK y **JDK 17**, con un emulador abierto o un
+móvil por USB con depuración activada. Se genera `apps/mobile/android/`
+(ignorado por git); regenerable con `npx expo prebuild --platform android --clean`.
+
+Solo hay que hacerlo cuando cambian las dependencias nativas o `app.config.js`;
+el día a día es `npm start` y recarga en caliente.
 
 Variables (`apps/mobile/.env`):
 
