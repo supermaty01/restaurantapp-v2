@@ -23,10 +23,18 @@ cp .env.example .env        # ver variables abajo
 ## 2. App móvil (funciona sin ningún servicio)
 
 ```bash
-npm run -w apps/mobile start
+npm start            # desde la raíz del repo (alias de: npm run -w apps/mobile start)
+npm start -- -c      # añade -c para limpiar la caché de Metro
 ```
 
+> ⚠️ **No ejecutes `npx expo start` en la raíz del monorepo.** La raíz no tiene
+> campo `main`, así que Expo cae a su entry por defecto (`expo/AppEntry.js`) y
+> falla con `Unable to resolve "../../App"`. Usa `npm start` desde la raíz, o
+> `cd apps/mobile && npx expo start`.
+
 La app arranca en **modo local**: SQLite en el dispositivo, sin cuenta, sin red. Este modo debe funcionar siempre, incluso sin nada de lo que sigue configurado.
+
+Todas las dependencias son compatibles con **Expo Go**, así que basta escanear el QR — no hace falta development build.
 
 Variables (`apps/mobile/.env`):
 
