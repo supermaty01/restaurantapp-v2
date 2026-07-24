@@ -1,33 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/context/AuthContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
-import { runSync, type SyncOutcome } from '@/services/sync/syncManager';
+import { getSyncState, requestSync, subscribeToSync } from '@/services/sync/syncStore';
 
-export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
+export type { SyncStatus } from '@/services/sync/syncStore';
 
 /**
  * Drives background sync while logged in (docs/03): on login, when the app
  * returns to the foreground, and on demand. Sync only runs with an account; in
  * anonymous mode this is a no-op. Reads/writes always hit local SQLite — this
  * never blocks the UI.
+ *
+ * State lives in a module-level store, so mounting this hook in several places
+ * (SyncRunner + the account screen) still yields a single sync at a time.
  */
 export function useSync() {
   const db = useDatabase();
   const { accountUuid } = useAuth();
-  const [status, setStatus] = useState<SyncStatus>('idle');
-  const [lastOutcome, setLastOutcome] = useState<SyncOutcome | null>(null);
-  const running = useRef(false);
+  const { status, lastOutcome } = useSyncExternalStore(subscribeToSync, getSyncState);
 
   const syncNow = useCallback(async () => {
-    if (!accountUuid || running.current) return;
-    running.current = true;
-    setStatus('syncing');
-    const outcome = await runSync(db, accountUuid);
-    setLastOutcome(outcome);
-    setStatus(outcome.ok ? 'ok' : 'error');
-    running.current = false;
+    if (!accountUuid) return;
+    await requestSync(db, accountUuid);
   }, [db, accountUuid]);
 
   // On login (and account change).
@@ -37,8 +33,8 @@ export function useSync() {
 
   // On returning to the foreground.
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (state) => {
-      if (state === 'active') void syncNow();
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'active') void syncNow();
     });
     return () => sub.remove();
   }, [syncNow]);

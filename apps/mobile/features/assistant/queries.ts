@@ -1,7 +1,10 @@
-import { and, desc, eq, gte, like, lte, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
+
+import type { SQL } from 'drizzle-orm';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 
 /**
  * Structured queries over the local diary — the exact, aggregable half of the
@@ -13,10 +16,17 @@ import type { AppDatabase } from '@/services/db/types';
  * ("that spicy ramen") is the semantic tool's job, feeding ids in here.
  */
 
-function contains(value: string): string {
-  // Escape LIKE wildcards in user text, then wrap for substring match.
+/**
+ * Case-insensitive "contains" over a text column.
+ *
+ * Wildcards in user input are escaped and the ESCAPE clause is emitted
+ * explicitly: SQLite ignores the escape character otherwise, so a dish named
+ * "Menú 100%" would be unfindable and a lone "%" would match everything.
+ * drizzle's `like()` can't emit ESCAPE, hence the raw fragment.
+ */
+function contains(col: SQLiteColumn, value: string): SQL {
   const escaped = value.replace(/[%_\\]/g, (m) => `\\${m}`);
-  return `%${escaped}%`;
+  return sql`${col} LIKE ${`%${escaped}%`} ESCAPE '\\'`;
 }
 
 export interface DishCountFilters {
@@ -38,9 +48,9 @@ export async function countDishOccurrences(
   filters: DishCountFilters,
 ): Promise<number> {
   const conditions = [eq(schema.visits.deleted, false), eq(schema.dishes.deleted, false)];
-  if (filters.dishQuery) conditions.push(like(schema.dishes.name, contains(filters.dishQuery)));
+  if (filters.dishQuery) conditions.push(contains(schema.dishes.name, filters.dishQuery));
   if (filters.restaurantQuery) {
-    conditions.push(like(schema.restaurants.name, contains(filters.restaurantQuery)));
+    conditions.push(contains(schema.restaurants.name, filters.restaurantQuery));
   }
   if (filters.from) conditions.push(gte(schema.visits.visitedAt, filters.from));
   if (filters.to) conditions.push(lte(schema.visits.visitedAt, filters.to));
@@ -80,7 +90,7 @@ export async function lastVisitWithPerson(
     .innerJoin(schema.people, eq(schema.visitParticipants.personId, schema.people.id))
     .innerJoin(schema.visits, eq(schema.visitParticipants.visitId, schema.visits.id))
     .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
-    .where(and(like(schema.people.name, contains(personQuery)), eq(schema.visits.deleted, false)))
+    .where(and(contains(schema.people.name, personQuery), eq(schema.visits.deleted, false)))
     .orderBy(desc(schema.visits.visitedAt))
     .limit(1);
 
@@ -93,10 +103,7 @@ export async function countVisitsWithPerson(
   personQuery: string,
   range: { from?: string | undefined; to?: string | undefined } = {},
 ): Promise<number> {
-  const conditions = [
-    like(schema.people.name, contains(personQuery)),
-    eq(schema.visits.deleted, false),
-  ];
+  const conditions = [contains(schema.people.name, personQuery), eq(schema.visits.deleted, false)];
   if (range.from) conditions.push(gte(schema.visits.visitedAt, range.from));
   if (range.to) conditions.push(lte(schema.visits.visitedAt, range.to));
 
@@ -120,9 +127,7 @@ export async function searchRestaurants(db: AppDatabase, query: string): Promise
   return db
     .select({ id: schema.restaurants.id, name: schema.restaurants.name })
     .from(schema.restaurants)
-    .where(
-      and(like(schema.restaurants.name, contains(query)), eq(schema.restaurants.deleted, false)),
-    )
+    .where(and(contains(schema.restaurants.name, query), eq(schema.restaurants.deleted, false)))
     .limit(10);
 }
 
@@ -130,7 +135,7 @@ export async function searchDishes(db: AppDatabase, query: string): Promise<Enti
   return db
     .select({ id: schema.dishes.id, name: schema.dishes.name })
     .from(schema.dishes)
-    .where(and(like(schema.dishes.name, contains(query)), eq(schema.dishes.deleted, false)))
+    .where(and(contains(schema.dishes.name, query), eq(schema.dishes.deleted, false)))
     .limit(10);
 }
 
@@ -138,6 +143,6 @@ export async function searchPeople(db: AppDatabase, query: string): Promise<Enti
   return db
     .select({ id: schema.people.id, name: schema.people.name })
     .from(schema.people)
-    .where(and(like(schema.people.name, contains(query)), eq(schema.people.deleted, false)))
+    .where(and(contains(schema.people.name, query), eq(schema.people.deleted, false)))
     .limit(10);
 }

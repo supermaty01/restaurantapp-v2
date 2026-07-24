@@ -9,6 +9,7 @@ import { makeTestDb } from '@/services/db/__tests__/test-db';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
+import type { RemoteRecord } from '@/services/sync/transport';
 
 import { FakeServer } from './fake-transport';
 
@@ -190,6 +191,47 @@ describe('SyncEngine', () => {
 
     const restaurants = await b.db.select().from(schema.restaurants);
     expect(restaurants).toHaveLength(1);
+  });
+
+  it('does not mark as synced a change enqueued during the push', async () => {
+    // Regression: push used to blanket-update `synced = false` rows, which also
+    // swallowed anything queued while it ran — losing that change forever.
+    const { db } = makeTestDb();
+    const server = new FakeServer();
+    await createRestaurant(db, {
+      name: 'Guadalupe',
+      comments: null,
+      rating: null,
+      latitude: null,
+      longitude: null,
+    });
+
+    // A transport that enqueues a new local change midway through the push,
+    // simulating the user saving while a sync is in flight.
+    let injected = false;
+    const racyTransport = {
+      push: async (table: string, records: RemoteRecord[]) => {
+        server.upsert(table, records);
+        if (!injected) {
+          injected = true;
+          await db.insert(schema.changeLog).values({
+            tableName: 'restaurants',
+            rowId: 999,
+            rowUuid: 'queued-mid-push',
+            operation: 'update',
+          });
+        }
+      },
+      pull: async (table: string, cursor: string | null) => server.since(table, cursor),
+    };
+
+    await new SyncEngine(db, racyTransport, ACCOUNT).push();
+
+    const stillPending = await db
+      .select()
+      .from(schema.changeLog)
+      .where(eq(schema.changeLog.synced, false));
+    expect(stillPending.map((c) => c.rowUuid)).toEqual(['queued-mid-push']);
   });
 
   it('advances the cursor so a second pull is a no-op', async () => {

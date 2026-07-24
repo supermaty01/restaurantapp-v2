@@ -130,10 +130,30 @@ describe('assistant queries', () => {
     expect(matches.map((m) => m.name).sort()).toEqual(['Carbonara', 'Pasta a la carbonara']);
   });
 
-  it('escapes LIKE wildcards in user input', async () => {
+  it('treats LIKE wildcards in user input literally', async () => {
     const { db } = makeTestDb();
     await seedDiary(db);
-    // "%" must be treated literally, not as "match anything".
-    expect(await countDishOccurrences(db, { dishQuery: '%' })).toBe(0);
+    const bar = await createRestaurant(db, {
+      name: 'Bar',
+      comments: null,
+      rating: null,
+      latitude: null,
+      longitude: null,
+    });
+    const promo = await createDish(db, {
+      name: 'Menú 100% vegano',
+      price: 900,
+      rating: 4,
+      comments: null,
+      restaurantId: bar,
+    });
+    await createVisit(db, { visitedAt: '2026-07-01', comments: null, restaurantId: bar }, [promo]);
+
+    // A literal "%" in the name must be findable...
+    expect(await countDishOccurrences(db, { dishQuery: '100%' })).toBe(1);
+    // ...and a lone "%" must not behave as "match anything".
+    expect(await countDishOccurrences(db, { dishQuery: '%' })).toBe(1);
+    // "_" is a single-char wildcard in LIKE; it must be literal too.
+    expect(await countDishOccurrences(db, { dishQuery: 'Men_' })).toBe(0);
   });
 });

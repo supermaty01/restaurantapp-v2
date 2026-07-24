@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
@@ -36,6 +36,8 @@ export class SyncEngine {
       .where(eq(schema.changeLog.synced, false));
 
     if (pending.length === 0) return;
+
+    const pushedIds: number[] = [];
 
     // Dependency order: FK targets (restaurants) push before children (dishes).
     for (const cfg of SYNC_TABLES) {
@@ -77,12 +79,18 @@ export class SyncEngine {
       }
 
       await this.transport.push(cfg.name, records);
+      // Mark exactly the entries that were just sent. A blanket
+      // `where(synced = false)` would also swallow changes enqueued *during*
+      // this push (and any table not in SYNC_TABLES), losing them silently.
+      pushedIds.push(...forTable.map((c) => c.id));
     }
 
-    await this.db
-      .update(schema.changeLog)
-      .set({ synced: true })
-      .where(eq(schema.changeLog.synced, false));
+    if (pushedIds.length > 0) {
+      await this.db
+        .update(schema.changeLog)
+        .set({ synced: true })
+        .where(inArray(schema.changeLog.id, pushedIds));
+    }
   }
 
   /** Applies remote changes into the local DB, advancing per-table cursors. */
