@@ -2,6 +2,7 @@ import * as Linking from 'expo-linking';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef } from 'react';
 
+import { devLog } from '@/lib/helpers/dev-log';
 import { SHARE_FILE_EXTENSION } from '@/services/share/types';
 
 /**
@@ -19,12 +20,12 @@ export function IntentHandler() {
 
       try {
         const initialUrl = await Linking.getInitialURL();
-        console.warn('[IntentHandler] Initial URL:', initialUrl);
+        devLog('IntentHandler', 'Initial URL:', initialUrl);
 
         if (initialUrl && isShareFileUrl(initialUrl)) {
           hasHandledInitialUrl.current = true;
           const fileUri = extractFileUri(initialUrl);
-          console.warn('[IntentHandler] Extracted file URI:', fileUri);
+          devLog('IntentHandler', 'Extracted file URI:', fileUri);
 
           if (fileUri) {
             // Wait a bit for the app to fully initialize
@@ -42,11 +43,11 @@ export function IntentHandler() {
 
     // Listen for incoming URLs while app is running
     const subscription = Linking.addEventListener('url', ({ url }) => {
-      console.warn('[IntentHandler] Received URL event:', url);
+      devLog('IntentHandler', 'Received URL event:', url);
 
       if (isShareFileUrl(url)) {
         const fileUri = extractFileUri(url);
-        console.warn('[IntentHandler] Extracted file URI from event:', fileUri);
+        devLog('IntentHandler', 'Extracted file URI from event:', fileUri);
 
         if (fileUri) {
           router.push({ pathname: '/import', params: { uri: encodeURIComponent(fileUri) } });
@@ -106,6 +107,6 @@ function extractFileUri(url: string): string | null {
     }
   }
 
-  console.warn('[IntentHandler] Could not extract file URI from:', url);
+  devLog('IntentHandler', 'Could not extract file URI from:', url);
   return null;
 }
