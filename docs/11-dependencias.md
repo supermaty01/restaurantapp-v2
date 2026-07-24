@@ -33,7 +33,8 @@ Lo que **no** se reimplementa (siguen siendo módulos oficiales de Expo, actuali
 | `axios`                                                                                                             | ❌ Fuera                     | `fetch` nativo basta; se va con la API legacy                                                                                  |
 | `@react-native-async-storage/async-storage`                                                                         | ❌ Fuera                     | `expo-secure-store` para tokens; el resto de settings ya vive en SQLite (`app_settings`)                                       |
 | `expo-drizzle-studio-plugin`                                                                                        | ⚠️ Solo dev                  | Útil; mantener como devDependency                                                                                              |
-| `jszip`                                                                                                             | ✅ Se queda                  | Formato de backup; puro JS, sin nativo, no rompe en upgrades                                                                   |
+| `jszip`                                                                                                             | ⚠️ Solo tests                | Se probó para backups y **no aguanta el tamaño real** (ver abajo); queda para construir archivos de prueba                     |
+| `react-native-zip-archive`                                                                                          | ✅ Vuelve (nativo)           | Zip por streaming para backups: es la única forma de manejar copias de cientos de MB. Es lo que ya usaba v1                    |
 | `date-fns`                                                                                                          | ✅ Se queda                  | Puro JS; alternativa `Intl` nativo — **abierto**, evaluar en fase 0                                                            |
 | `react-hook-form` + `zod` + `@hookform/resolvers`                                                                   | ✅ Se quedan                 | Núcleo de los formularios, puro JS, buena salud                                                                                |
 | `nativewind` + `tailwindcss`                                                                                        | ✅ Se queda                  | Base del sistema de diseño                                                                                                     |
@@ -48,6 +49,33 @@ Lo que **no** se reimplementa (siguen siendo módulos oficiales de Expo, actuali
 | `expo-background-task`                                                                                              | ➕ Nuevo (fase 3)            | Sync periódico                                                                                                                 |
 | `expo-speech-recognition`                                                                                           | ➕ Nuevo (fase 7)            | STT nativo; **abierto**: verificar salud y compatibilidad con el SDK antes de adoptar (si es frágil → solo Whisper vía Worker) |
 | `hono`                                                                                                              | ➕ Nuevo (fase 4)            | Worker                                                                                                                         |
+
+## Excepción razonada: el zip de los backups
+
+La regla del proyecto es evitar dependencias nativas. Los backups son la
+excepción, y conviene dejar escrito el porqué para no repetir el error.
+
+Primero se sustituyó `react-native-zip-archive` (nativo, de v1) por **jszip**
+(puro JS) siguiendo el principio. Funcionaba en los tests… con archivos de
+juguete. En un backup real **de 207 MB** falla siempre: jszip lee el archivo
+entero como base64 (~276 MB de string) y descomprime en memoria, así que
+revienta el heap de JS. Peor aún, el fallo aparecía como un engañoso
+`Invalid format`, como si la copia estuviera corrupta.
+
+**Decisión revisada:** los backups usan el módulo nativo, que hace streaming a
+disco. Motivos:
+
+- El objetivo es soportar **varios GB**; ninguna solución en memoria llega.
+- Los backups son la garantía de que no se pierden datos ([09](09-migracion-datos.md)):
+  la corrección pesa más que la pureza de dependencias.
+- Es la misma librería con la que v1 escribió las copias que hay que poder
+  restaurar.
+
+La regla general de [11](11-dependencias.md) sigue en pie —"una dependencia
+entra solo si el coste de escribirla supera al de mantenerla"— y aquí escribir
+un zip con streaming en JS no es viable. Coste asumido: hay que vigilarla en
+cada subida de SDK, y **ya no se puede probar el zip en node**; los tests fijan
+el _layout_ del archivo, que es el contrato de compatibilidad con v1.
 
 ## Procedimiento de upgrade de SDK (fase 0 y en adelante)
 

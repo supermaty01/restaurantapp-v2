@@ -1,81 +1,31 @@
-import * as FileSystem from 'expo-file-system/legacy';
-import JSZip from 'jszip';
+import { zip as zipNative, unzip as unzipNative } from 'react-native-zip-archive';
 
 /**
- * Zip helpers backed by JSZip (pure JS) instead of a native archive module.
+ * Zip helpers for backups, backed by the native `react-native-zip-archive`.
  *
- * Rationale (docs/11-dependencias.md): native modules are what break on every
- * Expo SDK upgrade. JSZip costs some memory but never blocks an upgrade.
+ * **Why native and not a JS zip (revised decision, see docs/11).** The first
+ * implementation used JSZip: pure JS, no native dependency, no upgrade risk.
+ * It was functionally wrong at real sizes — it reads the whole archive into a
+ * base64 string and decompresses in memory, so a 207 MB backup (never mind the
+ * multi-GB target) blows up the JS heap and surfaces as a bogus "invalid
+ * format". The native module streams to disk, and it is also what v1 wrote
+ * existing backups with, so restoring them keeps working.
  *
- * Files are streamed through base64 because that is the only encoding
- * expo-file-system can read and write for binary data.
+ * Paths may be `file://` URIs: the library normalises them.
  */
 
-export interface ZipEntry {
-  /** Path inside the archive, e.g. `images/photo.jpg`. */
-  name: string;
-  /** Absolute file:// URI of the source file. */
-  uri: string;
+/** Zips a whole directory; entries are relative to `sourceDir`. */
+export async function createZipFromDirectory(
+  sourceDir: string,
+  targetPath: string,
+): Promise<string> {
+  return zipNative(sourceDir, targetPath);
 }
 
-export async function createZip(
-  entries: ZipEntry[],
-  destinationUri: string,
-  onProgress?: (fraction: number) => void,
-): Promise<void> {
-  const zip = new JSZip();
-
-  for (const [index, entry] of entries.entries()) {
-    const base64 = await FileSystem.readAsStringAsync(entry.uri, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-    zip.file(entry.name, base64, { base64: true });
-    onProgress?.((index + 1) / entries.length);
-  }
-
-  const content = await zip.generateAsync({
-    type: 'base64',
-    compression: 'DEFLATE',
-    compressionOptions: { level: 6 },
-  });
-
-  await FileSystem.writeAsStringAsync(destinationUri, content, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-}
-
-export async function extractZip(
-  zipUri: string,
+/** Extracts an archive into `destinationDir`, streaming to disk. */
+export async function extractZipToDirectory(
+  zipPath: string,
   destinationDir: string,
-  onProgress?: (fraction: number) => void,
-): Promise<string[]> {
-  const base64 = await FileSystem.readAsStringAsync(zipUri, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
-
-  const zip = await JSZip.loadAsync(base64, { base64: true });
-  const files = Object.values(zip.files).filter((file) => !file.dir);
-  const written: string[] = [];
-
-  for (const [index, file] of files.entries()) {
-    const targetUri = `${destinationDir}${file.name}`;
-
-    // Recreate the archive's directory structure before writing the file.
-    const lastSlash = targetUri.lastIndexOf('/');
-    if (lastSlash > -1) {
-      await FileSystem.makeDirectoryAsync(targetUri.slice(0, lastSlash), {
-        intermediates: true,
-      });
-    }
-
-    const content = await file.async('base64');
-    await FileSystem.writeAsStringAsync(targetUri, content, {
-      encoding: FileSystem.EncodingType.Base64,
-    });
-
-    written.push(file.name);
-    onProgress?.((index + 1) / files.length);
-  }
-
-  return written;
+): Promise<string> {
+  return unzipNative(zipPath, destinationDir);
 }

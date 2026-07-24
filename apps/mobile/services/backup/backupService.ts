@@ -8,7 +8,7 @@ import { DATABASE_NAME } from '@/services/db/constants';
 import * as schema from '@/services/db/schema';
 import type { DrizzleDatabase } from '@/services/db/types';
 
-import { createZip, extractZip } from './zip';
+import { createZipFromDirectory, extractZipToDirectory } from './zip';
 
 /**
  * These records are JSON blobs read back from app_settings, i.e. an untrusted
@@ -53,11 +53,13 @@ export class BackupService {
     progressCallback(0);
 
     const tempDir = `${FileSystem.cacheDirectory}export_temp/`;
+    const imagesTemp = `${tempDir}images/`;
 
-    // Staging area: only the DB and metadata need copying; images are zipped
-    // straight from their original location.
+    // Staging area: the archive mirrors this layout (database.db,
+    // metadata.json, images/…), which is also the layout v1 produced, so old
+    // and new backups stay interchangeable.
     await FileSystem.deleteAsync(tempDir, { idempotent: true });
-    await FileSystem.makeDirectoryAsync(tempDir, { intermediates: true });
+    await FileSystem.makeDirectoryAsync(imagesTemp, { intermediates: true });
     progressCallback(5);
 
     const dbSrc = `${SQLITE_DIR}${DATABASE_NAME}`;
@@ -72,23 +74,17 @@ export class BackupService {
     progressCallback(20);
 
     const imageFiles = await FileSystem.readDirectoryAsync(IMAGES_DIR).catch(() => []);
-
-    const entries = [
-      { name: 'database.db', uri: `${tempDir}database.db` },
-      { name: 'metadata.json', uri: `${tempDir}metadata.json` },
-      ...imageFiles.map((fn) => ({
-        name: `images/${fn}`,
-        uri: `${IMAGES_DIR}${fn}`,
-      })),
-    ];
+    await this.copyFilesInBatches(imageFiles, IMAGES_DIR, imagesTemp, (p) =>
+      progressCallback(20 + Math.floor(p * 50)),
+    );
+    progressCallback(70);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const zipName = `restaurantapp_backup_${timestamp}.zip`;
     const zipPath = `${FileSystem.documentDirectory}${zipName}`;
 
-    await createZip(entries, zipPath, (fraction) =>
-      progressCallback(20 + Math.floor(fraction * 70)),
-    );
+    // Streams to disk: backups run to hundreds of MB, so nothing is buffered.
+    await createZipFromDirectory(tempDir, zipPath);
     progressCallback(90);
 
     // Get file info and save to DB
@@ -152,18 +148,19 @@ export class BackupService {
     // Save backup info
     await this.saveBackupInfo(backupDir);
 
-    // 2. Extract ZIP using native module
+    // 2. Extract the archive (native, streamed to disk)
     await FileSystem.deleteAsync(extractDir, { idempotent: true });
     await FileSystem.makeDirectoryAsync(extractDir, { intermediates: true });
 
     try {
-      await extractZip(fileUri, extractDir, (fraction) =>
-        progressCallback(30 + Math.floor(fraction * 20)),
-      );
+      await extractZipToDirectory(fileUri, extractDir);
     } catch (error) {
-      throw new Error('Failed to extract backup file. Invalid format.', {
-        cause: error,
-      });
+      // Surface the real reason: "invalid format" hid read failures, truncated
+      // reads and genuinely corrupt archives behind one useless message.
+      throw new Error(
+        `No se pudo extraer la copia: ${error instanceof Error ? error.message : String(error)}`,
+        { cause: error },
+      );
     }
     progressCallback(50);
 
