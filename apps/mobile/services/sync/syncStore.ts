@@ -43,11 +43,22 @@ export async function requestSync(db: AppDatabase, accountUuid: string): Promise
 
   setState({ status: 'syncing', lastOutcome: state.lastOutcome });
 
-  inFlight = runSync(db, accountUuid).then((outcome) => {
-    setState({ status: outcome.ok ? 'ok' : 'error', lastOutcome: outcome });
-    inFlight = null;
-    return outcome;
-  });
+  inFlight = runSync(db, accountUuid)
+    .catch((error: unknown): SyncOutcome => {
+      // runSync already converts failures into outcomes; this is a last resort
+      // so an unexpected throw can't leave `inFlight` stuck and block every
+      // future sync.
+      return {
+        ok: false,
+        error: error instanceof Error ? error.message : 'Error de sincronización',
+        at: new Date().toISOString(),
+      };
+    })
+    .then((outcome) => {
+      setState({ status: outcome.ok ? 'ok' : 'error', lastOutcome: outcome });
+      inFlight = null;
+      return outcome;
+    });
 
   return inFlight;
 }

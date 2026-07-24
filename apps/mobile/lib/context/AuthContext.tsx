@@ -49,10 +49,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!supabase) return;
 
-    void supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setLoading(false);
-    });
+    // The cloud is optional: if Supabase is unreachable (no network, a local
+    // instance the device can't see, a wrong URL), the app must still start in
+    // anonymous mode. Without this catch the rejection is unhandled and
+    // `loading` never clears, hanging the UI.
+    void supabase.auth
+      .getSession()
+      .then(({ data }) => setSession(data.session))
+      .catch((error: unknown) => {
+        console.warn('No se pudo recuperar la sesión:', error);
+      })
+      .finally(() => setLoading(false));
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
       setSession(next);
