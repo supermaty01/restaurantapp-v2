@@ -1,6 +1,3 @@
-// Polyfill crypto.getRandomValues so `uuid` works on native. Must be imported
-// before anything that generates a uuid.
-import 'react-native-get-random-values';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Slot } from 'expo-router';
