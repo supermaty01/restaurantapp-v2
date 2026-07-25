@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { Alert } from 'react-native';
 
 import FormDatePicker from '@/components/FormDatePicker';
 import FormInput from '@/components/FormInput';
+import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
@@ -116,22 +117,12 @@ export default function VisitEditScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-canvas p-4">
-      <Text className="text-2xl font-bold mb-4 text-ink">Editar visita</Text>
-
-      <View className="bg-surface p-4 rounded-md mb-8">
-        <FormDatePicker control={control} name="visited_at" label="Fecha" />
-
-        <FormInput
-          control={control}
-          name="comments"
-          label="Comentarios"
-          placeholder="Escribe tus comentarios..."
-          multiline
-          inputClassName="h-auto"
-          numberOfLines={4}
-        />
-
+    <FormScaffold
+      submitLabel="Guardar cambios"
+      onSubmit={handleSubmit(onSubmit)}
+      loading={isSubmitting}
+    >
+      <FormSection title="Dónde y cuándo">
         <RestaurantPicker
           control={control}
           setValue={setValue}
@@ -139,7 +130,10 @@ export default function VisitEditScreen() {
           label="Restaurante"
           errors={errors}
         />
+        <FormDatePicker control={control} name="visited_at" label="Fecha" />
+      </FormSection>
 
+      <FormSection title="Qué comiste" hint="Puedes añadir platos nuevos sobre la marcha">
         <DishPicker
           control={control}
           name="dishes"
@@ -149,28 +143,28 @@ export default function VisitEditScreen() {
           selectedDishes={selectedDishes}
           setSelectedDishes={setSelectedDishes}
         />
+      </FormSection>
 
+      <FormSection title="Con quién" hint="Opcional">
         <PeopleTagInput value={participants} onChange={setParticipants} />
+      </FormSection>
 
+      <FormSection title="Notas y fotos" hint="Opcional">
+        <FormInput
+          control={control}
+          name="comments"
+          label="Comentarios"
+          placeholder="Qué tal estuvo…"
+          multiline
+          numberOfLines={4}
+        />
         <ImagesUploader
           isEdit
           images={selectedImages}
           onChangeImages={setSelectedImages}
           onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
         />
-
-        <TouchableOpacity
-          onPress={handleSubmit(onSubmit)}
-          className={`mt-4 bg-primary py-3 rounded-md items-center ${isSubmitting ? 'opacity-50' : ''}`}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text className="text-on-primary font-bold">Actualizar</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </FormSection>
+    </FormScaffold>
   );
 }

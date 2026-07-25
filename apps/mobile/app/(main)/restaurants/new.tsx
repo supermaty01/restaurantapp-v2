@@ -1,13 +1,14 @@
-import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Alert } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
+import { Button } from '@/components/ui/Button';
+import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
 import { createRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
@@ -94,80 +95,68 @@ export default function RestaurantCreateScreen() {
   };
 
   return (
-    <ScrollView
-      className="flex-1 bg-canvas p-4"
-      keyboardShouldPersistTaps="handled"
-      nestedScrollEnabled={true}
+    <FormScaffold
+      submitLabel="Guardar restaurante"
+      onSubmit={handleSubmit(onSubmit)}
+      loading={loading}
     >
-      <Text className="text-2xl font-bold mb-4 text-ink">Añadir restaurante</Text>
-
-      <View className="bg-surface p-4 rounded-md mb-8">
-        {/* Nombre */}
-        <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
-
-        {/* Comentarios (opcional) */}
+      <FormSection title="Lo básico">
+        <FormInput control={control} name="name" label="Nombre" placeholder="Trattoria Bella" />
         <FormInput
           control={control}
           name="comments"
           label="Comentarios"
-          placeholder="Ejemplo: Ambiente agradable, buena comida..."
+          placeholder="Ambiente agradable, buena comida…"
+          hint="Opcional"
           multiline
-          inputClassName="h-auto"
           numberOfLines={4}
         />
+      </FormSection>
 
-        {/* Ubicación (opcional) */}
-        <Text className="text-xl font-semibold text-ink mb-2">Ubicación</Text>
-        <MapLocationPicker location={location} onLocationChange={setLocation} />
-
-        {/* Rating (opcional) */}
-        <Text className="text-xl font-semibold text-ink my-2">Calificación</Text>
-        <View className="flex justify-center items-center">
-          <RatingStars control={control} name="rating" />
+      <FormSection title="Valoración" hint="Opcional">
+        <View className="items-center rounded-xl border border-line bg-surface py-4">
+          <RatingStars control={control} name="rating" size={30} gap={6} />
         </View>
+      </FormSection>
 
-        {/* Tags */}
-        <View className="flex-row items-center justify-between mt-4">
-          <Text className="text-xl font-semibold text-ink">Etiquetas</Text>
-          <TouchableOpacity
-            className="flex-row items-center"
+      <FormSection title="Ubicación" hint="Para verlo en el mapa y llegar hasta él">
+        <View className="overflow-hidden rounded-xl border border-line">
+          <MapLocationPicker location={location} onLocationChange={setLocation} />
+        </View>
+      </FormSection>
+
+      <FormSection
+        title="Etiquetas"
+        hint={selectedTags.length > 0 ? `${selectedTags.length} elegidas` : 'Para agruparlo luego'}
+        action={
+          <Button
+            label={selectedTags.length > 0 ? 'Cambiar' : 'Añadir'}
+            icon="pricetag-outline"
+            variant="secondary"
+            size="sm"
             onPress={() => setTagModalVisible(true)}
-          >
-            <View className="bg-primary rounded-full p-2">
-              <Ionicons name="add" size={24} color="#fff" />
-            </View>
-          </TouchableOpacity>
-        </View>
-        {selectedTags.length > 0 && (
-          <View className="flex-row flex-wrap mt-2">
+          />
+        }
+      >
+        {selectedTags.length > 0 ? (
+          <View className="flex-row flex-wrap gap-1.5">
             {selectedTags.map((tag) => (
               <Tag name={tag.name} color={tag.color} key={tag.id} />
             ))}
           </View>
-        )}
-        <TagSelectorModal
-          visible={isTagModalVisible}
-          onClose={() => setTagModalVisible(false)}
-          selectedTags={selectedTags}
-          onChangeSelected={setSelectedTags}
-        />
+        ) : null}
+      </FormSection>
 
-        {/* Imágenes (solo se seleccionan, no se suben aún) */}
+      <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
+      </FormSection>
 
-        {/* Botón para crear restaurante */}
-        <TouchableOpacity
-          onPress={handleSubmit(onSubmit)}
-          className="mt-4 bg-primary py-3 rounded-md items-center disabled:bg-primary/30 dark:disabled:bg-dark-primary/30"
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text className="text-on-primary font-bold">Guardar</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      <TagSelectorModal
+        visible={isTagModalVisible}
+        onClose={() => setTagModalVisible(false)}
+        selectedTags={selectedTags}
+        onChangeSelected={setSelectedTags}
+      />
+    </FormScaffold>
   );
 }

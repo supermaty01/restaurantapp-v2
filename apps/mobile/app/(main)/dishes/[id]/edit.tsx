@@ -1,12 +1,13 @@
-import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Text, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
+import { View, Alert, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
+import { Button } from '@/components/ui/Button';
+import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import { updateDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
@@ -115,34 +116,9 @@ export default function DishEditScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-canvas p-4">
-      <Text className="text-2xl font-bold mb-4 text-ink">Editar plato</Text>
-
-      <View className="bg-surface p-4 rounded-md mb-8">
-        {/* Nombre */}
-        <FormInput control={control} name="name" label="Nombre" placeholder="Ingresa el nombre" />
-
-        {/* Comentarios (opcional) */}
-        <FormInput
-          control={control}
-          name="comments"
-          label="Comentarios"
-          placeholder="Ejemplo: Bastante cantidad, buen sabor..."
-          multiline
-          inputClassName="h-auto"
-          numberOfLines={4}
-        />
-
-        {/* Precio */}
-        <FormInput
-          control={control}
-          name="price"
-          label="Precio"
-          placeholder="Ingresa el precio"
-          keyboardType="numeric"
-        />
-
-        {/* Restaurante */}
+    <FormScaffold submitLabel="Guardar cambios" onSubmit={handleSubmit(onSubmit)} loading={loading}>
+      <FormSection title="Lo básico">
+        <FormInput control={control} name="name" label="Nombre" placeholder="Carbonara" />
         <RestaurantPicker
           control={control}
           setValue={setValue}
@@ -150,60 +126,69 @@ export default function DishEditScreen() {
           label="Restaurante"
           errors={errors}
         />
+      </FormSection>
 
-        {/* Rating (opcional) */}
-        <Text className="text-xl font-semibold text-ink my-2">Calificación</Text>
-        <View className="flex justify-center items-center">
-          <RatingStars control={control} name="rating" />
+      <FormSection title="Valoración" hint="Opcional">
+        <View className="items-center rounded-xl border border-line bg-surface py-4">
+          <RatingStars control={control} name="rating" size={30} gap={6} />
         </View>
+      </FormSection>
 
-        {/* Tags */}
-        <View className="flex-row items-center justify-between mt-4">
-          <Text className="text-xl font-semibold text-ink">Etiquetas</Text>
-          <TouchableOpacity
-            className="flex-row items-center"
+      <FormSection title="Detalles" hint="Opcional">
+        <FormInput
+          control={control}
+          name="price"
+          label="Precio"
+          placeholder="0"
+          keyboardType="numeric"
+        />
+        <FormInput
+          control={control}
+          name="comments"
+          label="Comentarios"
+          placeholder="Bastante cantidad, buen sabor…"
+          multiline
+          numberOfLines={4}
+        />
+      </FormSection>
+
+      <FormSection
+        title="Etiquetas"
+        hint={selectedTags.length > 0 ? `${selectedTags.length} elegidas` : 'Para agruparlo luego'}
+        action={
+          <Button
+            label={selectedTags.length > 0 ? 'Cambiar' : 'Añadir'}
+            icon="pricetag-outline"
+            variant="secondary"
+            size="sm"
             onPress={() => setTagModalVisible(true)}
-          >
-            <View className="bg-primary rounded-full p-2">
-              <Ionicons name="add" size={24} color="#fff" />
-            </View>
-          </TouchableOpacity>
-        </View>
-        {selectedTags.length > 0 && (
-          <View className="flex-row flex-wrap mt-2">
+          />
+        }
+      >
+        {selectedTags.length > 0 ? (
+          <View className="flex-row flex-wrap gap-1.5">
             {selectedTags.map((tag) => (
               <Tag name={tag.name} color={tag.color} key={tag.id} />
             ))}
           </View>
-        )}
-        <TagSelectorModal
-          visible={isTagModalVisible}
-          onClose={() => setTagModalVisible(false)}
-          selectedTags={selectedTags}
-          onChangeSelected={setSelectedTags}
-        />
+        ) : null}
+      </FormSection>
 
-        {/* Images */}
+      <TagSelectorModal
+        visible={isTagModalVisible}
+        onClose={() => setTagModalVisible(false)}
+        selectedTags={selectedTags}
+        onChangeSelected={setSelectedTags}
+      />
+
+      <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader
           isEdit
           images={selectedImages}
           onChangeImages={setSelectedImages}
           onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
         />
-
-        {/* Submit button */}
-        <TouchableOpacity
-          onPress={handleSubmit(onSubmit)}
-          className="mt-4 bg-primary py-3 rounded-md items-center"
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text className="text-on-primary font-bold">Guardar</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </ScrollView>
+      </FormSection>
+    </FormScaffold>
   );
 }
