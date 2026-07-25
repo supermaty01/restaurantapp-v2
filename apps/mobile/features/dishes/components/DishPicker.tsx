@@ -88,6 +88,15 @@ function DishPicker<
     (dish) => !selectedDishes.some((selected) => selected.id === dish.id),
   );
 
+  /**
+   * The selected dishes of an existing visit come from `useVisitById`, which
+   * returns them as `DishBasicDTO` — id, name and deleted, no photos. The
+   * restaurant's own list is already loaded here and does carry them, so the
+   * two are merged rather than widening the visit query for one thumbnail.
+   */
+  const photoFor = (dishId: number) =>
+    dishes.find((dish) => dish.id === dishId)?.images?.[0]?.uri ?? null;
+
   return (
     <View className="gap-2.5">
       {selectedDishes.length > 0 ? (
@@ -99,7 +108,7 @@ function DishPicker<
             >
               <Thumbnail
                 name={dish.name}
-                uri={dish.images?.[0]?.uri ?? null}
+                uri={dish.images?.[0]?.uri ?? photoFor(dish.id)}
                 size={40}
                 radius={9}
                 icon="fast-food"

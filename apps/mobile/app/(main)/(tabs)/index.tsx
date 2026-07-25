@@ -90,18 +90,32 @@ export default function HomeScreen() {
       </FadeInUp>
 
       <FadeInUp index={2}>
-        <PressableScale
-          accessibilityLabel="Buscar en tu diario"
-          onPress={() => router.push('/(main)/search')}
-          scaleTo={0.985}
-          className="mt-6 flex-row items-center gap-2.5 rounded-pill border border-line bg-surface px-4 py-3.5"
-          style={elevation.low}
-        >
-          <Ionicons name="search" size={17} color={colors.inkSubtle} />
-          <Txt variant="body" tone="subtle">
-            Buscar en tu diario…
-          </Txt>
-        </PressableScale>
+        <View className="mt-6 flex-row gap-2.5">
+          <PressableScale
+            accessibilityLabel="Buscar en tu diario"
+            onPress={() => router.push('/(main)/search')}
+            scaleTo={0.985}
+            className="flex-1 flex-row items-center gap-2.5 rounded-pill border border-line bg-surface px-4 py-3.5"
+            style={elevation.low}
+          >
+            <Ionicons name="search" size={17} color={colors.inkSubtle} />
+            <Txt variant="body" tone="subtle">
+              Buscar en tu diario…
+            </Txt>
+          </PressableScale>
+
+          {/* The map is a way of browsing the diary, not a setting: it belongs
+              next to search rather than buried in a menu. */}
+          <PressableScale
+            accessibilityLabel="Ver el mapa"
+            onPress={() => router.push('/(main)/map')}
+            scaleTo={0.92}
+            className="h-[50px] w-[50px] items-center justify-center rounded-pill border border-line bg-surface"
+            style={elevation.low}
+          >
+            <Ionicons name="map-outline" size={19} color={colors.primary} />
+          </PressableScale>
+        </View>
       </FadeInUp>
 
       <FadeInUp index={3}>

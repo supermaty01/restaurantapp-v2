@@ -61,6 +61,19 @@ export default function ProfileScreen() {
         />
       </View>
 
+      {/* Tags stopped being a tab because they are a filter, not a collection —
+          but managing them still needs a door, and cleaning up unused ones is
+          not something you do from inside a form. */}
+      <SectionHeader title="Tu diario" className="mt-7" />
+      <View className="mt-3 gap-2.5">
+        <Row
+          icon="pricetag-outline"
+          label="Etiquetas"
+          onPress={() => router.push('/(main)/tags')}
+        />
+        <Row icon="map-outline" label="Mapa" onPress={() => router.push('/(main)/map')} />
+      </View>
+
       <SectionHeader title="Aplicación" className="mt-7" />
       <View className="mt-3 gap-2.5">
         <Row
