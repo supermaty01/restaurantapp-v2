@@ -77,6 +77,10 @@ Todo en [`components/ui/`](../apps/mobile/components/ui/):
 | `ListHeader`            | Cabecera compartida de las tres colecciones                                       |
 | `Fab`                   | Botón flotante de acción                                                          |
 | `SegmentedTabs`         | Cambio de contenido dentro de una pantalla                                        |
+| `Sheet`                 | Hoja inferior, compartida por crear y filtrar                                     |
+| `FilterSheet`           | Filtros y orden, con recuento de resultados en vivo                               |
+| `DetailScaffold`        | Marco de las pantallas de detalle                                                 |
+| `FormScaffold`          | Marco de los formularios, con acción fija                                         |
 | `FloatingTabBar`        | Navegación principal                                                              |
 | `Skeleton`              | Carga                                                                             |
 
@@ -88,8 +92,40 @@ Todo en [`components/ui/`](../apps/mobile/components/ui/):
 
 ## Arquitectura de información
 
-Cinco pestañas: **Inicio · Feed · Lugares · Platos · Perfil**.
+**Inicio · Diario · ➕ · Feed · Perfil.**
 
-v1 tenía cuatro listas al mismo nivel —Restaurantes, Platos, Visitas, Etiquetas— lo que daba el mismo peso a una dimensión de navegación (etiquetas) que a las colecciones, y no dejaba sitio para la mitad social. Visitas y Etiquetas son ahora pantallas completas a un toque, desde Inicio y Perfil.
+### Por qué así
+
+El diagnóstico de la estructura anterior, que tenía «demasiadas secciones»:
+
+- **Etiquetas como destino era el error de fondo.** Una etiqueta es una _dimensión de filtrado_, no una colección que se navega. Por eso su pantalla se sentía inútil: era un CRUD sin contexto. Ha vuelto a ser un filtro; la pantalla que queda sirve para _mantenerlas_ (cuántas cosas etiqueta cada una, cuáles no usas).
+- **Visitas, Lugares y Platos son la misma maquinaria** sobre el mismo diario, y se alterna entre ellas constantemente. Estaban repartidas en tres sitios, uno de los cuales ni siquiera era pestaña. Ahora son hermanas dentro de **Diario**, tras un control segmentado: cambiar cuesta un toque en vez de un viaje por la barra.
+- **Duplicación sin valor:** Mapa y Visitas se alcanzaban desde dos sitios cada uno.
+- **Perfil era un cajón de sastre** con tres trabajos sin relación. Ahora solo cuenta, amigos y ajustes.
+- **Crear estaba disperso:** un FAB por lista más accesos rápidos en Inicio, así que «añadir algo» empezaba por decidir dónde estar.
+
+### Las piezas
+
+| Pestaña    | Contiene                                         |
+| ---------- | ------------------------------------------------ |
+| **Inicio** | Saludo, buscador, contadores y visitas recientes |
+| **Diario** | Visitas · Lugares · Platos, con sus filtros      |
+| **➕**     | Acción, no destino: abre una hoja para registrar |
+| **Feed**   | Actividad de tus amigos                          |
+| **Perfil** | Tu cuenta, amigos y ajustes                      |
+
+**El mapa** es un modo de vista de Lugares, que es donde encaja tanto crear un restaurante desde el mapa como buscarlos por zona.
+
+**El buscador de Inicio** busca en todo el diario y es el hueco del asistente (docs/07). La búsqueda en lenguaje natural es el mismo trabajo, no una función aparte: «¿cuántas hamburguesas comí este año?» es una consulta. Hoy lleva un placeholder que dice qué podrá hacer, sin fingir que ya funciona.
+
+### Detalles y formularios
+
+Las pantallas de detalle comparten `DetailScaffold`: foto, título, acciones y cuerpo. Las acciones son botones de icono discretos — v1 usaba círculos rellenos en azul, terracota y rojo, tres botones saturados compitiendo con la foto, y el más llamativo era Eliminar.
+
+Los formularios comparten `FormScaffold`: campos agrupados por lo que respondes («Dónde y cuándo», «Qué comiste», «Con quién») y la acción en un pie fijo. v1 dejaba Guardar al final del scroll.
+
+### Visitas: línea de tiempo
+
+Las visitas abren agrupadas por mes con cabeceras fijadas, al estilo de una galería de fotos. Una lista plana de unos cientos de entradas no da ninguna sensación de _cuándo_; por mes se navega por memoria, que es como se busca una comida.
 
 **Pendiente:** v1 permitía deslizar entre pestañas mediante `material-top-tabs` anclado abajo. SDK 56 prohibió declarar navegadores de react-navigation a mano, así que sigue sin estar.
