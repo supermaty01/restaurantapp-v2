@@ -4,30 +4,30 @@ import { Pressable, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/Dialog';
+import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Card, SectionHeader } from '@/components/ui/Surface';
+import { Txt } from '@/components/ui/Txt';
 import { fetchMyProfile } from '@/features/social/api';
 import type { Profile } from '@/features/social/api';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
 import { useFriends } from '@/features/social/hooks/useFriends';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { formatRelativeDate } from '@/lib/helpers/date';
 import { useSync } from '@/lib/hooks/useSync';
+import { SYNC_LABEL, type SyncStatus } from '@/services/sync/syncStore';
 
 import type { ComponentProps } from 'react';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
-const SYNC_LABEL: Record<string, string> = {
-  idle: 'Al día',
-  syncing: 'Sincronizando…',
-  error: 'Error al sincronizar',
-};
-
 export default function ProfileScreen() {
   const router = useRouter();
   const { session, isConfigured, signOut } = useAuth();
   const { status, lastOutcome, syncNow } = useSync();
+  const { tell } = useDialog();
   const { incoming } = useFriends();
 
   const { data: profile } = useAsyncResource<Profile>(fetchMyProfile, {
@@ -45,6 +45,15 @@ export default function ProfileScreen() {
           email={session.user.email ?? ''}
           syncStatus={status}
           syncError={lastOutcome?.ok === false ? (lastOutcome.error ?? undefined) : undefined}
+          syncedAt={lastOutcome?.ok === true ? lastOutcome.at : undefined}
+          showSyncError={(detail) =>
+            void tell({
+              title: 'No se pudo sincronizar',
+              message: detail,
+              icon: 'cloud-offline-outline',
+              destructive: true,
+            })
+          }
           onSync={syncNow}
           onEdit={() => router.push('/(main)/profile-edit')}
         />
@@ -95,13 +104,17 @@ function AccountCard({
   email,
   syncStatus,
   syncError,
+  syncedAt,
+  showSyncError,
   onSync,
   onEdit,
 }: {
   profile: Profile | null;
   email: string;
-  syncStatus: string;
+  syncStatus: SyncStatus;
   syncError?: string | undefined;
+  syncedAt?: string | undefined;
+  showSyncError: (detail: string) => void;
   onSync: () => void;
   onEdit: () => void;
 }) {
@@ -123,22 +136,49 @@ function AccountCard({
         <Button label="Editar" variant="secondary" size="sm" onPress={onEdit} />
       </View>
 
-      <View className="flex-row items-center justify-between border-t border-line pt-3">
-        <View className="flex-row items-center gap-2">
+      <View className="flex-row items-center justify-between gap-2 border-t border-line pt-3">
+        {/* The state in a word, the detail on demand: a raw driver error is
+            what you need while something is broken and clutter once it is
+            fixed, so it moves behind a tap instead of filling the card. */}
+        <PressableScale
+          accessibilityLabel={syncError ? 'Ver el detalle del error' : 'Estado de sincronización'}
+          {...(syncError ? { onPress: () => void showSyncError(syncError) } : {})}
+          scaleTo={0.97}
+          className="min-w-0 flex-1 flex-row items-center gap-2"
+        >
           <Ionicons
-            name={syncStatus === 'error' ? 'alert-circle-outline' : 'cloud-done-outline'}
+            name={
+              syncStatus === 'error'
+                ? 'alert-circle'
+                : syncStatus === 'syncing'
+                  ? 'sync'
+                  : 'cloud-done'
+            }
             size={16}
             color={syncStatus === 'error' ? colors.danger : colors.sage}
           />
-          {/* The reason, not just the fact. "Error al sincronizar" with no
-              detail leaves the only person who can fix it guessing. */}
-          {/* Not truncated: a native error's useful half is at the end, and
-              cutting it left "…has been rejected...." with the reason gone. */}
-          <Text className="flex-1 text-[13px] text-ink-muted">
-            {syncError ?? SYNC_LABEL[syncStatus] ?? syncStatus}
-          </Text>
-        </View>
-        <Button label="Sincronizar" variant="ghost" size="sm" onPress={onSync} />
+          <Txt
+            variant="caption"
+            tone={syncStatus === 'error' ? 'danger' : 'muted'}
+            numberOfLines={1}
+            className="flex-1"
+          >
+            {syncStatus === 'ok' && syncedAt
+              ? `Al día · ${formatRelativeDate(syncedAt)}`
+              : SYNC_LABEL[syncStatus]}
+          </Txt>
+          {syncError ? (
+            <Ionicons name="information-circle-outline" size={15} color={colors.inkSubtle} />
+          ) : null}
+        </PressableScale>
+
+        <Button
+          label={syncStatus === 'error' ? 'Reintentar' : 'Sincronizar'}
+          variant="ghost"
+          size="sm"
+          disabled={syncStatus === 'syncing'}
+          onPress={onSync}
+        />
       </View>
     </Card>
   );

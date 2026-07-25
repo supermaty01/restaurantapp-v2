@@ -3,6 +3,21 @@ import { runSync, type SyncOutcome } from '@/services/sync/syncManager';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
 
+/**
+ * How each state reads to a person.
+ *
+ * Here rather than in the screen so the two cannot drift: the profile card kept
+ * its own map, missed `ok`, and printed the raw status — the word "ok" sitting
+ * in the middle of a card written in Spanish. `Record<SyncStatus, string>` makes
+ * a new state a type error instead of a string that leaks to the UI.
+ */
+export const SYNC_LABEL: Record<SyncStatus, string> = {
+  idle: 'Sin sincronizar aún',
+  syncing: 'Sincronizando…',
+  ok: 'Al día',
+  error: 'No se pudo sincronizar',
+};
+
 export interface SyncState {
   status: SyncStatus;
   lastOutcome: SyncOutcome | null;

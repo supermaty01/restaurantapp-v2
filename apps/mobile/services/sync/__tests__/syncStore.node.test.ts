@@ -4,6 +4,7 @@ import {
   requestSync,
   resetSyncStateForTests,
   subscribeToSync,
+  SYNC_LABEL,
 } from '@/services/sync/syncStore';
 
 // The store calls runSync, which talks to Supabase; stub it so these tests
@@ -14,6 +15,18 @@ jest.mock('@/services/sync/syncManager', () => ({
 }));
 
 const ACCOUNT = '11111111-1111-4111-8111-111111111111';
+
+describe('SYNC_LABEL', () => {
+  // `Record<SyncStatus, string>` already forces a label per state. This catches
+  // the other half of the same bug: a label that is the machine word itself,
+  // which is what the profile card ended up showing.
+  it('reads as Spanish, not as a status code', () => {
+    for (const [status, label] of Object.entries(SYNC_LABEL)) {
+      expect(label).not.toBe(status);
+      expect(label.trim().length).toBeGreaterThan(3);
+    }
+  });
+});
 
 describe('sync store', () => {
   beforeEach(() => {
