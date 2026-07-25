@@ -1,54 +1,46 @@
-import { View, Text, ScrollView } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import MapLocationPicker from '@/components/MapLocationPicker';
-import RatingStars from '@/components/RatingStars';
+import { DetailField } from '@/components/ui/DetailScaffold';
+import { Txt } from '@/components/ui/Txt';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
-import Tag from '@/features/tags/components/Tag';
 
-interface RestaurantDetailsProps {
-  restaurant: RestaurantDetailsDTO;
-}
+/**
+ * The "Detalles" panel of a restaurant.
+ *
+ * Rating and tags used to be repeated here; they now live in the screen header,
+ * where they are visible whichever tab you are on. What is left is what only
+ * this panel can show.
+ */
+export default function RestaurantDetails({ restaurant }: { restaurant: RestaurantDetailsDTO }) {
+  const hasLocation = Boolean(restaurant.latitude && restaurant.longitude);
 
-export default function RestaurantDetails({ restaurant }: RestaurantDetailsProps) {
   return (
-    <ScrollView contentContainerStyle={{ flexGrow: 1 }} nestedScrollEnabled>
-      <View className="p-4 bg-surface flex-1">
-        <Text className="text-base font-bold text-ink-subtle mb-2">Comentarios</Text>
-        {restaurant.comments ? (
-          <Text className="text-base text-[#4A4A4A] mb-4">{restaurant.comments}</Text>
-        ) : (
-          <Text className="text-base italic text-[#999] mb-4">Sin comentarios</Text>
-        )}
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="px-5 pb-8 pt-2 gap-5"
+      nestedScrollEnabled
+      showsVerticalScrollIndicator={false}
+    >
+      <DetailField label="Comentarios" value={restaurant.comments} empty="Sin comentarios" />
 
-        <Text className="text-base font-bold text-ink-subtle mb-2">Etiquetas</Text>
-        {restaurant.tags && restaurant.tags.length > 0 ? (
-          <View className="flex-row flex-wrap mb-4">
-            {restaurant.tags.map((tag) => (
-              <Tag key={tag.id} color={tag.color} name={tag.name} deleted={tag.deleted} />
-            ))}
+      <DetailField label="Ubicación">
+        {hasLocation ? (
+          <View className="overflow-hidden rounded-xl border border-line">
+            <MapLocationPicker
+              location={{
+                latitude: restaurant.latitude as number,
+                longitude: restaurant.longitude as number,
+              }}
+              editable={false}
+            />
           </View>
         ) : (
-          <Text className="text-sm italic text-[#999] mb-4">Sin etiquetas</Text>
+          <Txt variant="body" tone="subtle">
+            Sin ubicación
+          </Txt>
         )}
-
-        <Text className="text-base font-bold text-ink-subtle mb-2">Ubicación</Text>
-        {restaurant.latitude && restaurant.longitude ? (
-          <MapLocationPicker
-            location={{
-              latitude: restaurant.latitude,
-              longitude: restaurant.longitude,
-            }}
-            editable={false}
-          />
-        ) : (
-          <Text className="text-sm italic text-[#999]">Sin ubicación</Text>
-        )}
-
-        <Text className="text-base font-bold text-ink-subtle my-2">Calificación</Text>
-        <View>
-          <RatingStars value={restaurant.rating} readOnly />
-        </View>
-      </View>
+      </DetailField>
     </ScrollView>
   );
 }

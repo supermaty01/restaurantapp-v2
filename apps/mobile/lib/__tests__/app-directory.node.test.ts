@@ -2,7 +2,6 @@ import { join } from 'node:path';
 
 import { globSync } from '../../components/__support__/glob';
 
-
 /**
  * `app/` may contain nothing but routes.
  *

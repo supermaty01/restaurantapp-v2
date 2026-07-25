@@ -1,9 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useGlobalSearchParams } from 'expo-router';
+import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';
+import { DetailField, DetailMissing, DetailScaffold } from '@/components/ui/DetailScaffold';
+import { PressableScale } from '@/components/ui/Motion';
+import { Txt } from '@/components/ui/Txt';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import {
   canHardDeleteDish,
@@ -13,30 +16,30 @@ import {
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import Tag from '@/features/tags/components/Tag';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { reportError } from '@/lib/helpers/report-error';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportDish } from '@/services/share/exportService';
 
+const priceFormat = new Intl.NumberFormat('es-CO', {
+  style: 'currency',
+  currency: 'COP',
+  minimumFractionDigits: 0,
+});
+
 export default function DishDetailScreen() {
   const router = useRouter();
-  const { id } = useGlobalSearchParams(); // Obtiene el id desde la ruta
+  const { id } = useGlobalSearchParams();
   const drizzleDb = useDatabase();
-  const dish = useDishById(Number(id));
   const { colors } = useTheme();
+  const dish = useDishById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
-
-  function handleEdit() {
-    router.push({
-      pathname: '/dishes/[id]/edit',
-      params: { id: id?.toString() },
-    });
-  }
 
   async function handleShare() {
     try {
       setIsSharing(true);
       await exportDish(drizzleDb, Number(id));
-    } catch {
-      Alert.alert('Error', 'No se pudo compartir el plato');
+    } catch (error) {
+      reportError('No se pudo compartir el plato', error);
     } finally {
       setIsSharing(false);
     }
@@ -44,16 +47,13 @@ export default function DishDetailScreen() {
 
   async function handleDelete() {
     try {
-      // Verificar si el plato puede ser eliminado permanentemente
       const canDeletePermanently = await canHardDeleteDish(drizzleDb, Number(id));
 
-      const message = canDeletePermanently
-        ? '¿Estás seguro de que deseas eliminar este plato? Esta acción no se puede deshacer.'
-        : '¿Estás seguro de que deseas eliminar este plato? El plato seguirá visible en visitas existentes.';
-
       Alert.alert(
-        'Eliminar Plato',
-        message,
+        'Eliminar plato',
+        canDeletePermanently
+          ? 'Se borrará definitivamente. Esta acción no se puede deshacer.'
+          : 'Seguirá apareciendo en las visitas que ya lo referencian.',
         [
           { text: 'Cancelar', style: 'cancel' },
           {
@@ -63,17 +63,13 @@ export default function DishDetailScreen() {
               void (async () => {
                 try {
                   if (canDeletePermanently) {
-                    // Eliminar permanentemente
                     await hardDeleteDish(drizzleDb, Number(id));
                   } else {
-                    // Soft delete
                     await softDeleteDish(drizzleDb, Number(id));
                   }
-
-                  Alert.alert('Eliminado', 'Plato eliminado correctamente');
                   router.back();
-                } catch {
-                  Alert.alert('Error', 'No se pudo eliminar el plato');
+                } catch (error) {
+                  reportError('No se pudo eliminar el plato', error);
                 }
               })();
             },
@@ -81,121 +77,96 @@ export default function DishDetailScreen() {
         ],
         { cancelable: true },
       );
-    } catch {
-      Alert.alert('Error', 'No se pudo verificar las referencias del plato');
+    } catch (error) {
+      reportError('No se pudo comprobar si el plato está en uso', error);
     }
   }
 
   if (!dish) {
-    return (
-      <View className="flex-1 justify-center items-center bg-canvas p-4">
-        <Text className="text-base text-ink">No se encontró el plato</Text>
-      </View>
-    );
+    return <DetailMissing message="No se encontró el plato" />;
   }
 
+  const notices = [
+    ...(dish.deleted ? ['Este plato ha sido eliminado'] : []),
+    ...(dish.restaurant.deleted ? ['El restaurante de este plato ha sido eliminado'] : []),
+  ];
+
   return (
-    <ScrollView className="flex-1 bg-canvas">
-      <ImageDisplay images={dish.images} />
-
-      {/* Nombre y botones Editar/Eliminar */}
-      <View className="flex-row items-center justify-between px-4 mt-4">
-        <View className="flex-1 mr-2">
-          <Text className="text-2xl font-bold text-ink">{dish.name}</Text>
+    <DetailScaffold
+      media={<ImageDisplay images={dish.images} />}
+      title={dish.name}
+      {...(notices.length > 0 ? { notices } : {})}
+      meta={
+        <View className="gap-2.5">
+          {dish.rating ? <RatingStars value={dish.rating} size={17} gap={2} readOnly /> : null}
+          {dish.tags?.length > 0 ? (
+            <View className="flex-row flex-wrap gap-1.5">
+              {dish.tags.map((tag) => (
+                <Tag key={tag.id} color={tag.color} name={tag.name} deleted={tag.deleted} />
+              ))}
+            </View>
+          ) : null}
         </View>
-        <View className="flex-row">
-          <TouchableOpacity
-            className="bg-blue-500 p-2 rounded-full mr-2"
-            onPress={handleShare}
-            disabled={isSharing}
+      }
+      actions={[
+        {
+          icon: 'share-outline',
+          label: 'Compartir',
+          onPress: () => void handleShare(),
+          busy: isSharing,
+        },
+        {
+          icon: 'create-outline',
+          label: 'Editar',
+          onPress: () => router.push({ pathname: '/dishes/[id]/edit', params: { id: String(id) } }),
+        },
+        {
+          icon: 'trash-outline',
+          label: 'Eliminar',
+          onPress: () => void handleDelete(),
+          danger: true,
+        },
+      ]}
+    >
+      {/* No segmented control here: a dish has one body, and v1 faked a single
+          "Detalles" tab with a hand-drawn underline. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerClassName="px-5 pb-8 pt-4 gap-5"
+        showsVerticalScrollIndicator={false}
+      >
+        <DetailField label="Dónde">
+          <PressableScale
+            accessibilityLabel={`Ver ${dish.restaurant.name}`}
+            onPress={() =>
+              router.push({
+                pathname: '/restaurants/[id]/view',
+                params: { id: String(dish.restaurant.id) },
+              })
+            }
+            scaleTo={0.985}
+            className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-3"
           >
-            {isSharing ? (
-              <ActivityIndicator size={20} color="#fff" />
-            ) : (
-              <Ionicons name="share-outline" size={20} color="#fff" />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-primary p-2 rounded-full mr-2" onPress={handleEdit}>
-            <Ionicons name="create-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-danger p-2 rounded-full" onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
+            <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary/12">
+              <Ionicons name="location" size={16} color={colors.primary} />
+            </View>
+            <Txt variant="heading" weight="bold" serif={false} numberOfLines={1} className="flex-1">
+              {dish.restaurant.name}
+            </Txt>
+            <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
+          </PressableScale>
+        </DetailField>
 
-      {dish.deleted && (
-        <View className="mt-3 mx-4 bg-red-100 px-2 py-2 rounded flex-row gap-2 border-red-600 border-[1px]">
-          <Ionicons className="flex" name="warning-outline" size={16} color="#dc2626" />
-          <Text className="flex text-danger text-sm">Este plato ha sido eliminado</Text>
-        </View>
-      )}
-      {dish.restaurant.deleted && (
-        <View className="mt-3 mx-4 bg-orange-100 px-2 py-2 rounded flex-row gap-2 border-orange-600 border-[1px]">
-          <Ionicons className="flex" name="warning-outline" size={16} color="#ea580c" />
-          <Text className="flex text-orange-600 text-sm">
-            El restaurante de este plato ha sido eliminado
-          </Text>
-        </View>
-      )}
-
-      <View className="bg-surface my-4 mx-4 p-4 rounded-xl">
-        <View className="flex-row mb-4">
-          <View className="flex-1 items-center">
-            <Text className="text-base font-bold text-primary">Detalles</Text>
-            <View className="w-full h-1 bg-primary mt-1" />
-          </View>
-        </View>
-
-        <Text className="text-base font-bold text-ink-subtle mb-2">Restaurante visitado</Text>
-        <TouchableOpacity
-          className="flex-row items-center py-3 border-b border-line mb-8"
-          onPress={() =>
-            router.push({ pathname: '/restaurants/[id]/view', params: { id: dish.restaurant.id } })
-          }
-        >
-          <View className="flex-1">
-            <Text className="text-base font-bold text-ink">{dish.restaurant.name}</Text>
-          </View>
-          <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
-        </TouchableOpacity>
-
-        <Text className="text-base font-bold text-ink-subtle mb-2">Precio</Text>
         {dish.price ? (
-          <Text className="text-xl font-bold text-primary mb-4">
-            {new Intl.NumberFormat('es-CO', {
-              style: 'currency',
-              currency: 'COP',
-              minimumFractionDigits: 0,
-            }).format(dish.price)}
-          </Text>
-        ) : (
-          <Text className="text-base italic text-ink-subtle mb-4">Sin precio</Text>
-        )}
+          <DetailField label="Precio">
+            <Txt variant="title" tone="primary" serif>
+              {priceFormat.format(dish.price)}
+            </Txt>
+          </DetailField>
+        ) : null}
 
-        <Text className="text-base font-bold text-ink-subtle mb-2">Comentarios</Text>
-        {dish.comments ? (
-          <Text className="text-base text-ink mb-4">{dish.comments}</Text>
-        ) : (
-          <Text className="text-base italic text-ink-subtle mb-4">Sin comentarios</Text>
-        )}
-
-        <Text className="text-base font-bold text-ink-subtle mb-2">Etiquetas</Text>
-        {dish.tags?.length > 0 ? (
-          <View className="flex-row flex-wrap mb-4">
-            {dish.tags.map((tag) => (
-              <Tag key={tag.id} color={tag.color} name={tag.name} deleted={tag.deleted} />
-            ))}
-          </View>
-        ) : (
-          <Text className="text-base italic text-ink-subtle mb-4">Sin etiquetas</Text>
-        )}
-
-        <Text className="text-base font-bold text-ink-subtle my-2">Calificación</Text>
-        <View className="flex-row">
-          <RatingStars value={dish.rating} readOnly />
-        </View>
-      </View>
-    </ScrollView>
+        <DetailField label="Comentarios" value={dish.comments} empty="Sin comentarios" />
+      </ScrollView>
+    </DetailScaffold>
   );
 }

@@ -1,38 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
+import { DetailField } from '@/components/ui/DetailScaffold';
+import { PressableScale } from '@/components/ui/Motion';
+import { Txt } from '@/components/ui/Txt';
 import type { VisitDetailsDTO } from '@/features/visits/types/visit-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 
-interface VisitDetailsProps {
-  visit: VisitDetailsDTO;
-}
-
-export default function VisitDetails({ visit }: VisitDetailsProps) {
+/** The "Detalles" panel of a visit: where it was, and what you wrote about it. */
+export default function VisitDetails({ visit }: { visit: VisitDetailsDTO }) {
   const { colors } = useTheme();
 
   return (
-    <View className="p-4 h-full bg-surface">
-      <Text className="text-base font-bold text-ink-subtle mb-2">Restaurante visitado</Text>
-      <TouchableOpacity
-        className="flex-row items-center py-3 border-b border-line mb-8"
-        onPress={() =>
-          router.push({ pathname: '/restaurants/[id]/view', params: { id: visit.restaurant.id } })
-        }
-      >
-        <View className="flex-1">
-          <Text className="text-base font-bold text-ink">{visit.restaurant.name}</Text>
-        </View>
-        <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
-      </TouchableOpacity>
+    <ScrollView
+      className="flex-1"
+      contentContainerClassName="px-5 pb-8 pt-2 gap-5"
+      nestedScrollEnabled
+      showsVerticalScrollIndicator={false}
+    >
+      <DetailField label="Dónde">
+        <PressableScale
+          accessibilityLabel={`Ver ${visit.restaurant.name}`}
+          onPress={() =>
+            router.push({
+              pathname: '/restaurants/[id]/view',
+              params: { id: String(visit.restaurant.id) },
+            })
+          }
+          scaleTo={0.985}
+          className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-3"
+        >
+          <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary/12">
+            <Ionicons name="location" size={16} color={colors.primary} />
+          </View>
+          <Txt variant="heading" weight="bold" serif={false} numberOfLines={1} className="flex-1">
+            {visit.restaurant.name}
+          </Txt>
+          <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
+        </PressableScale>
+      </DetailField>
 
-      <Text className="text-base font-bold text-ink-subtle mb-2">Comentarios</Text>
-      {visit.comments ? (
-        <Text className="text-base text-[#4A4A4A] mb-4 py-3">{visit.comments}</Text>
-      ) : (
-        <Text className="text-base italic text-[#999] mb-4 py-3">Sin comentarios</Text>
-      )}
-    </View>
+      <DetailField label="Comentarios" value={visit.comments} empty="Sin comentarios" />
+    </ScrollView>
   );
 }

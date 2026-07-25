@@ -1,8 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { Alert, View } from 'react-native';
 
+import RatingStars from '@/components/RatingStars';
+import { DetailMissing, DetailScaffold } from '@/components/ui/DetailScaffold';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import RestaurantDetails from '@/features/restaurants/components/RestaurantDetails';
@@ -14,6 +15,8 @@ import {
   hardDeleteRestaurant,
   softDeleteRestaurant,
 } from '@/features/restaurants/repositories/restaurantRepository';
+import Tag from '@/features/tags/components/Tag';
+import { reportError } from '@/lib/helpers/report-error';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportRestaurant } from '@/services/share/exportService';
 
@@ -24,19 +27,12 @@ export default function RestaurantDetailScreen() {
   const restaurant = useRestaurantById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
 
-  function handleEdit() {
-    router.push({
-      pathname: '/restaurants/[id]/edit',
-      params: { id: id?.toString() },
-    });
-  }
-
   async function handleShare() {
     try {
       setIsSharing(true);
       await exportRestaurant(drizzleDb, Number(id));
-    } catch {
-      Alert.alert('Error', 'No se pudo compartir el restaurante');
+    } catch (error) {
+      reportError('No se pudo compartir el restaurante', error);
     } finally {
       setIsSharing(false);
     }
@@ -44,16 +40,16 @@ export default function RestaurantDetailScreen() {
 
   async function handleDelete() {
     try {
-      // Verificar si el restaurante puede ser eliminado permanentemente
+      // A restaurant referenced by dishes or visits can only be soft-deleted,
+      // and the warning has to say so: "deleted" meaning two different things
+      // is exactly the kind of surprise that loses data in the user's head.
       const canDeletePermanently = await canHardDeleteRestaurant(drizzleDb, Number(id));
 
-      const message = canDeletePermanently
-        ? '¿Estás seguro de que deseas eliminar este restaurante? Esta acción no se puede deshacer.'
-        : '¿Estás seguro de que deseas eliminar este restaurante? El restaurante seguirá visible en platos y visitas existentes.';
-
       Alert.alert(
-        'Eliminar Restaurante',
-        message,
+        'Eliminar restaurante',
+        canDeletePermanently
+          ? 'Se borrará definitivamente. Esta acción no se puede deshacer.'
+          : 'Seguirá apareciendo en los platos y visitas que ya lo referencian.',
         [
           { text: 'Cancelar', style: 'cancel' },
           {
@@ -67,11 +63,9 @@ export default function RestaurantDetailScreen() {
                   } else {
                     await softDeleteRestaurant(drizzleDb, Number(id));
                   }
-
-                  Alert.alert('Eliminado', 'Restaurante eliminado correctamente');
                   router.back();
-                } catch {
-                  Alert.alert('Error', 'No se pudo eliminar el restaurante');
+                } catch (error) {
+                  reportError('No se pudo eliminar el restaurante', error);
                 }
               })();
             },
@@ -79,75 +73,76 @@ export default function RestaurantDetailScreen() {
         ],
         { cancelable: true },
       );
-    } catch {
-      Alert.alert('Error', 'No se pudo verificar las referencias del restaurante');
+    } catch (error) {
+      reportError('No se pudo comprobar si el restaurante está en uso', error);
     }
   }
 
   if (!restaurant) {
-    return (
-      <View className="flex-1 justify-center items-center bg-canvas p-4">
-        <Text className="text-base text-ink">No se encontró el restaurante</Text>
-      </View>
-    );
+    return <DetailMissing message="No se encontró el restaurante" />;
   }
 
   return (
-    <View className="flex-1 bg-canvas">
-      <ImageDisplay images={restaurant.images} />
-
-      <View className="flex-row items-center justify-between px-4 mt-4">
-        <View className="flex-1 mr-2">
-          <Text className="text-2xl font-bold text-ink">{restaurant.name}</Text>
-        </View>
-        <View className="flex-row">
-          <TouchableOpacity
-            className="bg-blue-500 p-2 rounded-full mr-2"
-            onPress={handleShare}
-            disabled={isSharing}
-          >
-            {isSharing ? (
-              <ActivityIndicator size={20} color="#fff" />
-            ) : (
-              <Ionicons name="share-outline" size={20} color="#fff" />
-            )}
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-primary p-2 rounded-full mr-2" onPress={handleEdit}>
-            <Ionicons name="create-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity className="bg-danger p-2 rounded-full" onPress={handleDelete}>
-            <Ionicons name="trash-outline" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-      {restaurant.deleted && (
-        <View className="mt-3 mx-4 bg-red-100 px-2 py-2 rounded flex-row gap-2 border-red-600 border-[1px]">
-          <Ionicons className="flex" name="warning-outline" size={16} color="#dc2626" />
-          <Text className="flex text-danger text-sm">Este restaurante ha sido eliminado</Text>
-        </View>
-      )}
-
-      <View className="bg-surface mt-4 mx-4 rounded-xl flex-1 overflow-hidden mb-4">
-        <SegmentedTabs
-          tabs={[
-            {
-              key: 'details',
-              label: 'Detalles',
-              render: () => <RestaurantDetails restaurant={restaurant} />,
-            },
-            {
-              key: 'visits',
-              label: 'Visitas',
-              render: () => <RestaurantVisits restaurant={restaurant} />,
-            },
-            {
-              key: 'dishes',
-              label: 'Platos',
-              render: () => <RestaurantDishes restaurant={restaurant} />,
-            },
-          ]}
-        />
-      </View>
-    </View>
+    <DetailScaffold
+      media={<ImageDisplay images={restaurant.images} />}
+      title={restaurant.name}
+      {...(restaurant.deleted ? { notices: ['Este restaurante ha sido eliminado'] } : {})}
+      meta={
+        restaurant.rating || restaurant.tags.length > 0 ? (
+          <View className="gap-2.5">
+            {restaurant.rating ? (
+              <RatingStars value={restaurant.rating} size={17} gap={2} readOnly />
+            ) : null}
+            {restaurant.tags.length > 0 ? (
+              <View className="flex-row flex-wrap gap-1.5">
+                {restaurant.tags.map((tag) => (
+                  <Tag key={tag.id} name={tag.name} color={tag.color} deleted={tag.deleted} />
+                ))}
+              </View>
+            ) : null}
+          </View>
+        ) : null
+      }
+      actions={[
+        {
+          icon: 'share-outline',
+          label: 'Compartir',
+          onPress: () => void handleShare(),
+          busy: isSharing,
+        },
+        {
+          icon: 'create-outline',
+          label: 'Editar',
+          onPress: () =>
+            router.push({ pathname: '/restaurants/[id]/edit', params: { id: String(id) } }),
+        },
+        {
+          icon: 'trash-outline',
+          label: 'Eliminar',
+          onPress: () => void handleDelete(),
+          danger: true,
+        },
+      ]}
+    >
+      <SegmentedTabs
+        tabs={[
+          {
+            key: 'details',
+            label: 'Detalles',
+            render: () => <RestaurantDetails restaurant={restaurant} />,
+          },
+          {
+            key: 'visits',
+            label: 'Visitas',
+            render: () => <RestaurantVisits restaurant={restaurant} />,
+          },
+          {
+            key: 'dishes',
+            label: 'Platos',
+            render: () => <RestaurantDishes restaurant={restaurant} />,
+          },
+        ]}
+      />
+    </DetailScaffold>
   );
 }
