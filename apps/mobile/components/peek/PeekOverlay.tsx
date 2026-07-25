@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     zIndex: 1001,
     overflow: 'hidden',
-    padding: 16,
+    // No padding: PeekContent runs its photo to the card's edge.
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -210,8 +210,8 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   footer: {
-    marginTop: 8,
-    paddingTop: 8,
+    paddingTop: 10,
+    paddingBottom: 12,
     borderTopWidth: 1,
   },
   measureContainer: {
@@ -222,6 +222,5 @@ const styles = StyleSheet.create({
   },
   measureCard: {
     borderRadius: TARGET_RADIUS,
-    padding: 16,
   },
 });

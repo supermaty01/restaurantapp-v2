@@ -20,7 +20,9 @@ export function IntentHandler() {
 
       try {
         const initialUrl = await Linking.getInitialURL();
-        devLog('IntentHandler', 'Initial URL:', initialUrl);
+        // Only worth a line when there is something to report: the common
+        // case is a plain launch with no deep link, every single time.
+        if (initialUrl) devLog('IntentHandler', 'Initial URL:', initialUrl);
 
         if (initialUrl && isShareFileUrl(initialUrl)) {
           hasHandledInitialUrl.current = true;

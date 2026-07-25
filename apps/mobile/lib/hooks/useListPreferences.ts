@@ -71,7 +71,7 @@ export function useListPreferences(entityType: ListEntityType) {
     return () => {
       cancelled = true;
     };
-  }, [entityType, defaults.sortField, defaults.sortOrder]);
+  }, [entityType, defaults.sortField, defaults.sortOrder, defaults.isGridView]);
 
   const upsert = useCallback(async (key: string, value: string) => {
     try {
