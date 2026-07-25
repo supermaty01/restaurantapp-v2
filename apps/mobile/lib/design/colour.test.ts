@@ -1,4 +1,4 @@
-import { contrastRatio, parseHex, readableInk, withAlpha } from './colour';
+import { contrastRatio, onColor, parseHex, readableInk, withAlpha } from './colour';
 import { darkColors, lightColors } from './tokens';
 
 function contrast(a: string, b: string): number {
@@ -78,5 +78,25 @@ describe('withAlpha', () => {
 
   it('expands short form', () => {
     expect(withAlpha('#fff', 0.5)).toBe('#ffffff80');
+  });
+});
+
+describe('onColor', () => {
+  it('picks ink on pale colours and white on deep ones', () => {
+    expect(onColor('#FFFF99')).toBe('#2A211C');
+    expect(onColor('#FFD700')).toBe('#2A211C');
+    expect(onColor('#8A3F26')).toBe('#FFFFFF');
+    expect(onColor('#2A211C')).toBe('#FFFFFF');
+  });
+
+  it.each(['#FFFF99', '#FFDAB9', '#FF9999', '#8A9A6B', '#C0623D', '#8A3F26'])(
+    'is legible on %s',
+    (colour) => {
+      expect(contrast(onColor(colour), colour)).toBeGreaterThan(4);
+    },
+  );
+
+  it('falls back to white for an unparseable colour', () => {
+    expect(onColor('rebeccapurple')).toBe('#FFFFFF');
   });
 });

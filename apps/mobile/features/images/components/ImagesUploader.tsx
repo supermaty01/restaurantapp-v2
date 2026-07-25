@@ -1,6 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { View, Text, TouchableOpacity, Image, Alert, Linking } from 'react-native';
+import { useState } from 'react';
+import { Alert, Image, Linking, ScrollView, TouchableOpacity, View } from 'react-native';
+
+import { PressableScale } from '@/components/ui/Motion';
+import { Sheet } from '@/components/ui/Sheet';
+import { Txt } from '@/components/ui/Txt';
+import { useTheme } from '@/lib/context/ThemeContext';
+
+import type { ComponentProps } from 'react';
 
 interface ImagesUploaderBaseProps {
   disabled?: boolean | undefined;
@@ -41,6 +49,8 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
   // union on `props.isEdit` inside each handler; that removes the `as any`
   // casts v1 needed because the destructured callback was an untyped union.
   const { disabled, isEdit, images } = props;
+  const { colors } = useTheme();
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const addImages = (uris: string[]) => {
     if (props.isEdit) {
@@ -112,55 +122,117 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
     }
   };
 
+  const uris = isEdit
+    ? (images as ImageItem[]).map((image) => ({ key: image.uri, uri: image.uri, item: image }))
+    : (images as string[]).map((uri) => ({ key: uri, uri, item: uri }));
+
   return (
-    <View className="mt-4">
-      <Text className="text-xl font-bold mb-2 text-ink">Fotos</Text>
-      <View className="flex-row gap-2 mb-4">
+    <View className="gap-2.5">
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {uris.map(({ key, uri, item }) => (
+          <View key={key} style={{ width: TILE, height: TILE }}>
+            <Image
+              source={{ uri }}
+              style={{ width: TILE, height: TILE, borderRadius: 14 }}
+              resizeMode="cover"
+            />
+            <TouchableOpacity
+              onPress={() => removeImage(item as never)}
+              disabled={disabled}
+              accessibilityRole="button"
+              accessibilityLabel="Quitar foto"
+              hitSlop={8}
+              className="absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-pill"
+              style={{ backgroundColor: 'rgba(26, 21, 18, 0.65)' }}
+            >
+              <Ionicons name="close" size={14} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        ))}
+
         <TouchableOpacity
-          className="bg-line-strong px-3 py-2 rounded-md"
-          onPress={pickFromGallery}
+          onPress={() => setPickerOpen(true)}
           disabled={disabled}
+          accessibilityRole="button"
+          accessibilityLabel="Añadir foto"
+          style={{ width: TILE, height: TILE }}
+          className="items-center justify-center gap-1.5 rounded-[14px] border-[1.5px] border-dashed border-line-strong"
         >
-          <Text className="text-ink">Seleccionar archivos</Text>
+          <Ionicons name="add" size={22} color={colors.inkSubtle} />
+          <Txt variant="overline" tone="subtle" serif={false}>
+            {uris.length === 0 ? 'Añadir' : 'Más'}
+          </Txt>
         </TouchableOpacity>
-        <TouchableOpacity
-          className="bg-line-strong px-3 py-2 rounded-md"
-          onPress={pickFromCamera}
-          disabled={disabled}
-        >
-          <Text className="text-ink">Abrir cámara</Text>
-        </TouchableOpacity>
-      </View>
-      {isEdit
-        ? images.map((image) => (
-            <View key={image.uri} className="mb-2">
-              <Image
-                source={{ uri: image.uri }}
-                className="w-full h-40 mb-1 rounded-md"
-                resizeMode="cover"
-              />
-              <TouchableOpacity
-                onPress={() => removeImage(image)}
-                className="bg-danger px-3 py-2 rounded-md w-28 flex-row justify-center"
-                disabled={disabled}
-              >
-                <Ionicons name="trash-outline" size={16} color="#fff" className="mr-2" />
-                <Text className="text-on-primary font-semibold">Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        : images.map((uri) => (
-            <View key={uri} className="mb-2">
-              <Image source={{ uri }} className="w-full h-40 mb-1 rounded-md" resizeMode="cover" />
-              <TouchableOpacity
-                onPress={() => removeImage(uri)}
-                className="bg-danger px-3 py-2 rounded-md w-24 text-center"
-                disabled={disabled}
-              >
-                <Text className="text-on-primary font-semibold">Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          ))}
+      </ScrollView>
+
+      {uris.length > 0 ? (
+        <Txt variant="caption" tone="subtle">
+          {uris.length} {uris.length === 1 ? 'foto' : 'fotos'}
+        </Txt>
+      ) : null}
+
+      <Sheet
+        visible={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Añadir una foto"
+        maxHeightRatio={0.45}
+      >
+        <View className="gap-2.5 px-5 pb-4 pt-1">
+          <SourceOption
+            icon="camera"
+            label="Hacer una foto"
+            onPress={() => {
+              setPickerOpen(false);
+              void pickFromCamera();
+            }}
+          />
+          <SourceOption
+            icon="images"
+            label="Elegir de la galería"
+            onPress={() => {
+              setPickerOpen(false);
+              void pickFromGallery();
+            }}
+          />
+        </View>
+      </Sheet>
     </View>
+  );
+}
+
+/** Square edge of a thumbnail in the strip. */
+const TILE = 96;
+
+function SourceOption({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: ComponentProps<typeof Ionicons>['name'];
+  label: string;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <PressableScale
+      accessibilityLabel={label}
+      onPress={onPress}
+      scaleTo={0.98}
+      className="flex-row items-center gap-3.5 rounded-xl border border-line bg-surface p-3.5"
+    >
+      <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary/12">
+        <Ionicons name={icon} size={20} color={colors.primary} />
+      </View>
+      <Txt variant="heading" weight="bold" serif={false} className="flex-1">
+        {label}
+      </Txt>
+      <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
+    </PressableScale>
   );
 }

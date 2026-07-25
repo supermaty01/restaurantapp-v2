@@ -7,7 +7,6 @@ import { View, Alert, ActivityIndicator } from 'react-native';
 import FormInput from '@/components/FormInput';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
-import { Button } from '@/components/ui/Button';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
@@ -15,8 +14,7 @@ import { useRestaurantById } from '@/features/restaurants/hooks/useRestaurantByI
 import { updateRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
 import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
 import { restaurantSchema } from '@/features/restaurants/schemas/restaurant-schema';
-import Tag from '@/features/tags/components/Tag';
-import TagSelectorModal from '@/features/tags/components/TagSelectorModal';
+import { TagField } from '@/features/tags/components/TagField';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
@@ -41,7 +39,6 @@ export default function RestaurantEditScreen() {
   const [selectedTags, setSelectedTags] = useState<TagDTO[]>([]);
   const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
   const [removedImages, setRemovedImages] = useState<number[]>([]);
-  const [isTagModalVisible, setTagModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const drizzleDb = useDatabase();
@@ -142,34 +139,18 @@ export default function RestaurantEditScreen() {
         </View>
       </FormSection>
 
-      <FormSection
-        title="Etiquetas"
-        hint={selectedTags.length > 0 ? `${selectedTags.length} elegidas` : 'Para agruparlo luego'}
-        action={
-          <Button
-            label={selectedTags.length > 0 ? 'Cambiar' : 'Añadir'}
-            icon="pricetag-outline"
-            variant="secondary"
-            size="sm"
-            onPress={() => setTagModalVisible(true)}
-          />
-        }
-      >
-        {selectedTags.length > 0 ? (
-          <View className="flex-row flex-wrap gap-1.5">
-            {selectedTags.map((tag) => (
-              <Tag name={tag.name} color={tag.color} key={tag.id} />
-            ))}
-          </View>
-        ) : null}
+      <FormSection title="Etiquetas" hint="Para agruparlo y filtrarlo luego">
+        <TagField selected={selectedTags} onChange={setSelectedTags} />
       </FormSection>
 
-      <TagSelectorModal
-        visible={isTagModalVisible}
-        onClose={() => setTagModalVisible(false)}
-        selectedTags={selectedTags}
-        onChangeSelected={setSelectedTags}
-      />
+      <FormSection title="Fotos" hint="Opcional">
+        <ImagesUploader
+          isEdit
+          images={selectedImages}
+          onChangeImages={setSelectedImages}
+          onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
+        />
+      </FormSection>
 
       <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader

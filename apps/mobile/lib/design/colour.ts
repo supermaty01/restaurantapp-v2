@@ -172,3 +172,22 @@ export function withAlpha(color: string, alpha: number): string {
 
   return `${toHex(rgb)}${channel}`;
 }
+
+/**
+ * Black or white — whichever is legible **on** the given colour.
+ *
+ * For filled surfaces, where the text sits on the user's colour rather than on
+ * a wash of it. `readableInk` is the wrong tool there: it keeps the hue, which
+ * is exactly what you do not want when the hue is the background.
+ */
+export function onColor(background: string): string {
+  const rgb = parseHex(background);
+  if (!rgb) return '#FFFFFF';
+
+  // Compare against the Clay ink rather than pure black: a warm dark reads
+  // better on a warm colour, and it is the same ink used everywhere else.
+  const ink = { r: 42, g: 33, b: 28 };
+  const white = { r: 255, g: 255, b: 255 };
+
+  return contrastRatio(ink, rgb) >= contrastRatio(white, rgb) ? '#2A211C' : '#FFFFFF';
+}
