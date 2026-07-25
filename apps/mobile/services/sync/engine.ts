@@ -16,6 +16,27 @@ const CURSOR_PREFIX = 'sync_cursor_';
  * in records.ts. The engine holds no Supabase dependency, so it is tested
  * against an in-memory fake transport.
  */
+/** Rows per push request. */
+const PUSH_BATCH = 200;
+
+/**
+ * Ids per `synced = true` statement.
+ *
+ * Well under SQLite's variable limit (999 on older builds, 32766 on newer):
+ * there is nothing to gain from being close to it, and the failure mode is the
+ * whole sync dying rather than a slow query.
+ */
+const MARK_BATCH = 400;
+
+function chunk<T>(items: T[], size: number): T[][] {
+  if (items.length <= size) return items.length > 0 ? [items] : [];
+  const batches: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    batches.push(items.slice(i, i + size));
+  }
+  return batches;
+}
+
 export class SyncEngine {
   constructor(
     private readonly db: AppDatabase,
@@ -77,18 +98,26 @@ export class SyncEngine {
         }
       }
 
-      await this.transport.push(cfg.name, records);
+      // In batches: a first sync of an imported diary pushes thousands of rows,
+      // and one request carrying all of them is a body no free tier enjoys.
+      for (const batch of chunk(records, PUSH_BATCH)) {
+        await this.transport.push(cfg.name, batch);
+      }
       // Mark exactly the entries that were just sent. A blanket
       // `where(synced = false)` would also swallow changes enqueued *during*
       // this push (and any table not in SYNC_TABLES), losing them silently.
       pushedIds.push(...forTable.map((c) => c.id));
     }
 
-    if (pushedIds.length > 0) {
+    // Also in batches: `inArray` becomes one bound parameter per id, and past
+    // SQLite's variable limit the statement is rejected outright rather than
+    // running slowly. A first sync sends one entry per existing row, so the
+    // count is bounded by the diary's size and not by anything we control.
+    for (const batch of chunk(pushedIds, MARK_BATCH)) {
       await this.db
         .update(schema.changeLog)
         .set({ synced: true })
-        .where(inArray(schema.changeLog.id, pushedIds));
+        .where(inArray(schema.changeLog.id, batch));
     }
   }
 

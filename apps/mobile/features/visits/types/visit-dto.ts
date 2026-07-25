@@ -9,7 +9,8 @@ export interface DishBasicDTO {
 
 export interface VisitDetailsDTO {
   id: number;
-  visited_at: string;
+  /** Absent in visits imported from v1 (docs/09). */
+  visited_at: string | null;
   comments: string | null;
   deleted: boolean;
   restaurant: {
@@ -23,7 +24,8 @@ export interface VisitDetailsDTO {
 
 export interface VisitListDTO {
   id: number;
-  visited_at: string;
+  /** Absent in visits imported from v1 (docs/09). */
+  visited_at: string | null;
   comments: string | null;
   deleted: boolean;
   restaurant: {
@@ -37,7 +39,8 @@ export interface VisitListDTO {
 // Mantener para compatibilidad con código existente
 export interface VisitDTO {
   id: string;
-  visited_at: string;
+  /** Absent in visits imported from v1 (docs/09). */
+  visited_at: string | null;
   comments: string;
   restaurant: RestaurantDetailsDTO;
   images: ImageDTO[];

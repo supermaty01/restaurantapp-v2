@@ -56,7 +56,11 @@ export const restaurants = sqliteTable('restaurants', {
 // Tabla de visitas
 export const visits = sqliteTable('visits', {
   id: integer('id').primaryKey({ autoIncrement: true }),
-  visitedAt: text('visited_at').notNull(),
+  // Nullable, like the mirror: imported v1 diaries contain visits with no
+  // recorded date, and a pull of one of those failed the local insert with
+  // "NOT NULL constraint failed". The app copes — the month timeline groups
+  // them under "Sin fecha".
+  visitedAt: text('visited_at'),
   comments: text('comments'),
   restaurantId: integer('restaurant_id').references(() => restaurants.id),
   userId: integer('user_id').references(() => users.id),

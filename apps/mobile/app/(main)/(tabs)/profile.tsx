@@ -132,7 +132,9 @@ function AccountCard({
           />
           {/* The reason, not just the fact. "Error al sincronizar" with no
               detail leaves the only person who can fix it guessing. */}
-          <Text className="flex-1 text-[13px] text-ink-muted" numberOfLines={2}>
+          {/* Not truncated: a native error's useful half is at the end, and
+              cutting it left "…has been rejected...." with the reason gone. */}
+          <Text className="flex-1 text-[13px] text-ink-muted">
             {syncError ?? SYNC_LABEL[syncStatus] ?? syncStatus}
           </Text>
         </View>

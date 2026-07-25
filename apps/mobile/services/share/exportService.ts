@@ -146,7 +146,9 @@ async function fetchVisitData(db: DrizzleDb, visitId: number): Promise<Shareable
       if (shareableImg) images.push(shareableImg);
     }
 
-    return { visitedAt: visit.visitedAt, comments: visit.comments, images };
+    // The share format has always carried a string; an undated visit
+    // travels as empty rather than changing a format other installs parse.
+    return { visitedAt: visit.visitedAt ?? '', comments: visit.comments, images };
   } catch {
     return null;
   }

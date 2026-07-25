@@ -9,6 +9,7 @@ import m0004 from './0004_magical_virginia_dare.sql';
 import m0005 from './0005_slow_calypso.sql';
 import m0006 from './0006_boring_wrecking_crew.sql';
 import m0007 from './0007_add_sync_columns.sql';
+import m0008 from './0008_visit_date_optional.sql';
 
   export default {
     journal,
@@ -20,7 +21,8 @@ m0003,
 m0004,
 m0005,
 m0006,
-m0007
+m0007,
+m0008
     }
   }
   

@@ -20,6 +20,7 @@ import {
 } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
 import { visitSchema } from '@/features/visits/schemas/visit-schema';
+import { getTodayLocalDateString } from '@/lib/helpers/date';
 import { reportError } from '@/lib/helpers/report-error';
 import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
@@ -55,7 +56,9 @@ export default function VisitEditScreen() {
   useEffect(() => {
     if (visit?.id) {
       reset({
-        visited_at: visit.visited_at,
+        // The form requires a date even where the stored visit lacks one:
+        // editing is the moment to give it the date it never had.
+        visited_at: visit.visited_at ?? getTodayLocalDateString(),
         comments: visit.comments || '',
         restaurantId: visit.restaurant.id,
         dishes: visit.dishes.map((dish) => dish.id),

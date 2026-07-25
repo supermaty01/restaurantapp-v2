@@ -24,7 +24,8 @@ export interface MonthSection<T> {
 }
 
 /** `YYYY-MM-DD` or an ISO timestamp → `{ year, month }`, in local time. */
-function parseYearMonth(value: string): { year: number; month: number } | null {
+function parseYearMonth(value: string | null | undefined): { year: number; month: number } | null {
+  if (!value) return null;
   const dateOnly = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   if (dateOnly) {
     return { year: Number(dateOnly[1]), month: Number(dateOnly[2]) - 1 };
@@ -48,7 +49,7 @@ function parseYearMonth(value: string): { year: number; month: number } | null {
  */
 export function groupByMonth<T>(
   items: T[],
-  getDate: (item: T) => string,
+  getDate: (item: T) => string | null | undefined,
   columns: number,
   now: Date = new Date(),
   /** Which way the months run. The timeline has to honour the chosen order. */

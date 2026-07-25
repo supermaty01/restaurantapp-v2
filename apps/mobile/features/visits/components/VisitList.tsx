@@ -99,7 +99,15 @@ export function VisitList() {
     result.sort((a, b) => {
       let comparison = 0;
       if (filterOptions.sortField === 'date') {
-        comparison = new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime();
+        // Undated visits sort last whichever way the rest runs, rather than
+        // landing at the epoch and pretending to be the oldest thing you ate.
+        const aTime = a.visited_at ? new Date(a.visited_at).getTime() : null;
+        const bTime = b.visited_at ? new Date(b.visited_at).getTime() : null;
+        if (aTime === null || bTime === null) {
+          comparison = aTime === bTime ? 0 : aTime === null ? 1 : -1;
+        } else {
+          comparison = aTime - bTime;
+        }
       } else if (filterOptions.sortField === 'restaurant') {
         comparison = a.restaurant.name.localeCompare(b.restaurant.name);
       }

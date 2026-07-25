@@ -68,7 +68,7 @@ export async function countDishOccurrences(
 
 export interface VisitSummary {
   visitId: number;
-  visitedAt: string;
+  visitedAt: string | null;
   restaurantName: string | null;
 }
 

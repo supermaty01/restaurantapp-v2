@@ -13,7 +13,8 @@ const SPANISH_MONTHS = [
   'Diciembre',
 ];
 
-function parseDateOnlyAsLocal(dateValue: string): Date | null {
+function parseDateOnlyAsLocal(dateValue: string | null | undefined): Date | null {
+  if (!dateValue) return null;
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateValue);
   if (!match) {
     return null;
@@ -23,7 +24,10 @@ function parseDateOnlyAsLocal(dateValue: string): Date | null {
   return new Date(Number(year), Number(month) - 1, Number(day));
 }
 
-export function formatVisitDate(dateValue: string): string {
+export function formatVisitDate(dateValue: string | null | undefined): string {
+  // Imported v1 diaries contain visits with no date (docs/09). Saying so beats
+  // every caller guarding, and beats printing "null".
+  if (!dateValue) return 'Sin fecha';
   const parsedDate = parseDateOnlyAsLocal(dateValue);
   if (!parsedDate) {
     return dateValue;
@@ -65,7 +69,8 @@ const SPANISH_MONTHS_SHORT = [
  * year stops being obvious. Accepts both the `YYYY-MM-DD` the local database
  * stores and the ISO timestamps the server returns.
  */
-export function formatDate(dateValue: string, now: Date = new Date()): string {
+export function formatDate(dateValue: string | null | undefined, now: Date = new Date()): string {
+  if (!dateValue) return 'Sin fecha';
   const parsed = parseDateOnlyAsLocal(dateValue) ?? new Date(dateValue);
   if (Number.isNaN(parsed.getTime())) {
     return dateValue;
@@ -82,7 +87,11 @@ export function formatDate(dateValue: string, now: Date = new Date()): string {
  * How long ago something happened, for the feed. Falls back to an absolute date
  * after a week, where "hace 23 días" stops being easier to read than "3 jul".
  */
-export function formatRelativeDate(dateValue: string, now: Date = new Date()): string {
+export function formatRelativeDate(
+  dateValue: string | null | undefined,
+  now: Date = new Date(),
+): string {
+  if (!dateValue) return 'Sin fecha';
   const parsed = parseDateOnlyAsLocal(dateValue) ?? new Date(dateValue);
   if (Number.isNaN(parsed.getTime())) {
     return dateValue;

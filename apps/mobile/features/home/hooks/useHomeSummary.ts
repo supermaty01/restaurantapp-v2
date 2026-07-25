@@ -8,7 +8,7 @@ import * as schema from '@/services/db/schema';
 
 export interface RecentVisit {
   id: number;
-  visitedAt: string;
+  visitedAt: string | null;
   comments: string | null;
   restaurantName: string | null;
   imagePath: string | null;
