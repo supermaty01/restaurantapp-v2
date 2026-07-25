@@ -11,12 +11,16 @@ import {
   Animated,
   ActivityIndicator,
   PanResponder,
+  Pressable,
   StyleSheet,
+  TextInput,
 } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 
+import { RestaurantMarker } from '@/features/restaurants/components/RestaurantMarker';
 import { useRestaurantMapList } from '@/features/restaurants/hooks/useRestaurantMapList';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { elevation } from '@/lib/design/tokens';
 import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
 import { getPlaceDetails } from '@/services/places';
 
@@ -55,6 +59,33 @@ export default function MapScreen() {
   const panDrawerStart = useRef(0);
 
   const currentRegion = useCurrentRegion();
+
+  const [query, setQuery] = useState('');
+  const [focusedId, setFocusedId] = useState<number | null>(null);
+
+  const matches = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (term.length < 2) return [];
+    return restaurants.filter((r) => r.name.toLowerCase().includes(term)).slice(0, 6);
+  }, [restaurants, query]);
+
+  /** Flies to a place and marks it, so you can see which one you picked. */
+  const focusRestaurant = useCallback(
+    (restaurant: { id: number; latitude: number; longitude: number }) => {
+      setFocusedId(restaurant.id);
+      setQuery('');
+      mapRef.current?.animateToRegion(
+        {
+          latitude: restaurant.latitude,
+          longitude: restaurant.longitude,
+          latitudeDelta: 0.008,
+          longitudeDelta: 0.008,
+        },
+        700,
+      );
+    },
+    [],
+  );
 
   const initialRegion = useMemo(() => {
     if (restaurants.length > 0) {
@@ -253,23 +284,76 @@ export default function MapScreen() {
           onPress={handleMapPress}
         >
           {restaurants.map((restaurant) => (
-            <Marker
+            <RestaurantMarker
               key={restaurant.id}
-              coordinate={{
-                latitude: restaurant.latitude,
-                longitude: restaurant.longitude,
-              }}
-              title={restaurant.name}
-              {...(restaurant.rating ? { description: `⭐ ${restaurant.rating}/5` } : {})}
-              onCalloutPress={() =>
+              latitude={restaurant.latitude}
+              longitude={restaurant.longitude}
+              name={restaurant.name}
+              rating={restaurant.rating ?? null}
+              selected={focusedId === restaurant.id}
+              onPress={() =>
                 router.push({
                   pathname: '/restaurants/[id]/view',
-                  params: { id: restaurant.id },
+                  params: { id: String(restaurant.id) },
                 })
               }
             />
           ))}
         </MapView>
+
+        {/* A map you cannot search is a map you can only pan. With a few
+            hundred places, panning is not a way to find anything. */}
+        <View
+          className="absolute inset-x-0 top-0 px-5 pt-3"
+          pointerEvents="box-none"
+          style={{ gap: 8 }}
+        >
+          <View
+            className="flex-row items-center gap-2.5 rounded-pill border border-line bg-surface px-4 py-3"
+            style={elevation.medium}
+          >
+            <Ionicons name="search" size={17} color={colors.inkSubtle} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Buscar en tus lugares…"
+              placeholderTextColor={colors.inkSubtle}
+              autoCorrect={false}
+              returnKeyType="search"
+              className="flex-1 text-ink"
+              style={{ fontSize: 15, paddingVertical: 2 }}
+            />
+            {query.length > 0 ? (
+              <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Limpiar">
+                <Ionicons name="close-circle" size={18} color={colors.inkSubtle} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {matches.length > 0 ? (
+            <View
+              className="overflow-hidden rounded-xl border border-line bg-surface"
+              style={elevation.medium}
+            >
+              {matches.map((restaurant, index) => (
+                <Pressable
+                  key={restaurant.id}
+                  accessibilityRole="button"
+                  accessibilityLabel={restaurant.name}
+                  onPress={() => focusRestaurant(restaurant)}
+                  className={`flex-row items-center gap-2.5 px-4 py-3 active:bg-sunken ${
+                    index > 0 ? 'border-t border-line' : ''
+                  }`}
+                >
+                  <Ionicons name="location" size={15} color={colors.primary} />
+                  <Text className="flex-1 text-ink" numberOfLines={1}>
+                    {restaurant.name}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          ) : null}
+        </View>
 
         {loadingPoi && (
           <View
