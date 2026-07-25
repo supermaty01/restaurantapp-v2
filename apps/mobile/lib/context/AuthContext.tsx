@@ -1,6 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 
+import { describeAuthError } from '@/lib/helpers/auth-errors';
 import { devLog } from '@/lib/helpers/dev-log';
 import { parseOAuthCallback } from '@/lib/helpers/oauth-callback';
 import { redactUrl } from '@/lib/helpers/redact';
@@ -130,9 +131,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         case 'error':
           // Supabase itself failed the exchange with the provider and passed
-          // the reason back in the redirect. Nothing the app did causes this.
+          // the reason back in the redirect. Nothing the app did causes this,
+          // so the message says who can actually fix it.
           devLog('Auth', 'el proveedor devolvió un error:', callback.message);
-          return { error: callback.message };
+          return { error: describeAuthError(callback.message) };
         case 'unrecognised':
           return {
             error: `El proveedor no devolvió ninguna credencial${

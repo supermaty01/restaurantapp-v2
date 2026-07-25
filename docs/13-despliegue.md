@@ -142,6 +142,27 @@ https://<proyecto>.supabase.co/auth/v1/callback
 No `restaurantapp://auth/callback`: ese es el salto siguiente, el que Supabase
 hace hacia la app, y va en Supabase (paso 2 de arriba), no en Google.
 
+### Cuando el login falle, los Auth Logs tienen la respuesta
+
+Supabase devuelve el fallo a la app como `Unable to exchange external code: …`,
+que no dice nada. El motivo real está en **Logs → Auth Logs**, filtrando por el
+endpoint `/callback` justo después de reproducirlo. Aparece el mensaje literal
+del proveedor:
+
+| Lo que dice Google                            | Qué arreglar                                              |
+| --------------------------------------------- | --------------------------------------------------------- |
+| `"invalid client" "client secret is invalid"` | El secreto de Supabase no es el del cliente de Google     |
+| `redirect_uri_mismatch`                       | El URI que envía Supabase no está registrado tal cual     |
+| `invalid_grant`                               | Código ya usado o caducado; mirar la hora del dispositivo |
+| `unauthorized_client`                         | El tipo de cliente no admite este flujo                   |
+
+Para el secreto: cópialo con **el icono de descarga** de Google Cloud, nunca
+seleccionando el texto. Un espacio invisible al pegar es la causa más frecuente
+de `invalid client`, y desde el dashboard los dos secretos se ven idénticos.
+
+La app traduce estos errores a mensajes accionables
+(`lib/helpers/auth-errors.ts`), pero la fuente de verdad son los logs.
+
 ### Que la pantalla de permisos diga «RestaurantApp»
 
 Si Google muestra «…permitirá que `xxxx.supabase.co` acceda a esta información»
