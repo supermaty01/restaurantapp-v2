@@ -20,8 +20,6 @@ Lo decide el servidor (`user_profile`, `user_entries`), nunca el cliente.
 
 ## Visibilidad
 
-Por entidad: `private` (default) | `friends` | `public`.
-
 Por entidad, el valor guardado es uno de cuatro: **`default`** | `private` | `friends` | `public`.
 
 `default` **no es un hueco ni una copia**: es un valor real que significa "lo que digan mis ajustes generales, ahora y más adelante". Se resuelve **al leer**, no al escribir.
