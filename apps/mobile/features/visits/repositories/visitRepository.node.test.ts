@@ -23,7 +23,7 @@ describe('visitRepository — people tagging', () => {
       db,
       { visitedAt: '2026-03-01', comments: null, restaurantId },
       [],
-      ['Irene', 'Caro'],
+      [{ name: 'Irene' }, { name: 'Caro' }],
     );
 
     const people = await db.select().from(schema.people);
@@ -41,8 +41,18 @@ describe('visitRepository — people tagging', () => {
     const { db } = makeTestDb();
     const restaurantId = await seedRestaurant(db);
 
-    await createVisit(db, { visitedAt: '2026-03-01', comments: null, restaurantId }, [], ['Caro']);
-    await createVisit(db, { visitedAt: '2026-03-08', comments: null, restaurantId }, [], ['Caro']);
+    await createVisit(
+      db,
+      { visitedAt: '2026-03-01', comments: null, restaurantId },
+      [],
+      [{ name: 'Caro' }],
+    );
+    await createVisit(
+      db,
+      { visitedAt: '2026-03-08', comments: null, restaurantId },
+      [],
+      [{ name: 'Caro' }],
+    );
 
     const people = await db.select().from(schema.people).where(eq(schema.people.name, 'Caro'));
     expect(people).toHaveLength(1);
@@ -55,7 +65,7 @@ describe('visitRepository — people tagging', () => {
       db,
       { visitedAt: '2026-03-01', comments: null, restaurantId },
       [],
-      ['Irene', 'Caro'],
+      [{ name: 'Irene' }, { name: 'Caro' }],
     );
 
     await updateVisit(
@@ -63,7 +73,7 @@ describe('visitRepository — people tagging', () => {
       visitId,
       { visitedAt: '2026-03-01', comments: null, restaurantId },
       [],
-      ['Nacho'],
+      [{ name: 'Nacho' }],
     );
 
     const participants = await db
@@ -86,7 +96,7 @@ describe('visitRepository — people tagging', () => {
       db,
       { visitedAt: '2026-03-01', comments: null, restaurantId },
       [],
-      ['Caro', '  ', 'Caro'],
+      [{ name: 'Caro' }, { name: '  ' }, { name: 'Caro' }],
     );
 
     const participants = await db

@@ -12,10 +12,11 @@ import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
+import type { PersonTag } from '@/features/people/repositories/peopleRepository';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
 import {
-  getVisitParticipantNames,
+  getVisitParticipants,
   updateVisit,
 } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
@@ -46,7 +47,7 @@ export default function VisitEditScreen() {
   const [selectedDishes, setSelectedDishes] = useState<DishListDTO[]>([]);
   const [selectedImages, setSelectedImages] = useState<ImageItem[]>([]);
   const [removedImages, setRemovedImages] = useState<number[]>([]);
-  const [participants, setParticipants] = useState<string[]>([]);
+  const [participants, setParticipants] = useState<PersonTag[]>([]);
 
   const drizzleDb = useDatabase();
   const visit = useVisitById(Number(id));
@@ -65,7 +66,7 @@ export default function VisitEditScreen() {
       });
 
       setSelectedImages(visit.images);
-      void getVisitParticipantNames(drizzleDb, Number(id)).then(setParticipants);
+      void getVisitParticipants(drizzleDb, Number(id)).then(setParticipants);
       setSelectedDishes(
         visit.dishes.map((dish) => ({
           id: dish.id,

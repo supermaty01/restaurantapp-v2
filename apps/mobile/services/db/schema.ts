@@ -98,6 +98,14 @@ export const tags = sqliteTable('tags', {
 export const people = sqliteTable('people', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
+  // La cuenta a la que apunta esta persona, si apunta a alguna. Es el uuid de
+  // auth, no un id local: quien te acompaña en una comida vive en el movil de
+  // otra persona, y su fila local aqui es solo una etiqueta con un puntero.
+  // Sin cuenta vinculada, "Irene" es una persona perfectamente valida.
+  linkedAccountUuid: text('linked_account_uuid'),
+  // El @handle en el momento de etiquetar, para poder pintar la etiqueta sin
+  // pedirle el perfil al servidor (y sin conexion).
+  username: text('username'),
   linkedUserId: integer('linked_user_id').references(() => users.id),
   userId: integer('user_id').references(() => users.id),
   deleted: integer('deleted', { mode: 'boolean' }).notNull().default(false),

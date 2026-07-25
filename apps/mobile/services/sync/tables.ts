@@ -123,7 +123,14 @@ export const SYNC_TABLES: SyncTableConfig[] = [
   {
     name: 'people',
     table: schema.people,
-    scalars: [{ local: 'name', remote: 'name', required: true }],
+    scalars: [
+      { local: 'name', remote: 'name', required: true },
+      // The account a tag points at, and the handle at the time of tagging.
+      // Both travel so a tag renders the same on every device, and so the
+      // server can work out who a visit was shared with.
+      { local: 'linkedAccountUuid', remote: 'linked_user_id' },
+      { local: 'username', remote: 'username' },
+    ],
     foreignKeys: [],
   },
   {

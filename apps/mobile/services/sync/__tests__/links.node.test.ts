@@ -61,7 +61,7 @@ async function seedDiary(db: AppDatabase) {
     db,
     { restaurantId, visitedAt: '2026-01-05', comments: null },
     [dishId],
-    ['Irene'],
+    [{ name: 'Irene' }],
   );
 
   return { tagId: tag!.id, restaurantId, dishId, visitId };

@@ -1,4 +1,5 @@
 import type { ImageDTO } from '@/features/images/types/image-dto';
+import type { PersonTag } from '@/features/people/repositories/peopleRepository';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 
 export interface DishBasicDTO {
@@ -20,6 +21,8 @@ export interface VisitDetailsDTO {
   };
   images: ImageDTO[];
   dishes: DishBasicDTO[];
+  /** Who was there. Empty is the normal case, not a missing value. */
+  people: PersonTag[];
 }
 
 export interface VisitListDTO {

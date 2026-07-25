@@ -69,13 +69,13 @@ async function seedDiary(db: AppDatabase) {
     db,
     { visitedAt: '2026-02-15', comments: null, restaurantId: local },
     [burger],
-    ['Caro'],
+    [{ name: 'Caro' }],
   );
   await createVisit(
     db,
     { visitedAt: '2026-06-20', comments: null, restaurantId: local },
     [burger],
-    ['Caro', 'Irene'],
+    [{ name: 'Caro' }, { name: 'Irene' }],
   );
 }
 

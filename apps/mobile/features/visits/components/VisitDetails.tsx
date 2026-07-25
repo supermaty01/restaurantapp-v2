@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { ScrollView, View } from 'react-native';
 
+import { Avatar } from '@/components/ui/Avatar';
 import { DetailField } from '@/components/ui/DetailScaffold';
 import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
@@ -40,6 +41,33 @@ export default function VisitDetails({ visit }: { visit: VisitDetailsDTO }) {
           <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
         </PressableScale>
       </DetailField>
+
+      {/* Only when there is someone. An empty "Con quién" on every solo meal
+          would make eating alone look like a field you forgot to fill in. */}
+      {visit.people.length > 0 ? (
+        <DetailField label="Con quién">
+          <View className="flex-row flex-wrap gap-2">
+            {visit.people.map((person) => (
+              <View
+                key={person.accountUuid ?? person.name}
+                className="flex-row items-center gap-2 rounded-pill border border-line bg-surface py-1.5 pl-1.5 pr-3.5"
+              >
+                <Avatar name={person.name} size={26} />
+                <View>
+                  <Txt variant="caption" weight="semi" serif={false}>
+                    {person.name}
+                  </Txt>
+                  {person.username && person.username !== person.name ? (
+                    <Txt variant="caption" tone="subtle">
+                      @{person.username}
+                    </Txt>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </View>
+        </DetailField>
+      ) : null}
 
       <DetailField label="Comentarios" value={visit.comments} empty="Sin comentarios" />
     </ScrollView>

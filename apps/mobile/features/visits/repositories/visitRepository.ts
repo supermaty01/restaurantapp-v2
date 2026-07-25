@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 
 import { findOrCreatePerson } from '@/features/people/repositories/peopleRepository';
+import type { PersonTag } from '@/features/people/repositories/peopleRepository';
 import type { Visibility } from '@/features/privacy/visibility';
 import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange, touchedAt } from '@/services/db/sync-write';
@@ -14,24 +15,27 @@ export interface VisitWriteInput {
   restaurantId: number;
 }
 
-/** Names of the people tagged on a visit (for pre-filling the edit form). */
-export async function getVisitParticipantNames(
+/** The people tagged on a visit, for the detail screen and the edit form. */
+export async function getVisitParticipants(
   db: AppDatabase,
   visitId: number,
-): Promise<string[]> {
-  const rows = await db
-    .select({ name: schema.people.name })
+): Promise<PersonTag[]> {
+  return db
+    .select({
+      name: schema.people.name,
+      accountUuid: schema.people.linkedAccountUuid,
+      username: schema.people.username,
+    })
     .from(schema.visitParticipants)
     .innerJoin(schema.people, eq(schema.visitParticipants.personId, schema.people.id))
     .where(eq(schema.visitParticipants.visitId, visitId));
-  return rows.map((r) => r.name);
 }
 
 export async function createVisit(
   db: AppDatabase,
   input: VisitWriteInput,
   dishIds: number[] = [],
-  participantNames: string[] = [],
+  participants: PersonTag[] = [],
 ): Promise<number> {
   const [row] = await db
     .insert(schema.visits)
@@ -42,7 +46,7 @@ export async function createVisit(
 
   await recordChange(db, 'visits', row.id, row.uuid, 'insert');
   await setVisitDishes(db, row.id, dishIds);
-  await setVisitParticipants(db, row.id, participantNames);
+  await setVisitParticipants(db, row.id, participants);
   return row.id;
 }
 
@@ -51,7 +55,7 @@ export async function updateVisit(
   id: number,
   input: VisitWriteInput,
   dishIds: number[] = [],
-  participantNames: string[] = [],
+  participants: PersonTag[] = [],
 ): Promise<void> {
   const [row] = await db
     .update(schema.visits)
@@ -63,7 +67,7 @@ export async function updateVisit(
 
   await recordChange(db, 'visits', id, row.uuid, 'update');
   await setVisitDishes(db, id, dishIds);
-  await setVisitParticipants(db, id, participantNames);
+  await setVisitParticipants(db, id, participants);
 }
 
 export async function softDeleteVisit(db: AppDatabase, id: number): Promise<void> {
@@ -98,19 +102,27 @@ async function setVisitDishes(db: AppDatabase, visitId: number, dishIds: number[
 }
 
 /**
- * Tags people on a visit. Names are resolved to person rows (created on demand);
- * the participation starts as 'local' — the pending/accepted social flow
- * (docs/06) lands with accounts in phase 5.
+ * Tags people on a visit, resolving each tag to a person row.
+ *
+ * `tagStatus` records whether the tag can travel: 'local' for someone without
+ * an account — nothing to deliver it to — and 'pending' for a tagged friend,
+ * who will see it in their own app once the visit syncs. Nobody is asked to
+ * approve being tagged; the status exists so a tag that *can* reach a person is
+ * distinguishable from one that is just a name written down.
  */
-async function setVisitParticipants(db: AppDatabase, visitId: number, names: string[]) {
+async function setVisitParticipants(db: AppDatabase, visitId: number, tags: PersonTag[]) {
   await db.delete(schema.visitParticipants).where(eq(schema.visitParticipants.visitId, visitId));
 
   const seen = new Set<number>();
-  for (const name of names) {
-    if (!name.trim()) continue;
-    const personId = await findOrCreatePerson(db, name);
+  for (const tag of tags) {
+    if (!tag.name.trim()) continue;
+    const personId = await findOrCreatePerson(db, tag);
     if (seen.has(personId)) continue;
     seen.add(personId);
-    await db.insert(schema.visitParticipants).values({ visitId, personId, tagStatus: 'local' });
+    await db.insert(schema.visitParticipants).values({
+      visitId,
+      personId,
+      tagStatus: tag.accountUuid ? 'pending' : 'local',
+    });
   }
 }

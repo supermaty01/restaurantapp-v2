@@ -11,6 +11,7 @@ import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
+import type { PersonTag } from '@/features/people/repositories/peopleRepository';
 import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
 import type { Visibility } from '@/features/privacy/visibility';
 import { VisibilityField } from '@/features/privacy/VisibilityField';
@@ -55,7 +56,7 @@ export default function VisitCreateScreen() {
 
   const [selectedDishes, setSelectedDishes] = useState<DishListDTO[]>([]);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
-  const [participants, setParticipants] = useState<string[]>([]);
+  const [participants, setParticipants] = useState<PersonTag[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const drizzleDb = useDatabase();

@@ -64,6 +64,13 @@
       "when": 1785016314516,
       "tag": "0008_visit_date_optional",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785100000000,
+      "tag": "0009_people_accounts",
+      "breakpoints": true
     }
   ]
 }

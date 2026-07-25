@@ -27,6 +27,10 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
       dishId: schema.dishes.id,
       dishName: schema.dishes.name,
       dishDeleted: schema.dishes.deleted,
+      personId: schema.people.id,
+      personName: schema.people.name,
+      personAccount: schema.people.linkedAccountUuid,
+      personUsername: schema.people.username,
     })
     .from(schema.visits);
 
@@ -41,11 +45,13 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
     .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
     .leftJoin(schema.images, eq(schema.visits.id, schema.images.visitId))
     .leftJoin(schema.dishVisits, eq(schema.visits.id, schema.dishVisits.visitId))
-    .leftJoin(schema.dishes, eq(schema.dishVisits.dishId, schema.dishes.id));
+    .leftJoin(schema.dishes, eq(schema.dishVisits.dishId, schema.dishes.id))
+    .leftJoin(schema.visitParticipants, eq(schema.visits.id, schema.visitParticipants.visitId))
+    .leftJoin(schema.people, eq(schema.visitParticipants.personId, schema.people.id));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['visits', 'restaurants', 'images', 'dishVisits', 'dishes'],
+    ['visits', 'restaurants', 'images', 'dishVisits', 'dishes', 'visitParticipants', 'people'],
     [id, includeDeleted],
   );
 
@@ -65,6 +71,7 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
           },
           images: [],
           dishes: [],
+          people: [],
         };
         acc.push(visit);
       }
@@ -81,6 +88,14 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
           id: row.dishId,
           name: row.dishName!,
           deleted: row.dishDeleted,
+        });
+      }
+
+      if (row.personId && !visit.people.some((p) => p.name === row.personName)) {
+        visit.people.push({
+          name: row.personName!,
+          accountUuid: row.personAccount,
+          username: row.personUsername,
         });
       }
 
