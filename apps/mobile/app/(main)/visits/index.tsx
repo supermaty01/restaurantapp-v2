@@ -1,24 +1,17 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import {
-  FlatList,
-  Text,
-  TouchableOpacity,
-  View,
-  useWindowDimensions,
-  TextInput,
-} from 'react-native';
+import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 
 import type { FilterSortOptions } from '@/components/FilterSortModal';
 import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
 import GridPeekItem from '@/components/GridPeekItem';
+import { Fab } from '@/components/ui/Fab';
+import { ListHeader } from '@/components/ui/ListHeader';
 import VisitItem from '@/features/visits/components/VisitItem';
 import { useVisitList } from '@/features/visits/hooks/useVisitList';
 import type { VisitListDTO } from '@/features/visits/types/visit-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
-import { useTheme } from '@/lib/context/ThemeContext';
 import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
@@ -26,7 +19,6 @@ const keyExtractor = (item: VisitListDTO) => item.id.toString();
 
 export default function VisitsScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const { isPeeking } = usePeekState();
 
   const visits = useVisitList(false);
@@ -183,46 +175,31 @@ export default function VisitsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-canvas px-4 pt-2 relative">
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-2xl font-bold text-ink">Visitas</Text>
-        <View className="flex-row items-center" style={{ gap: 12 }}>
-          <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
-            <Ionicons name={isGridView ? 'list' : 'grid'} size={22} color={colors.inkMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setFilterModalVisible(true)}>
-            <View className="relative">
-              <Ionicons
-                name="filter"
-                size={24}
-                color={hasActiveFilters ? colors.primary : colors.inkMuted}
-              />
-              {hasActiveFilters && (
-                <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View className="mb-3">
-        <View className="flex-row items-center bg-surface rounded-lg px-3 py-2 border border-line">
-          <Ionicons name="search" size={18} color={colors.inkMuted} />
-          <TextInput
-            className="flex-1 ml-2 text-sm text-ink"
-            placeholder="Buscar por nombre..."
-            placeholderTextColor={colors.inkSubtle}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
-
+    <View className="relative flex-1 bg-canvas px-5 pt-2">
+      <ListHeader
+        title="Visitas"
+        count={filteredAndSortedVisits.length}
+        countLabel="visitas"
+        actions={[
+          {
+            icon: isGridView ? 'list-outline' : 'grid-outline',
+            label: isGridView ? 'Ver como lista' : 'Ver como cuadrícula',
+            onPress: () => setIsGridView(!isGridView),
+          },
+          {
+            icon: 'options-outline',
+            label: 'Filtrar y ordenar',
+            onPress: () => setFilterModalVisible(true),
+            active: hasActiveFilters,
+          },
+        ]}
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: 'Buscar una visita…',
+        }}
+      />
+      <View className="h-4" />
       <FlatList
         key={isGridView ? `grid-${numColumns}` : 'list'}
         data={filteredAndSortedVisits}
@@ -237,12 +214,7 @@ export default function VisitsScreen() {
         maxToRenderPerBatch={6}
         windowSize={5}
       />
-      <TouchableOpacity
-        onPress={() => router.push('/visits/new')}
-        className="absolute bottom-5 right-5 w-12 h-12 bg-primary rounded-full items-center justify-center"
-      >
-        <Ionicons name="add" size={24} color="#fff" />
-      </TouchableOpacity>
+      <Fab onPress={() => router.push('/visits/new')} accessibilityLabel="Nueva visita" />
 
       <FilterSortModal
         visible={filterModalVisible}

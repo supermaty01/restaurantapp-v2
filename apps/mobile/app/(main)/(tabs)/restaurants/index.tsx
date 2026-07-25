@@ -1,26 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import {
-  FlatList,
-  TouchableOpacity,
-  View,
-  Text,
-  useWindowDimensions,
-  TextInput,
-} from 'react-native';
+import { FlatList, View, Text, useWindowDimensions } from 'react-native';
 
 import type { FilterSortOptions } from '@/components/FilterSortModal';
 import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
 import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
+import { Fab } from '@/components/ui/Fab';
+import { ListHeader } from '@/components/ui/ListHeader';
 import RestaurantItem from '@/features/restaurants/components/RestaurantItem';
 import { useRestaurantList } from '@/features/restaurants/hooks/useRestaurantList';
 import type { RestaurantListDTO } from '@/features/restaurants/types/restaurant-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
-import { useTheme } from '@/lib/context/ThemeContext';
-import { elevation } from '@/lib/design/tokens';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 const keyExtractor = (item: RestaurantListDTO) => item.id.toString();
@@ -39,7 +31,6 @@ const buildPreviewData = (item: RestaurantListDTO) => {
 
 export default function RestaurantsScreen() {
   const router = useRouter();
-  const { colors } = useTheme();
   const { isPeeking } = usePeekState();
 
   const restaurants = useRestaurantList(false);
@@ -186,48 +177,32 @@ export default function RestaurantsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-canvas px-4 pt-2 relative">
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-2xl font-bold text-ink">Restaurantes</Text>
-        <View className="flex-row items-center" style={{ gap: 12 }}>
-          <TouchableOpacity onPress={() => router.push('/map')}>
-            <Ionicons name="map-outline" size={22} color={colors.inkMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
-            <Ionicons name={isGridView ? 'list' : 'grid'} size={22} color={colors.inkMuted} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setFilterModalVisible(true)}>
-            <View className="relative">
-              <Ionicons
-                name="filter"
-                size={24}
-                color={hasActiveFilters ? colors.primary : colors.inkMuted}
-              />
-              {hasActiveFilters && (
-                <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
-              )}
-            </View>
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View className="mb-3">
-        <View className="flex-row items-center bg-surface rounded-lg px-3 py-2 border border-line">
-          <Ionicons name="search" size={18} color={colors.inkMuted} />
-          <TextInput
-            className="flex-1 ml-2 text-sm text-ink"
-            placeholder="Buscar por nombre..."
-            placeholderTextColor={colors.inkSubtle}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCorrect={false}
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+    <View className="relative flex-1 bg-canvas px-5 pt-2">
+      <ListHeader
+        title="Lugares"
+        count={filteredAndSortedRestaurants.length}
+        countLabel="lugares"
+        actions={[
+          { icon: 'map-outline', label: 'Ver en el mapa', onPress: () => router.push('/map') },
+          {
+            icon: isGridView ? 'list-outline' : 'grid-outline',
+            label: isGridView ? 'Ver como lista' : 'Ver como cuadrícula',
+            onPress: () => setIsGridView(!isGridView),
+          },
+          {
+            icon: 'options-outline',
+            label: 'Filtrar y ordenar',
+            onPress: () => setFilterModalVisible(true),
+            active: hasActiveFilters,
+          },
+        ]}
+        search={{
+          value: searchQuery,
+          onChange: setSearchQuery,
+          placeholder: 'Buscar un lugar…',
+        }}
+      />
+      <View className="h-4" />
       <FlatList
         key={isGridView ? `grid-${numColumns}` : 'list'}
         data={filteredAndSortedRestaurants}
@@ -243,13 +218,11 @@ export default function RestaurantsScreen() {
         maxToRenderPerBatch={6}
         windowSize={5}
       />
-      <TouchableOpacity
+      <Fab
         onPress={() => router.push('/restaurants/new')}
-        className="absolute bottom-[104px] right-5 h-14 w-14 items-center justify-center rounded-pill bg-primary"
-        style={elevation.medium}
-      >
-        <Ionicons name="add" size={26} color={colors.onPrimary} />
-      </TouchableOpacity>
+        accessibilityLabel="Nuevo lugar"
+        aboveTabBar
+      />
 
       <FilterSortModal
         visible={filterModalVisible}
