@@ -29,6 +29,13 @@ export interface Profile {
   bio: string | null;
 }
 
+/** A profile as seen by someone else, with the relationship and the counters. */
+export interface PublicProfile extends Profile {
+  state: FriendshipState;
+  sharedCount: number;
+  friendCount: number;
+}
+
 export type FeedKind = 'visit' | 'dish' | 'restaurant';
 
 export interface FeedEntry {
@@ -165,13 +172,9 @@ export async function removeFriend(other: string): Promise<FriendshipState> {
   return callRpc<FriendshipState>('remove_friend', { other });
 }
 
-export async function fetchFeed(before?: string): Promise<FeedEntry[]> {
-  const rows = await callRpc<Record<string, unknown>[]>('feed_page', {
-    before: before ?? null,
-    page_size: 20,
-  });
-
-  return (rows ?? []).map((row) => ({
+/** `feed_page` and `user_entries` return the same row shape. */
+function toFeedEntry(row: Record<string, unknown>): FeedEntry {
+  return {
     kind: row['kind'] as FeedKind,
     entityUuid: row['entity_uuid'] as string,
     authorId: row['author_id'] as string,
@@ -184,5 +187,51 @@ export async function fetchFeed(before?: string): Promise<FeedEntry[]> {
     rating: (row['rating'] as number | null) ?? null,
     comments: (row['comments'] as string | null) ?? null,
     imageKey: (row['image_key'] as string | null) ?? null,
-  }));
+  };
+}
+
+export async function fetchFeed(before?: string): Promise<FeedEntry[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('feed_page', {
+    before: before ?? null,
+    page_size: 20,
+  });
+  return (rows ?? []).map(toFeedEntry);
+}
+
+/** Someone else's profile page. Returns null if the user does not exist. */
+export async function fetchUserProfile(userId: string): Promise<PublicProfile | null> {
+  const rows = await callRpc<
+    (UserRow & { state: string; shared_count: number; friend_count: number })[]
+  >('user_profile', { target: userId });
+
+  const row = rows?.[0];
+  if (!row) return null;
+
+  return {
+    userId: row.user_id,
+    username: row.username,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url,
+    bio: row.bio ?? null,
+    state: row.state as FriendshipState,
+    // The counters come back as bigint, which PostgREST sends as a string.
+    sharedCount: Number(row.shared_count ?? 0),
+    friendCount: Number(row.friend_count ?? 0),
+  };
+}
+
+/**
+ * What one person has shared, as feed entries.
+ *
+ * The server decides how much of it the caller may see — a stranger gets only
+ * the public entries, a friend also gets the friends-only ones. The client never
+ * filters this itself.
+ */
+export async function fetchUserEntries(userId: string, before?: string): Promise<FeedEntry[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('user_entries', {
+    target: userId,
+    before: before ?? null,
+    page_size: 20,
+  });
+  return (rows ?? []).map(toFeedEntry);
 }

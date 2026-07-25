@@ -9,20 +9,6 @@
 \set ON_ERROR_STOP on
 \pset pager off
 
-grant usage on schema public to authenticated;
-grant select, insert, update, delete on all tables in schema public to authenticated;
-grant select on feed to authenticated;
-
-create or replace function expect_eq(actual anyelement, expected anyelement, what text)
-returns void language plpgsql as $$
-begin
-  if actual is distinct from expected then
-    raise exception 'FAIL: % — expected %, got %', what, expected, actual;
-  end if;
-  raise notice 'ok: % (%)', what, actual;
-end;
-$$;
-
 -- ── Fixtures ─────────────────────────────────────────────────────────────────
 \set mateo   '''11111111-1111-1111-1111-111111111111'''
 \set irene   '''22222222-2222-2222-2222-222222222222'''

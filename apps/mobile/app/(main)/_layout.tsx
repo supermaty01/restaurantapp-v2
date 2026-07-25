@@ -64,6 +64,8 @@ export default function MainLayout() {
           <Stack.Screen name="tags/index" options={{ title: 'Etiquetas' }} />
           <Stack.Screen name="friends/index" options={{ title: 'Amigos' }} />
           <Stack.Screen name="friends/search" options={{ title: 'Buscar personas' }} />
+          <Stack.Screen name="friends/[id]" options={{ title: 'Perfil' }} />
+          <Stack.Screen name="profile-edit" options={{ title: 'Editar perfil' }} />
           <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />
           <Stack.Screen name="map" options={{ title: 'Mapa' }} />

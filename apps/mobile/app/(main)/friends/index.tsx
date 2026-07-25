@@ -15,6 +15,8 @@ export default function FriendsScreen() {
   const { friends, incoming, outgoing, loading, error, reload, enabled, accept, decline, remove } =
     useFriends();
 
+  const openProfile = (userId: string) => router.push(`/(main)/friends/${userId}`);
+
   if (!enabled) {
     return (
       <Screen>
@@ -69,9 +71,15 @@ export default function FriendsScreen() {
         />
       ) : null}
 
-      <Group title="Solicitudes recibidas" users={incoming} onAccept={accept} onDecline={decline} />
-      <Group title="Amigos" users={friends} onRemove={remove} />
-      <Group title="Solicitudes enviadas" users={outgoing} onRemove={remove} />
+      <Group
+        title="Solicitudes recibidas"
+        users={incoming}
+        onAccept={accept}
+        onDecline={decline}
+        onOpen={openProfile}
+      />
+      <Group title="Amigos" users={friends} onRemove={remove} onOpen={openProfile} />
+      <Group title="Solicitudes enviadas" users={outgoing} onRemove={remove} onOpen={openProfile} />
     </ScrollView>
   );
 }
@@ -82,12 +90,14 @@ function Group({
   onAccept,
   onDecline,
   onRemove,
+  onOpen,
 }: {
   title: string;
   users: UserSummary[];
   onAccept?: (id: string) => void;
   onDecline?: (id: string) => void;
   onRemove?: (id: string) => void;
+  onOpen?: (id: string) => void;
 }) {
   if (users.length === 0) return null;
 
@@ -102,6 +112,7 @@ function Group({
             {...(onAccept ? { onAccept } : {})}
             {...(onDecline ? { onDecline } : {})}
             {...(onRemove ? { onRemove } : {})}
+            {...(onOpen ? { onPress: onOpen } : {})}
           />
         ))}
       </View>

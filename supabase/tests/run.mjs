@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 /**
- * Applies every migration to a throwaway database inside the local Supabase
- * Postgres container, then runs the .test.sql files against it.
+ * Runs the .test.sql files against the real migration chain.
  *
- * The point is to exercise the real migration chain from zero — RLS policies,
- * triggers and security-definer functions included — which unit tests in the app
- * cannot reach. Requires `supabase start` to be running (docs/13).
+ * Each test file gets its **own** database, built from zero: drop, create, load
+ * the auth stub, apply every migration in order, load the shared helpers, then
+ * run the file. That is slower than sharing one database, but a suite where one
+ * file's fixtures leak into the next one's counts is a suite that fails for
+ * reasons unrelated to the code — and worse, can pass for them too.
+ *
+ * This exercises what app-level unit tests cannot reach: RLS policies, triggers
+ * and security-definer functions, as Postgres actually executes them. Requires
+ * `supabase start` to be running (docs/13).
  */
 import { execSync, spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -41,40 +46,62 @@ function psql(container, args, input) {
   };
 }
 
-function runFile(container, file, label) {
-  const sql = readFileSync(file, 'utf8');
-  const { ok, out } = psql(container, ['-d', DB, '-v', 'ON_ERROR_STOP=1', '-q'], sql);
+function runFile(container, file, label, { quiet = false } = {}) {
+  const { ok, out } = psql(
+    container,
+    ['-d', DB, '-v', 'ON_ERROR_STOP=1', '-q'],
+    readFileSync(file, 'utf8'),
+  );
 
   if (!ok) {
     console.error(`\n✖ ${label} failed:\n${out.trim()}`);
     return false;
   }
 
-  const checks = out
-    .split('\n')
-    .filter((line) => line.includes('ok:'))
-    .map((line) => `  ${line.replace(/^NOTICE:\s*ok:\s*/, '✓ ').trim()}`);
-  if (checks.length) console.log(checks.join('\n'));
+  if (!quiet) {
+    const checks = out
+      .split('\n')
+      .filter((line) => line.includes('ok:'))
+      .map((line) => `  ${line.replace(/^NOTICE:\s*ok:\s*/, '✓ ').trim()}`);
+    if (checks.length) console.log(checks.join('\n'));
+  }
   return true;
+}
+
+/** Rebuilds the schema from scratch. Returns false if any migration fails. */
+function freshDatabase(container) {
+  psql(container, ['-q', '-c', `drop database if exists ${DB} with (force)`]);
+  psql(container, ['-q', '-c', `create database ${DB}`]);
+
+  let ok = runFile(container, join(here, 'auth-stub.sql'), 'auth stub', { quiet: true });
+
+  for (const name of readdirSync(migrationsDir).sort()) {
+    if (!name.endsWith('.sql')) continue;
+    ok = runFile(container, join(migrationsDir, name), name, { quiet: true }) && ok;
+  }
+
+  return runFile(container, join(here, 'helpers.sql'), 'helpers', { quiet: true }) && ok;
 }
 
 const container = findContainer();
 console.log(`Using ${container}`);
 
-// A fresh database every run: a test that depends on leftovers proves nothing.
-psql(container, ['-q', '-c', `drop database if exists ${DB} with (force)`]);
-psql(container, ['-q', '-c', `create database ${DB}`]);
+const testFiles = readdirSync(here)
+  .filter((name) => name.endsWith('.test.sql'))
+  .sort();
 
-let ok = runFile(container, join(here, 'auth-stub.sql'), 'auth stub');
-
-for (const name of readdirSync(migrationsDir).sort()) {
-  if (!name.endsWith('.sql')) continue;
-  ok = runFile(container, join(migrationsDir, name), name) && ok;
+if (testFiles.length === 0) {
+  console.error('No .test.sql files found.');
+  process.exit(1);
 }
 
-for (const name of readdirSync(here).sort()) {
-  if (!name.endsWith('.test.sql')) continue;
+let ok = true;
+for (const name of testFiles) {
   console.log(`\n── ${name}`);
+  if (!freshDatabase(container)) {
+    ok = false;
+    continue;
+  }
   ok = runFile(container, join(here, name), name) && ok;
 }
 

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Text, TextInput, View } from 'react-native';
 
@@ -14,6 +15,7 @@ import { reportError } from '@/lib/helpers/report-error';
 const MIN_QUERY = 2;
 
 export default function FriendSearchScreen() {
+  const router = useRouter();
   const { colors } = useTheme();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<UserSummary[]>([]);
@@ -97,7 +99,12 @@ export default function FriendSearchScreen() {
         data={results}
         keyExtractor={(item) => item.userId}
         renderItem={({ item }) => (
-          <UserRow user={item} onAdd={add} busy={pending === item.userId} />
+          <UserRow
+            user={item}
+            onAdd={add}
+            onPress={(id) => router.push(`/(main)/friends/${id}`)}
+            busy={pending === item.userId}
+          />
         )}
         contentContainerClassName="px-5 pt-4 pb-8 gap-2.5"
         keyboardShouldPersistTaps="handled"

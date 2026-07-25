@@ -45,6 +45,7 @@ export default function ProfileScreen() {
           email={session.user.email ?? ''}
           syncStatus={status}
           onSync={syncNow}
+          onEdit={() => router.push('/(main)/profile-edit')}
         />
       ) : (
         <SignedOutCard configured={isConfigured} onPress={() => router.push('/(main)/account')} />
@@ -100,11 +101,13 @@ function AccountCard({
   email,
   syncStatus,
   onSync,
+  onEdit,
 }: {
   profile: Profile | null;
   email: string;
   syncStatus: string;
   onSync: () => void;
+  onEdit: () => void;
 }) {
   const { colors } = useTheme();
   const name = profile?.displayName ?? profile?.username ?? email.split('@')[0] ?? 'Tú';
@@ -121,6 +124,7 @@ function AccountCard({
             {profile ? `@${profile.username}` : email}
           </Text>
         </View>
+        <Button label="Editar" variant="secondary" size="sm" onPress={onEdit} />
       </View>
 
       <View className="flex-row items-center justify-between border-t border-line pt-3">
