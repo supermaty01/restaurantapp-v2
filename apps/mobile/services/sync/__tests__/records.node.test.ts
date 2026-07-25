@@ -1,6 +1,6 @@
 import type { AppDatabase } from '@/services/db/types';
 
-import { toRemoteRecord } from '../records';
+import { toRemoteRecord, toTombstoneRecord } from '../records';
 
 import type { SyncTableConfig } from '../tables';
 
@@ -123,5 +123,43 @@ describe('toRemoteRecord', () => {
     const record = await toRemoteRecord(db, config, localRow({ name: null }), 'account-uuid');
     expect(record['name']).toBeNull();
     expect(record['uuid']).toBe('row-uuid');
+  });
+});
+
+describe('toTombstoneRecord', () => {
+  const visits = {
+    name: 'visits',
+    table: {} as SyncTableConfig['table'],
+    scalars: [
+      { local: 'visitedAt', remote: 'visited_at' },
+      { local: 'visibility', remote: 'visibility', required: true, fallback: () => 'private' },
+      { local: 'name', remote: 'name', required: true },
+    ],
+    foreignKeys: [],
+  } satisfies SyncTableConfig;
+
+  it('marks the row deleted', () => {
+    expect(toTombstoneRecord(visits, 'gone-uuid', 'account')).toMatchObject({
+      uuid: 'gone-uuid',
+      user_id: 'account',
+      deleted: true,
+    });
+  });
+
+  it('satisfies every column the mirror requires', () => {
+    // Building a tombstone from scratch skipped these, so deleting a visit
+    // failed the push with "violates not-null constraint" — the same error as
+    // a row that had never been filled in, from a completely different cause.
+    const record = toTombstoneRecord(visits, 'gone-uuid', 'account');
+
+    expect(record['visibility']).toBe('private');
+    expect(record['name']).not.toBeNull();
+    expect(record['name']).not.toBeUndefined();
+  });
+
+  it('leaves optional columns out', () => {
+    // Nothing reads them, and inventing a date for a deleted visit would be a
+    // lie that outlives the row.
+    expect(toTombstoneRecord(visits, 'gone-uuid', 'account')).not.toHaveProperty('visited_at');
   });
 });

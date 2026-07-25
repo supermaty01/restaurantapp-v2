@@ -3,7 +3,7 @@ import { eq, inArray } from 'drizzle-orm';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { linkLocalData } from '@/services/sync/linkLocalData';
-import { applyRemoteRecord, toRemoteRecord } from '@/services/sync/records';
+import { applyRemoteRecord, toRemoteRecord, toTombstoneRecord } from '@/services/sync/records';
 import { column, SYNC_TABLES } from '@/services/sync/tables';
 import type { RemoteRecord, SyncTransport } from '@/services/sync/transport';
 
@@ -73,14 +73,7 @@ export class SyncEngine {
           records.push(await toRemoteRecord(this.db, cfg, local, this.accountUuid));
         } else {
           // Hard-deleted locally: push a tombstone so the deletion propagates.
-          const now = new Date().toISOString();
-          records.push({
-            uuid,
-            user_id: this.accountUuid,
-            created_at: now,
-            updated_at: now,
-            deleted: true,
-          });
+          records.push(toTombstoneRecord(cfg, uuid, this.accountUuid));
         }
       }
 

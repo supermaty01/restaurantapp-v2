@@ -144,3 +144,38 @@ export async function applyRemoteRecord(
       .where(eq(column(cfg.table, 'id'), local.id));
   }
 }
+
+/**
+ * The record pushed for a row that no longer exists locally.
+ *
+ * A tombstone only has to carry `deleted: true` — nothing reads its other
+ * fields. But Postgres still enforces its NOT NULL columns on the way in, and
+ * building the tombstone from scratch skipped every one of them, so deleting a
+ * visit failed the push with the same "violates not-null constraint" as a row
+ * that had never been filled in. The required columns are satisfied here the
+ * same way live rows satisfy them.
+ */
+export function toTombstoneRecord(
+  cfg: SyncTableConfig,
+  uuid: string,
+  accountUuid: string,
+): RemoteRecord {
+  const now = new Date().toISOString();
+
+  const record: RemoteRecord = {
+    uuid,
+    user_id: accountUuid,
+    created_at: now,
+    updated_at: now,
+    deleted: true,
+  };
+
+  for (const scalar of cfg.scalars) {
+    if (!scalar.required) continue;
+    // A placeholder is fine and never shown: the row is gone, and the mirror
+    // keeps it only so the deletion reaches other devices.
+    record[scalar.remote] = scalar.fallback?.() ?? '—';
+  }
+
+  return record;
+}
