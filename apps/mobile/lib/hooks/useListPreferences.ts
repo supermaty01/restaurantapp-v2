@@ -16,10 +16,15 @@ interface ListPreferences {
 type ListEntityType = 'restaurant' | 'dish' | 'visit';
 
 // Keyed by the exact union rather than `string`, so indexing is provably safe.
-const DEFAULTS: Record<ListEntityType, { sortField: SortField; sortOrder: SortOrder }> = {
-  restaurant: { sortField: 'name', sortOrder: 'asc' },
-  dish: { sortField: 'name', sortOrder: 'asc' },
-  visit: { sortField: 'date', sortOrder: 'desc' },
+const DEFAULTS: Record<
+  ListEntityType,
+  { sortField: SortField; sortOrder: SortOrder; isGridView: boolean }
+> = {
+  restaurant: { sortField: 'name', sortOrder: 'asc', isGridView: false },
+  dish: { sortField: 'name', sortOrder: 'asc', isGridView: false },
+  // Visits open as the month timeline: a flat reverse-chronological list of a
+  // few hundred entries gives no sense of *when* (docs/14).
+  visit: { sortField: 'date', sortOrder: 'desc', isGridView: true },
 };
 
 export function useListPreferences(entityType: ListEntityType) {
@@ -28,7 +33,7 @@ export function useListPreferences(entityType: ListEntityType) {
   const defaults = DEFAULTS[entityType];
 
   const [prefs, setPrefs] = useState<ListPreferences>({
-    isGridView: false,
+    isGridView: defaults.isGridView,
     sortField: defaults.sortField,
     sortOrder: defaults.sortOrder,
     loaded: false,
@@ -50,7 +55,11 @@ export function useListPreferences(entityType: ListEntityType) {
 
         const map = new Map(rows.map((r) => [r.key, r.value]));
         setPrefs({
-          isGridView: map.get(`${entityType}_view_mode`) === 'grid',
+          // A stored preference wins; otherwise the entity's own default,
+          // which is the month timeline for visits (docs/14).
+          isGridView: map.has(`${entityType}_view_mode`)
+            ? map.get(`${entityType}_view_mode`) === 'grid'
+            : defaults.isGridView,
           sortField: (map.get(`${entityType}_sort_field`) as SortField) || defaults.sortField,
           sortOrder: (map.get(`${entityType}_sort_order`) as SortOrder) || defaults.sortOrder,
           loaded: true,

@@ -1,11 +1,9 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { FlatList, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 
 import type { FilterSortOptions } from '@/components/filters/FilterSheet';
 import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/FilterSheet';
-import GridPeekItem from '@/components/GridPeekItem';
 import { ListHeader } from '@/components/ui/ListHeader';
 import VisitItem from '@/features/visits/components/VisitItem';
 import { useVisitList } from '@/features/visits/hooks/useVisitList';
@@ -13,6 +11,8 @@ import type { VisitListDTO } from '@/features/visits/types/visit-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
 import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
+
+import { VisitTimeline } from './VisitTimeline';
 
 const keyExtractor = (item: VisitListDTO) => item.id.toString();
 
@@ -30,8 +30,6 @@ export function VisitList() {
     sortOrder: prefs.sortOrder,
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const { width } = useWindowDimensions();
-  const numColumns = width >= 600 ? 3 : 2;
 
   const isGridView = prefs.isGridView;
   const setIsGridView = prefs.setIsGridView;
@@ -140,41 +138,6 @@ export function VisitList() {
     [buildPreviewData, navigateToVisit],
   );
 
-  const renderGridItem = useCallback(
-    ({ item }: { item: VisitListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri ?? null;
-      const previewData = buildPreviewData(item);
-      const formattedVisitDate = formatDate(item.visited_at);
-
-      return (
-        <GridPeekItem
-          style={{ flex: 1 / numColumns }}
-          previewData={previewData}
-          onPress={() => navigateToVisit(item.id)}
-        >
-          {imageUrl ? (
-            <Image
-              source={imageUrl}
-              style={{ width: '100%', height: 100 }}
-              contentFit="cover"
-              recyclingKey={`grid-visit-${item.id}`}
-              cachePolicy="memory-disk"
-            />
-          ) : (
-            <View style={{ width: '100%', height: 100 }} className="bg-sunken" />
-          )}
-          <View className="p-2">
-            <Text className="text-sm font-bold text-ink" numberOfLines={1}>
-              {item.restaurant.name}
-            </Text>
-            <Text className="text-xs text-ink-subtle">{formattedVisitDate}</Text>
-          </View>
-        </GridPeekItem>
-      );
-    },
-    [buildPreviewData, navigateToVisit, numColumns],
-  );
-
   const listEmptyComponent = useMemo(
     () => (
       <View className="flex-1 justify-center items-center mt-10">
@@ -191,8 +154,8 @@ export function VisitList() {
         countLabel="visitas"
         actions={[
           {
-            icon: isGridView ? 'list-outline' : 'grid-outline',
-            label: isGridView ? 'Ver como lista' : 'Ver como cuadrícula',
+            icon: isGridView ? 'list-outline' : 'calendar-outline',
+            label: isGridView ? 'Ver como lista' : 'Ver por meses',
             onPress: () => setIsGridView(!isGridView),
           },
           {
@@ -209,20 +172,22 @@ export function VisitList() {
         }}
       />
       <View className="h-4" />
-      <FlatList
-        key={isGridView ? `grid-${numColumns}` : 'list'}
-        data={filteredAndSortedVisits}
-        keyExtractor={keyExtractor}
-        numColumns={isGridView ? numColumns : 1}
-        columnWrapperStyle={isGridView ? { gap: 8 } : undefined}
-        renderItem={isGridView ? renderGridItem : renderListItem}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={listEmptyComponent}
-        scrollEnabled={!isPeeking}
-        initialNumToRender={8}
-        maxToRenderPerBatch={6}
-        windowSize={5}
-      />
+      {isGridView ? (
+        <VisitTimeline visits={filteredAndSortedVisits} onPressVisit={navigateToVisit} />
+      ) : (
+        <FlatList
+          data={filteredAndSortedVisits}
+          keyExtractor={keyExtractor}
+          renderItem={renderListItem}
+          showsVerticalScrollIndicator={false}
+          contentContainerClassName="pb-28"
+          ListEmptyComponent={listEmptyComponent}
+          scrollEnabled={!isPeeking}
+          initialNumToRender={8}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+        />
+      )}
 
       <FilterSheet
         visible={filterModalVisible}
