@@ -6,12 +6,13 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import RatingStars from '@/components/RatingStars';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/Dialog';
 import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Card, EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
-import { fetchSharedVisit, type SharedVisit } from '@/features/social/api';
+import { fetchSharedVisit, rejectTag, type SharedVisit } from '@/features/social/api';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
 import { remoteImageUri } from '@/features/social/remote-image';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -35,6 +36,7 @@ export default function SharedVisitScreen() {
   const { session } = useAuth();
   const { colors } = useTheme();
   const router = useRouter();
+  const { ask, tell } = useDialog();
 
   const { data, loading, error } = useAsyncResource<SharedVisit | null>(
     () => fetchSharedVisit(String(visitUuid)),
@@ -69,6 +71,31 @@ export default function SharedVisitScreen() {
 
   const author = data.author.displayName ?? data.author.username;
   const cover = remoteImageUri(data.author.userId, data.images[0] ?? null);
+  const taggedMe = data.people.some((person) => person.accountUuid === session?.user.id);
+
+  async function removeMe() {
+    const confirmed = await ask({
+      title: 'Quitarte de esta visita',
+      message:
+        'Dejará de aparecerte y perderás el acceso. No se borra nada del diario de quien te etiquetó.',
+      icon: 'person-remove-outline',
+      confirmLabel: 'Quitarme',
+      cancelLabel: 'Cancelar',
+    });
+    if (!confirmed) return;
+
+    try {
+      await rejectTag(data!.uuid);
+      router.back();
+    } catch (cause) {
+      await tell({
+        title: 'No se pudo quitar',
+        message: cause instanceof Error ? cause.message : 'Inténtalo de nuevo',
+        icon: 'alert-circle-outline',
+        destructive: true,
+      });
+    }
+  }
 
   return (
     <Screen padded={false}>
@@ -140,6 +167,24 @@ export default function SharedVisitScreen() {
               {data.comments}
             </Txt>
           </Card>
+        ) : null}
+
+        {/* Only when you are in the guest list. Being tagged is done to you,
+            so undoing it belongs on the visit itself, not buried in settings.
+            It removes nothing from their diary — the tag stays written where
+            they wrote it and simply stops reaching you. */}
+        {taggedMe ? (
+          <PressableScale
+            accessibilityLabel="Quitarme de esta visita"
+            onPress={() => void removeMe()}
+            scaleTo={0.97}
+            className="flex-row items-center justify-center gap-2 rounded-pill border border-line-strong px-4 py-2.5"
+          >
+            <Ionicons name="person-remove-outline" size={15} color={colors.inkMuted} />
+            <Txt variant="caption" weight="semi" serif={false} tone="muted">
+              Quitarme de esta visita
+            </Txt>
+          </PressableScale>
         ) : null}
 
         {data.people.length > 0 ? (

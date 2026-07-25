@@ -179,5 +179,34 @@ select expect_eq(
   (select count(*)::int from feed_page((select min(occurred_at) from feed_page()), 20)), 0,
   'before excluye lo ya visto');
 
+-- ── Quitarse de una etiqueta (0013) ─────────────────────────────────────────
+-- Etiquetar es algo que te hacen; tiene que poder deshacerse. Y la retirada
+-- tiene que sobrevivir al siguiente sync de quien etiquetó, que reenvía el
+-- conjunto completo de participantes de cada visita.
+set test.uid = :caro;
+select expect_eq((select count(*)::int from tagged_visits()), 1, 'Caro está etiquetada');
+select reject_tag(:meal);
+select expect_eq((select count(*)::int from tagged_visits()), 0, 'y se retira de la bandeja');
+select expect_eq(can_read_visit(:meal), false, 'retirarse también cierra el acceso');
+
+-- Mateo vuelve a sincronizar: su móvil reenvía los participantes tal cual.
+-- Es exactamente lo que borraría un rechazo guardado en visit_participant.
+set test.uid = :mateo;
+delete from visit_participant where visit_uuid = :meal;
+insert into visit_participant (user_id, visit_uuid, person_uuid, tag_status)
+  values (:mateo, :meal, :person, 'pending');
+
+set test.uid = :caro;
+select expect_eq(
+  (select count(*)::int from tagged_visits()), 0,
+  'el sync de quien etiquetó no repone la etiqueta retirada');
+select expect_eq(
+  (select count(*)::int from visit_participant where visit_uuid = :meal), 1,
+  'y sin borrarle nada de su diario a quien etiquetó');
+
+-- Reversible: te retiraste, no te bloqueaste.
+select restore_tag(:meal);
+select expect_eq((select count(*)::int from tagged_visits()), 1, 'y se puede deshacer');
+
 \echo ''
 \echo 'All feed checks passed.'

@@ -405,3 +405,24 @@ export async function fetchTaggedVisits(before?: string): Promise<TaggedVisit[]>
     companionCount: Number(row['companion_count'] ?? 0),
   }));
 }
+
+/**
+ * Removes yourself from someone else's visit.
+ *
+ * Nothing is deleted from their diary: the tag stays where they wrote it, and
+ * stops granting you access or showing up for you. Asking permission before
+ * tagging would turn "I had dinner with Caro" into a negotiation, so the
+ * consent is after the fact — which only works if withdrawing it is real.
+ *
+ * Recorded as a row of your own (0013). Marking their participant row would
+ * last exactly until their phone next synced, because a device pushes the
+ * complete set of a visit's participants every time.
+ */
+export async function rejectTag(visitUuid: string): Promise<void> {
+  await callRpc<null>('reject_tag', { visit: visitUuid });
+}
+
+/** Undoes `rejectTag`. Withdrawing is not blocking. */
+export async function restoreTag(visitUuid: string): Promise<void> {
+  await callRpc<null>('restore_tag', { visit: visitUuid });
+}
