@@ -11,6 +11,7 @@ import {
 
 import { runAssistant, type ChatMessage } from '@/features/assistant/agent';
 import { useAuth } from '@/lib/context/AuthContext';
+import { useTheme } from '@/lib/context/ThemeContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -24,6 +25,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
  * device + Worker verification; this screen covers the text query path.
  */
 export default function AssistantScreen() {
+  const { colors } = useTheme();
   const db = useDatabase();
   const { session } = useAuth();
   const [input, setInput] = useState('');
@@ -103,7 +105,7 @@ export default function AssistantScreen() {
             <Text className={m.role === 'user' ? 'text-on-primary' : 'text-ink'}>{m.content}</Text>
           </View>
         ))}
-        {busy && <ActivityIndicator className="mt-2" color="#905c36" />}
+        {busy && <ActivityIndicator className="mt-2" color={colors.primary} />}
       </ScrollView>
 
       <View className="flex-row items-center gap-2 p-3 border-t border-line">

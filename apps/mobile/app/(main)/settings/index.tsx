@@ -1,23 +1,20 @@
-import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { useRouter } from 'expo-router';
 import { useContext, useState } from 'react';
-import { View, Text, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import { Alert } from 'react-native';
 
 import { DBVersionContext } from '@/app/_layout';
+import { FormSection } from '@/components/ui/FormScaffold';
+import { Screen } from '@/components/ui/Screen';
 import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
 import ThemeCard from '@/features/settings/components/ThemeCard';
 import ThemeSelectionModal from '@/features/settings/components/ThemeSelectionModal';
 import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
-import { useAuth } from '@/lib/context/AuthContext';
 import { reportError } from '@/lib/helpers/report-error';
 
 export default function SettingsScreen() {
   const bumpDb = useContext(DBVersionContext);
-  const router = useRouter();
-  const { session } = useAuth();
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const {
     isExporting,
@@ -131,54 +128,37 @@ export default function SettingsScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-canvas">
-      <View className="p-4">
-        <Text className="text-2xl font-bold text-ink mb-6">Configuración</Text>
-
-        {/* Información de la app */}
-        <InfoCard appVersion={appVersion} storageUsed={storageInfo.used} lastExport={lastExport} />
-
-        {/* Tema */}
-        {/* Cuenta y sincronización (opcional) */}
-        <TouchableOpacity
-          onPress={() => router.push('/account')}
-          className="bg-surface p-4 rounded-xl mb-4 flex-row items-center justify-between"
-        >
-          <View className="flex-row items-center">
-            <Ionicons name="person-circle-outline" size={24} color="#905c36" />
-            <Text className="text-lg font-bold text-ink ml-2">
-              {session ? 'Tu cuenta' : 'Cuenta y sincronización'}
-            </Text>
-          </View>
-          <Ionicons name="chevron-forward" size={20} color="#905c36" />
-        </TouchableOpacity>
-
-        <ThemeCard onPress={handleThemePress} />
-
-        {/* Exportar datos */}
+    <Screen scroll contentClassName="pt-1 gap-6">
+      <FormSection
+        title="Copias de seguridad"
+        hint="Todo tu diario en un único archivo, con las fotos incluidas"
+      >
         <ExportCard
           onPress={handleExportData}
           isExporting={isExporting}
           exportProgress={exportProgress}
           disabled={isExporting || isImporting}
         />
-
-        {/* Importar datos */}
         <ImportCard
           onPress={handleImportData}
           isImporting={isImporting}
           importProgress={importProgress}
           disabled={isExporting || isImporting}
         />
+      </FormSection>
 
-        {/* Cerrar sesión */}
+      <FormSection title="Apariencia">
+        <ThemeCard onPress={handleThemePress} />
+      </FormSection>
 
-        {/* Modal de selección de tema */}
-        <ThemeSelectionModal
-          visible={themeModalVisible}
-          onClose={() => setThemeModalVisible(false)}
-        />
-      </View>
-    </ScrollView>
+      <FormSection title="Acerca de">
+        <InfoCard appVersion={appVersion} storageUsed={storageInfo.used} lastExport={lastExport} />
+      </FormSection>
+
+      <ThemeSelectionModal
+        visible={themeModalVisible}
+        onClose={() => setThemeModalVisible(false)}
+      />
+    </Screen>
   );
 }

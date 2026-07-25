@@ -203,7 +203,7 @@ const styles = StyleSheet.create({
     zIndex: 1001,
     overflow: 'hidden',
     // No padding: PeekContent runs its photo to the card's edge.
-    shadowColor: '#000',
+    shadowColor: '#2A211C',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

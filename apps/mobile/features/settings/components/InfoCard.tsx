@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View } from 'react-native';
 
+import { Divider } from '@/components/ui/Surface';
+import { Txt } from '@/components/ui/Txt';
 import type { BackupInfo } from '@/services/backup/backupService';
 
 import { formatBytes, formatDate } from '../utils/formatters';
@@ -11,22 +13,29 @@ interface InfoCardProps {
   lastExport: BackupInfo | null;
 }
 
+/** Facts about the install. Read rarely, so it sits last and stays quiet. */
 const InfoCard: React.FC<InfoCardProps> = ({ appVersion, storageUsed, lastExport }) => {
+  const rows = [
+    { label: 'Versión', value: appVersion },
+    { label: 'Almacenamiento usado', value: formatBytes(storageUsed) },
+    { label: 'Última copia', value: formatDate(lastExport?.date) },
+  ];
+
   return (
-    <View className="bg-surface p-4 rounded-xl mb-4">
-      <Text className="text-lg font-bold text-ink mb-2">Información</Text>
-      <View className="flex-row justify-between mb-2">
-        <Text className="text-ink-muted">Versión</Text>
-        <Text className="text-ink">{appVersion}</Text>
-      </View>
-      <View className="flex-row justify-between mb-2">
-        <Text className="text-ink-muted">Almacenamiento usado</Text>
-        <Text className="text-ink">{formatBytes(storageUsed)}</Text>
-      </View>
-      <View className="flex-row justify-between">
-        <Text className="text-ink-muted">Última exportación</Text>
-        <Text className="text-ink">{formatDate(lastExport?.date)}</Text>
-      </View>
+    <View className="rounded-xl border border-line bg-surface px-4">
+      {rows.map((row, index) => (
+        <View key={row.label}>
+          {index > 0 ? <Divider /> : null}
+          <View className="flex-row items-center justify-between py-3.5">
+            <Txt variant="callout" tone="muted">
+              {row.label}
+            </Txt>
+            <Txt variant="callout" weight="semi" serif={false}>
+              {row.value}
+            </Txt>
+          </View>
+        </View>
+      ))}
     </View>
   );
 };

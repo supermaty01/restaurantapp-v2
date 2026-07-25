@@ -44,7 +44,7 @@ export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) 
                 <View className="flex-row items-center">
                   <Text className="text-base font-bold text-ink flex-1">{item.name}</Text>
                   {item.deleted && (
-                    <View className="bg-red-100 px-2 py-0.5 rounded mr-1">
+                    <View className="mr-1 rounded-pill bg-danger/12 px-2 py-0.5">
                       <Text className="text-danger text-xs">Eliminado</Text>
                     </View>
                   )}

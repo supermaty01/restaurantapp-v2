@@ -41,7 +41,10 @@ const DishSelectorModal: React.FC<DishSelectorModalProps> = ({
               </TouchableOpacity>
             )}
           />
-          <TouchableOpacity className="mt-5 p-3 bg-blue-500 rounded" onPress={onClose}>
+          <TouchableOpacity
+            className="mt-5 items-center rounded-lg bg-primary p-3"
+            onPress={onClose}
+          >
             <Text className="text-on-primary text-base">Close</Text>
           </TouchableOpacity>
         </View>

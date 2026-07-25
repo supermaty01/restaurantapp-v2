@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { useAuth, type OAuthProvider } from '@/lib/context/AuthContext';
+import { useTheme } from '@/lib/context/ThemeContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { useSync } from '@/lib/hooks/useSync';
 import { linkLocalData } from '@/services/sync/linkLocalData';
@@ -21,6 +22,7 @@ import { linkLocalData } from '@/services/sync/linkLocalData';
  * explains the app is fully local.
  */
 export default function AccountScreen() {
+  const { colors } = useTheme();
   const {
     isConfigured,
     session,
@@ -160,7 +162,7 @@ export default function AccountScreen() {
             onPress={() => void runAuth(() => signInWithOAuth(provider))}
             className="flex-row items-center justify-center border border-line rounded-md py-3 mb-2"
           >
-            <Ionicons name={`logo-${provider}`} size={20} color="#905c36" />
+            <Ionicons name={`logo-${provider}`} size={20} color={colors.primary} />
             <Text className="text-ink font-semibold ml-2">
               Continuar con {provider === 'google' ? 'Google' : 'Apple'}
             </Text>
