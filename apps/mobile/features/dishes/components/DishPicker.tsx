@@ -1,8 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, ActivityIndicator, Modal, FlatList } from 'react-native';
+import { useCallback, useEffect } from 'react';
+import { Pressable, ScrollView, View } from 'react-native';
 
+import { PressableScale } from '@/components/ui/Motion';
+import { Thumbnail } from '@/components/ui/Thumbnail';
+import { Txt } from '@/components/ui/Txt';
 import { useDishesByRestaurant } from '@/features/dishes/hooks/useDishesByRestaurant';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
@@ -44,14 +47,12 @@ function DishPicker<
   selectedDishes,
   setSelectedDishes,
 }: DishPickerProps<TFieldValues, TName, TTransformed>) {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const { newDish, setNewDish } = useNewDish();
   const router = useRouter();
   const { colors } = useTheme();
 
   // Usar el hook para obtener los platos del restaurante
   const dishes = useDishesByRestaurant(restaurantId);
-  const isLoading = false;
 
   const handleAddDish = useCallback(
     (dish: DishListDTO) => {
@@ -81,97 +82,115 @@ function DishPicker<
     });
   };
 
+  const message = errors?.[name] ? String(errors[name]?.message ?? '') : null;
+
+  const available = dishes.filter(
+    (dish) => !selectedDishes.some((selected) => selected.id === dish.id),
+  );
+
   return (
-    <View>
-      <Text className="text-xl font-semibold text-ink mt-2">Platos</Text>
-
-      {selectedDishes.length > 0 && (
-        <View className="mt-3">
+    <View className="gap-2.5">
+      {selectedDishes.length > 0 ? (
+        <View className="gap-2">
           {selectedDishes.map((dish) => (
-            <View key={dish.id} className="flex-row items-center w-full mb-3">
-              <Text className="flex-1 py-2 px-4 border border-line text-ink rounded-lg">
+            <View
+              key={dish.id}
+              className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5"
+            >
+              <Thumbnail
+                name={dish.name}
+                uri={dish.images?.[0]?.uri ?? null}
+                size={40}
+                radius={9}
+                icon="fast-food"
+              />
+              <Txt variant="body" weight="semi" serif={false} numberOfLines={1} className="flex-1">
                 {dish.name}
-              </Text>
-
-              <TouchableOpacity
+              </Txt>
+              <Pressable
                 onPress={() => handleRemoveDish(dish.id)}
-                className="ml-3 p-2 bg-danger rounded-lg"
+                accessibilityRole="button"
+                accessibilityLabel={`Quitar ${dish.name}`}
+                hitSlop={8}
+                className="h-7 w-7 items-center justify-center rounded-pill bg-sunken"
               >
-                <Ionicons name="close" size={23} color="white" />
-              </TouchableOpacity>
+                <Ionicons name="close" size={15} color={colors.inkMuted} />
+              </Pressable>
             </View>
           ))}
         </View>
-      )}
+      ) : null}
 
-      <View className="flex-row justify-between mt-3">
-        <TouchableOpacity
-          className={`bg-primary py-3 px-4 rounded-md ${!restaurantId ? 'opacity-50' : ''}`}
-          onPress={() => setIsModalVisible(true)}
-          disabled={!restaurantId}
-        >
-          <Text className="text-on-primary font-bold">Añadir existente</Text>
-        </TouchableOpacity>
+      {/* The dishes this restaurant already has, one tap away. Most visits
+          repeat something you have eaten there before, so the common case
+          should not require opening anything. */}
+      {restaurantId && available.length > 0 ? (
+        <View className="gap-1.5">
+          {selectedDishes.length > 0 ? (
+            <Txt variant="caption" tone="subtle">
+              De este restaurante
+            </Txt>
+          ) : null}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            {available.slice(0, 8).map((dish) => (
+              <PressableScale
+                key={dish.id}
+                accessibilityLabel={`Añadir ${dish.name}`}
+                onPress={() => handleAddDish(dish)}
+                scaleTo={0.94}
+                className="flex-row items-center gap-1.5 rounded-pill border border-line-strong bg-surface px-3 py-1.5"
+              >
+                <Ionicons name="add" size={13} color={colors.primary} />
+                <Txt variant="caption" weight="semi" serif={false} numberOfLines={1}>
+                  {dish.name}
+                </Txt>
+              </PressableScale>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
-        <TouchableOpacity
-          className={`bg-primary py-3 px-4 rounded-md ${!restaurantId ? 'opacity-50' : ''}`}
-          onPress={() =>
-            router.push({
-              pathname: '/dishes/new',
-              params: { useBackRedirect: 'true', restaurantId },
-            })
-          }
+      <View className="flex-row gap-2.5">
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Crear un plato nuevo"
+          onPress={() => {
+            if (!restaurantId) return;
+            router.push(`/dishes/new?useBackRedirect=true&restaurantId=${restaurantId}`);
+          }}
           disabled={!restaurantId}
+          className={`flex-1 flex-row items-center justify-center gap-2 rounded-pill border border-dashed px-3.5 py-2.5 ${
+            restaurantId ? 'border-primary/40 bg-primary/8' : 'border-line-strong opacity-50'
+          }`}
         >
-          <Text className="text-on-primary font-bold">Crear nuevo plato</Text>
-        </TouchableOpacity>
+          <Ionicons name="add" size={15} color={restaurantId ? colors.primary : colors.inkSubtle} />
+          <Txt
+            variant="caption"
+            weight="bold"
+            serif={false}
+            tone={restaurantId ? 'primary' : 'subtle'}
+          >
+            Plato nuevo
+          </Txt>
+        </Pressable>
       </View>
 
-      {errors?.[name] && (
-        <Text className="text-danger dark:text-red-400 mt-1">
-          {String(errors[name]?.message ?? '')}
-        </Text>
-      )}
+      {!restaurantId ? (
+        <Txt variant="caption" tone="subtle">
+          Elige primero el restaurante.
+        </Txt>
+      ) : null}
 
-      <Modal visible={isModalVisible} animationType="slide" transparent={true}>
-        <View
-          className="flex-1 justify-center items-center"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-        >
-          <View className="bg-surface w-4/5 p-4 rounded-md">
-            <Text className="text-lg font-bold mb-3 text-ink">Seleccionar Platos</Text>
-
-            {isLoading ? (
-              <ActivityIndicator size="large" color={colors.primary} />
-            ) : dishes.length === 0 ? (
-              <Text className="text-ink-subtle text-center mt-4">No hay platos disponibles</Text>
-            ) : (
-              <FlatList
-                data={dishes}
-                keyExtractor={(item) => item.id.toString()}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    className="flex-row justify-between items-center p-3 border-b border-line"
-                    onPress={() => handleAddDish(item)}
-                  >
-                    <Text className="text-ink">{item.name}</Text>
-                    {selectedDishes.some((d) => d.id === item.id) && (
-                      <Ionicons name="checkmark-circle" size={19} color="green" />
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
-            )}
-
-            <TouchableOpacity
-              className="bg-primary py-3 px-4 rounded-md mt-4"
-              onPress={() => setIsModalVisible(false)}
-            >
-              <Text className="text-on-primary text-center font-bold">Cerrar</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
+      {message ? (
+        <Txt variant="caption" tone="danger">
+          {message}
+        </Txt>
+      ) : null}
     </View>
   );
 }
