@@ -1,11 +1,14 @@
 import { eq } from 'drizzle-orm';
 
 import { findOrCreatePerson } from '@/features/people/repositories/peopleRepository';
+import type { Visibility } from '@/features/privacy/visibility';
 import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange, touchedAt } from '@/services/db/sync-write';
 import type { AppDatabase } from '@/services/db/types';
 
 export interface VisitWriteInput {
+  /** Who can see it. Omitted keeps whatever the row already had. */
+  visibility?: Visibility;
   visitedAt: string;
   comments: string | null;
   restaurantId: number;

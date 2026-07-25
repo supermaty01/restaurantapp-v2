@@ -61,7 +61,10 @@ export default function ProfileEditScreen() {
       });
       router.back();
     } catch (cause) {
-      reportError('No se pudo guardar el perfil', cause);
+      // updateMyProfile already phrases its failures for a person ("ese nombre
+      // ya está cogido"); prefixing them with a generic sentence buried the
+      // part that actually said what to do.
+      reportError(cause instanceof Error ? cause.message : 'No se pudo guardar el perfil', cause);
     } finally {
       setSaving(false);
     }

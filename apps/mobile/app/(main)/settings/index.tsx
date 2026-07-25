@@ -5,6 +5,7 @@ import { Alert } from 'react-native';
 import { DBVersionContext } from '@/app/_layout';
 import { FormSection } from '@/components/ui/FormScaffold';
 import { Screen } from '@/components/ui/Screen';
+import { PrivacyCard } from '@/features/privacy/PrivacyCard';
 import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
@@ -145,6 +146,13 @@ export default function SettingsScreen() {
           importProgress={importProgress}
           disabled={isExporting || isImporting}
         />
+      </FormSection>
+
+      <FormSection
+        title="Privacidad"
+        hint="El punto de partida de cada entrada; siempre puedes cambiarla una a una"
+      >
+        <PrivacyCard />
       </FormSection>
 
       <FormSection title="Apariencia">

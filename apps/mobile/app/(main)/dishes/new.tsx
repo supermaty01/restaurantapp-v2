@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View } from 'react-native';
 
@@ -13,6 +13,9 @@ import { createDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
 import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
+import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
+import type { Visibility } from '@/features/privacy/visibility';
+import { VisibilityField } from '@/features/privacy/VisibilityField';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { TagField } from '@/features/tags/components/TagField';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
@@ -23,6 +26,15 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishCreateScreen() {
+  const { value: defaultVisibility, loaded: visibilityLoaded } = useDefaultVisibility('dish');
+  const [visibility, setVisibility] = useState<Visibility>(defaultVisibility);
+
+  // The preference resolves asynchronously; adopt it until the user has
+  // touched the control, then leave their choice alone.
+  const [visibilityTouched, setVisibilityTouched] = useState(false);
+  useEffect(() => {
+    if (visibilityLoaded && !visibilityTouched) setVisibility(defaultVisibility);
+  }, [visibilityLoaded, defaultVisibility, visibilityTouched]);
   const { notify } = useToast();
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
   const {
@@ -48,6 +60,7 @@ export default function DishCreateScreen() {
     setLoading(true);
     try {
       const payload = {
+        visibility,
         name: data.name.trim(),
         restaurantId: data.restaurantId,
         comments: data.comments?.trim() || '',
@@ -130,6 +143,17 @@ export default function DishCreateScreen() {
 
       <FormSection title="Etiquetas" hint="Para agruparlo y filtrarlo luego">
         <TagField selected={selectedTags} onChange={setSelectedTags} />
+      </FormSection>
+
+      <FormSection title="Quién ve este plato">
+        <VisibilityField
+          value={visibility}
+          onChange={(next) => {
+            setVisibilityTouched(true);
+            setVisibility(next);
+          }}
+          defaultValue={defaultVisibility}
+        />
       </FormSection>
 
       <FormSection title="Fotos" hint="Opcional">

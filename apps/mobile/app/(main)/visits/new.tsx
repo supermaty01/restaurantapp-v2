@@ -11,6 +11,9 @@ import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
+import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
+import type { Visibility } from '@/features/privacy/visibility';
+import { VisibilityField } from '@/features/privacy/VisibilityField';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { createVisit } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
@@ -23,6 +26,15 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function VisitCreateScreen() {
+  const { value: defaultVisibility, loaded: visibilityLoaded } = useDefaultVisibility('visit');
+  const [visibility, setVisibility] = useState<Visibility>(defaultVisibility);
+
+  // The preference resolves asynchronously; adopt it until the user has
+  // touched the control, then leave their choice alone.
+  const [visibilityTouched, setVisibilityTouched] = useState(false);
+  useEffect(() => {
+    if (visibilityLoaded && !visibilityTouched) setVisibility(defaultVisibility);
+  }, [visibilityLoaded, defaultVisibility, visibilityTouched]);
   const { notify } = useToast();
   const { restaurantId: routeRestaurantId } = useGlobalSearchParams();
   const {
@@ -57,6 +69,7 @@ export default function VisitCreateScreen() {
     setIsSubmitting(true);
     try {
       const payload = {
+        visibility,
         visitedAt: data.visited_at,
         comments: data.comments?.trim() || '',
         restaurantId: data.restaurantId,
@@ -120,6 +133,17 @@ export default function VisitCreateScreen() {
           placeholder="Qué tal estuvo…"
           multiline
           numberOfLines={4}
+        />
+      </FormSection>
+
+      <FormSection title="Quién ve esta visita">
+        <VisibilityField
+          value={visibility}
+          onChange={(next) => {
+            setVisibilityTouched(true);
+            setVisibility(next);
+          }}
+          defaultValue={defaultVisibility}
         />
       </FormSection>
 

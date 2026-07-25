@@ -11,8 +11,19 @@ import { Alert } from 'react-native';
 /** Flattens an error and its `cause` chain, so the root reason is never lost. */
 function describe(error: unknown, depth = 0): string {
   if (depth > 4) return '…';
+
   if (!(error instanceof Error)) {
-    return typeof error === 'string' ? error : String(error);
+    if (typeof error === 'string') return error;
+    // `String(obj)` gives "[object Object]", which is the least useful string
+    // in computing: it appeared verbatim in a user-facing dialog.
+    if (error && typeof error === 'object') {
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return Object.prototype.toString.call(error);
+      }
+    }
+    return String(error);
   }
   const cause = (error as { cause?: unknown }).cause;
   return cause === undefined ? error.message : `${error.message}\n↳ ${describe(cause, depth + 1)}`;
@@ -42,5 +53,15 @@ export function reportError(userMessage: string, error: unknown, title = 'Error'
 
   console.error(`${userMessage}:`, error);
 
-  present(title, __DEV__ && detail ? `${userMessage}\n\n[dev] ${detail}` : userMessage);
+  // Skip the dev block when it would just repeat the message: some callers
+  // pass the error's own text because it is already written for a person.
+  const adds = Boolean(detail) && detail !== userMessage && !detail.startsWith(userMessage);
+  present(
+    title,
+    __DEV__ && adds
+      ? `${userMessage}
+
+[dev] ${detail}`
+      : userMessage,
+  );
 }

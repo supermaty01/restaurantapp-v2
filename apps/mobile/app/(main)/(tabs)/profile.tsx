@@ -27,7 +27,7 @@ const SYNC_LABEL: Record<string, string> = {
 export default function ProfileScreen() {
   const router = useRouter();
   const { session, isConfigured, signOut } = useAuth();
-  const { status, syncNow } = useSync();
+  const { status, lastOutcome, syncNow } = useSync();
   const { incoming } = useFriends();
 
   const { data: profile } = useAsyncResource<Profile>(fetchMyProfile, {
@@ -44,6 +44,7 @@ export default function ProfileScreen() {
           profile={profile}
           email={session.user.email ?? ''}
           syncStatus={status}
+          syncError={lastOutcome?.ok === false ? (lastOutcome.error ?? undefined) : undefined}
           onSync={syncNow}
           onEdit={() => router.push('/(main)/profile-edit')}
         />
@@ -93,12 +94,14 @@ function AccountCard({
   profile,
   email,
   syncStatus,
+  syncError,
   onSync,
   onEdit,
 }: {
   profile: Profile | null;
   email: string;
   syncStatus: string;
+  syncError?: string | undefined;
   onSync: () => void;
   onEdit: () => void;
 }) {
@@ -127,7 +130,11 @@ function AccountCard({
             size={16}
             color={syncStatus === 'error' ? colors.danger : colors.sage}
           />
-          <Text className="text-[13px] text-ink-muted">{SYNC_LABEL[syncStatus] ?? syncStatus}</Text>
+          {/* The reason, not just the fact. "Error al sincronizar" with no
+              detail leaves the only person who can fix it guessing. */}
+          <Text className="flex-1 text-[13px] text-ink-muted" numberOfLines={2}>
+            {syncError ?? SYNC_LABEL[syncStatus] ?? syncStatus}
+          </Text>
         </View>
         <Button label="Sincronizar" variant="ghost" size="sm" onPress={onSync} />
       </View>

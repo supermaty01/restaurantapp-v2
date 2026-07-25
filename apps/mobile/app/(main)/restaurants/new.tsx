@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { View } from 'react-native';
 
@@ -10,6 +10,9 @@ import RatingStars from '@/components/RatingStars';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
+import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
+import type { Visibility } from '@/features/privacy/visibility';
+import { VisibilityField } from '@/features/privacy/VisibilityField';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
 import { createRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
 import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
@@ -23,6 +26,15 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function RestaurantCreateScreen() {
+  const { value: defaultVisibility, loaded: visibilityLoaded } = useDefaultVisibility('restaurant');
+  const [visibility, setVisibility] = useState<Visibility>(defaultVisibility);
+
+  // The preference resolves asynchronously; adopt it until the user has
+  // touched the control, then leave their choice alone.
+  const [visibilityTouched, setVisibilityTouched] = useState(false);
+  useEffect(() => {
+    if (visibilityLoaded && !visibilityTouched) setVisibility(defaultVisibility);
+  }, [visibilityLoaded, defaultVisibility, visibilityTouched]);
   const { notify } = useToast();
   const { useBackRedirect, prefillName, prefillLatitude, prefillLongitude } =
     useGlobalSearchParams<{
@@ -67,6 +79,7 @@ export default function RestaurantCreateScreen() {
           rating: data.rating || null,
           latitude: location?.latitude || null,
           longitude: location?.longitude || null,
+          visibility,
         },
         selectedTags.map((tag) => tag.id),
       );
@@ -124,6 +137,17 @@ export default function RestaurantCreateScreen() {
 
       <FormSection title="Etiquetas" hint="Para agruparlo y filtrarlo luego">
         <TagField selected={selectedTags} onChange={setSelectedTags} />
+      </FormSection>
+
+      <FormSection title="Quién ve este lugar">
+        <VisibilityField
+          value={visibility}
+          onChange={(next) => {
+            setVisibilityTouched(true);
+            setVisibility(next);
+          }}
+          defaultValue={defaultVisibility}
+        />
       </FormSection>
 
       <FormSection title="Fotos" hint="Opcional">
