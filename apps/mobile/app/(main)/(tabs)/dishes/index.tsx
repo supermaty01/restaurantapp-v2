@@ -20,6 +20,7 @@ import { useDishList } from '@/features/dishes/hooks/useDishList';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { elevation } from '@/lib/design/tokens';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 const keyExtractor = (item: DishListDTO) => item.id.toString();
@@ -232,6 +233,7 @@ export default function DishesScreen() {
         columnWrapperStyle={isGridView ? { gap: 8 } : undefined}
         renderItem={isGridView ? renderGridItem : renderListItem}
         showsVerticalScrollIndicator={false}
+        contentContainerClassName="pb-28"
         ListEmptyComponent={listEmptyComponent}
         scrollEnabled={!isPeeking}
         initialNumToRender={8}
@@ -240,9 +242,10 @@ export default function DishesScreen() {
       />
       <TouchableOpacity
         onPress={() => router.push('/dishes/new')}
-        className="absolute bottom-5 right-5 w-12 h-12 bg-primary rounded-full items-center justify-center"
+        className="absolute bottom-[104px] right-5 h-14 w-14 items-center justify-center rounded-pill bg-primary"
+        style={elevation.medium}
       >
-        <Ionicons name="add" size={24} color="#fff" />
+        <Ionicons name="add" size={26} color={colors.onPrimary} />
       </TouchableOpacity>
 
       <FilterSortModal

@@ -1,40 +1,61 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/lib/context/ThemeContext';
+import { elevation } from '@/lib/design/tokens';
+
+import { PressableScale } from './Motion';
+import { Txt } from './Txt';
 
 import type { ComponentProps, ReactNode } from 'react';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
 
 /**
- * The Clay card: a light surface on the warm canvas, hairline border, no
- * shadow. Depth comes from the border and the background contrast rather than
- * elevation, which is what keeps the paper feel.
+ * The Clay card.
+ *
+ * A light surface on the warm canvas with a hairline and a soft, warm-tinted
+ * shadow. The mockups are border-only, which reads clean but inert; a little
+ * elevation is what makes a card sit *on* the paper rather than be drawn onto
+ * it. Tappable cards yield under the finger — `active:opacity` reads as a
+ * flicker, a spring reads as an object.
  */
 export function Card({
   children,
   onPress,
+  onLongPress,
   className = '',
   padded = true,
+  raised = true,
 }: {
   children: ReactNode;
   onPress?: (() => void) | undefined;
+  onLongPress?: (() => void) | undefined;
   className?: string;
   padded?: boolean;
+  /** Turn off where the card sits inside another surface. */
+  raised?: boolean;
 }) {
-  const classes = `bg-surface border border-line rounded-xl ${padded ? 'p-3' : ''} ${className}`;
+  const classes = `rounded-xl border border-line bg-surface ${padded ? 'p-3' : ''} ${className}`;
+  const style = raised ? elevation.low : undefined;
 
-  if (!onPress) return <View className={classes}>{children}</View>;
+  if (!onPress) {
+    return (
+      <View className={classes} style={style}>
+        {children}
+      </View>
+    );
+  }
 
   return (
-    <Pressable
-      accessibilityRole="button"
+    <PressableScale
       onPress={onPress}
-      className={`${classes} active:opacity-80`}
+      onLongPress={onLongPress}
+      className={classes}
+      {...(style ? { style } : {})}
     >
       {children}
-    </Pressable>
+    </PressableScale>
   );
 }
 
@@ -52,10 +73,12 @@ export function SectionHeader({
 }) {
   return (
     <View className={`flex-row items-baseline justify-between ${className}`}>
-      <Text className="font-display text-[20px] text-ink">{title}</Text>
+      <Txt variant="title">{title}</Txt>
       {actionLabel && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
-          <Text className="font-semi text-[13px] text-primary">{actionLabel}</Text>
+        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={10}>
+          <Txt variant="caption" tone="primary" weight="bold" serif={false}>
+            {actionLabel}
+          </Txt>
         </Pressable>
       ) : null}
     </View>
@@ -65,15 +88,18 @@ export function SectionHeader({
 /** The small uppercase label that sits above a form field. */
 export function FieldLabel({ children }: { children: ReactNode }) {
   return (
-    <Text className="font-bold text-[12px] uppercase tracking-wider text-ink-subtle">
+    <Txt variant="overline" tone="subtle" serif={false} uppercase>
       {children}
-    </Text>
+    </Txt>
   );
 }
 
 /**
- * Shown where a list has nothing in it. An empty screen with no explanation
- * reads as a bug, so this always says what would appear here.
+ * Shown where a list has nothing in it.
+ *
+ * An empty screen with no explanation reads as a bug, so this always says what
+ * would appear here. The icon sits in a tinted disc rather than floating loose,
+ * which stops it looking like a rendering failure.
  */
 export function EmptyState({
   icon,
@@ -92,12 +118,18 @@ export function EmptyState({
 
   return (
     <View className={`items-center justify-center px-8 py-12 ${className}`}>
-      <View className="mb-4 h-16 w-16 items-center justify-center rounded-pill bg-sunken">
-        <Ionicons name={icon} size={28} color={colors.inkSubtle} />
+      <View className="mb-4 h-[72px] w-[72px] items-center justify-center rounded-pill bg-primary/8">
+        <View className="h-14 w-14 items-center justify-center rounded-pill bg-primary/10">
+          <Ionicons name={icon} size={26} color={colors.primary} />
+        </View>
       </View>
-      <Text className="text-center font-display text-[20px] text-ink">{title}</Text>
+      <Txt variant="title" className="text-center">
+        {title}
+      </Txt>
       {message ? (
-        <Text className="mt-1.5 text-center text-[14px] leading-5 text-ink-muted">{message}</Text>
+        <Txt variant="callout" tone="muted" className="mt-1.5 max-w-[280px] text-center">
+          {message}
+        </Txt>
       ) : null}
       {action ? <View className="mt-5">{action}</View> : null}
     </View>
@@ -109,6 +141,7 @@ export function Chip({
   label,
   tone = 'neutral',
   color,
+  icon,
   onPress,
   className = '',
 }: {
@@ -116,34 +149,49 @@ export function Chip({
   tone?: 'neutral' | 'primary' | 'sage' | 'accent';
   /** An explicit colour, for user-defined tags that carry their own. */
   color?: string | undefined;
+  icon?: IconName | undefined;
   onPress?: (() => void) | undefined;
   className?: string;
 }) {
-  const tones: Record<string, string> = {
+  const { colors } = useTheme();
+
+  const backgrounds: Record<string, string> = {
     neutral: 'bg-sunken',
-    primary: 'bg-primary/10',
+    primary: 'bg-primary/12',
     sage: 'bg-sage/15',
     accent: 'bg-accent/15',
   };
-  const text: Record<string, string> = {
+  const inks: Record<string, string> = {
     neutral: 'text-ink-muted',
     primary: 'text-primary',
     sage: 'text-sage',
     accent: 'text-accent',
   };
+  const iconColours: Record<string, string> = {
+    neutral: colors.inkMuted,
+    primary: colors.primary,
+    sage: colors.sage,
+    accent: colors.accent,
+  };
 
   const body = (
     <View
-      className={`rounded-pill px-2.5 py-1 ${color ? '' : tones[tone]} ${className}`}
+      className={`flex-row items-center gap-1 rounded-pill px-2.5 py-1 ${
+        color ? '' : backgrounds[tone]
+      } ${className}`}
       style={color ? { backgroundColor: `${color}26` } : undefined}
     >
-      <Text
-        className={`font-bold text-[11px] ${color ? '' : text[tone]}`}
-        style={color ? { color } : undefined}
+      {icon ? <Ionicons name={icon} size={11} color={color ?? iconColours[tone]} /> : null}
+      <Txt
+        variant="overline"
+        serif={false}
+        weight="bold"
         numberOfLines={1}
+        className={color ? '' : (inks[tone] ?? '')}
+        style={[{ letterSpacing: 0.2 }, color ? { color } : null]}
       >
         {label}
-      </Text>
+      </Txt>
     </View>
   );
 
@@ -154,3 +202,10 @@ export function Chip({
     </Pressable>
   );
 }
+
+/** A hairline used to separate stacked rows inside one surface. */
+export function Divider({ className = '' }: { className?: string }) {
+  return <View className={`h-px bg-line ${className}`} />;
+}
+
+export { elevation };

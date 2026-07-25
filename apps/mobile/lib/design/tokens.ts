@@ -137,3 +137,61 @@ export const fonts = {
   bodySemi: 'PlusJakartaSans_600SemiBold',
   bodyBold: 'PlusJakartaSans_700Bold',
 } as const;
+
+/**
+ * Soft, warm shadows.
+ *
+ * The mockups are flat — border-only cards on a warm canvas — which reads clean
+ * but slightly inert. A little elevation gives the paper metaphor somewhere to
+ * live: cards sit *on* the canvas rather than being drawn onto it.
+ *
+ * The shadow is tinted with the ink brown rather than pure black, so it warms
+ * the surface underneath instead of greying it. Android only honours
+ * `elevation` (and paints it neutral), so the two platforms are close but not
+ * identical — deliberately, rather than flattening iOS to match.
+ */
+export const elevation = {
+  /** Resting cards and list rows. */
+  low: {
+    shadowColor: '#2A211C',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  /** Raised surfaces: the tab bar, sticky headers. */
+  medium: {
+    shadowColor: '#2A211C',
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 4,
+  },
+  /** Sheets, dialogs, anything overlaying the page. */
+  high: {
+    shadowColor: '#2A211C',
+    shadowOpacity: 0.16,
+    shadowRadius: 28,
+    shadowOffset: { width: 0, height: 12 },
+    elevation: 12,
+  },
+} as const;
+
+/**
+ * Type scale.
+ *
+ * Sizes pair with a line height and a tracking value, because the display face
+ * (Newsreader) and the text face (Plus Jakarta Sans) want opposite treatment:
+ * the serif wants tight leading and neutral tracking at large sizes, the sans
+ * wants open leading and slightly negative tracking at small ones.
+ */
+export const type = {
+  hero: { fontSize: 34, lineHeight: 38, letterSpacing: -0.5 },
+  display: { fontSize: 27, lineHeight: 32, letterSpacing: -0.3 },
+  title: { fontSize: 20, lineHeight: 25, letterSpacing: -0.2 },
+  heading: { fontSize: 17, lineHeight: 22, letterSpacing: -0.1 },
+  body: { fontSize: 15, lineHeight: 21 },
+  callout: { fontSize: 14, lineHeight: 19 },
+  caption: { fontSize: 12.5, lineHeight: 17 },
+  overline: { fontSize: 11, lineHeight: 14, letterSpacing: 1.1 },
+} as const;

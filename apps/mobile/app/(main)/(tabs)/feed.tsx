@@ -73,7 +73,7 @@ export default function FeedScreen() {
           data={data ?? []}
           keyExtractor={(item) => `${item.kind}:${item.entityUuid}`}
           renderItem={renderItem}
-          contentContainerClassName="px-5 pb-8 gap-3"
+          contentContainerClassName="px-5 pb-28 gap-3"
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl

@@ -36,7 +36,7 @@ export default function ProfileScreen() {
   });
 
   return (
-    <Screen scroll contentClassName="pt-3">
+    <Screen scroll tabBar contentClassName="pt-3">
       <Text className="font-display text-[26px] text-ink">Perfil</Text>
 
       {session ? (

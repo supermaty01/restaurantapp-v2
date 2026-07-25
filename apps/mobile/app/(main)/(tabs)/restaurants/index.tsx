@@ -20,6 +20,7 @@ import { useRestaurantList } from '@/features/restaurants/hooks/useRestaurantLis
 import type { RestaurantListDTO } from '@/features/restaurants/types/restaurant-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { elevation } from '@/lib/design/tokens';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 const keyExtractor = (item: RestaurantListDTO) => item.id.toString();
@@ -235,6 +236,7 @@ export default function RestaurantsScreen() {
         columnWrapperStyle={isGridView ? { gap: 8 } : undefined}
         renderItem={isGridView ? renderGridItem : renderListItem}
         showsVerticalScrollIndicator={false}
+        contentContainerClassName="pb-28"
         ListEmptyComponent={listEmptyComponent}
         scrollEnabled={!isPeeking}
         initialNumToRender={8}
@@ -243,9 +245,10 @@ export default function RestaurantsScreen() {
       />
       <TouchableOpacity
         onPress={() => router.push('/restaurants/new')}
-        className="absolute bottom-5 right-5 w-12 h-12 bg-primary rounded-full items-center justify-center"
+        className="absolute bottom-[104px] right-5 h-14 w-14 items-center justify-center rounded-pill bg-primary"
+        style={elevation.medium}
       >
-        <Ionicons name="add" size={24} color="#fff" />
+        <Ionicons name="add" size={26} color={colors.onPrimary} />
       </TouchableOpacity>
 
       <FilterSortModal
