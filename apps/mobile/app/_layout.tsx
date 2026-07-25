@@ -19,6 +19,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { IntentHandler } from '@/components/IntentHandler';
 import { SyncRunner } from '@/components/SyncRunner';
 import { DialogProvider } from '@/components/ui/Dialog';
+import { ToastProvider } from '@/components/ui/Toast';
 import migrations from '@/drizzle/migrations';
 import '../global.css';
 import { AuthProvider } from '@/lib/context/AuthContext';
@@ -118,13 +119,15 @@ export default function RootLayout() {
                 <AuthProvider>
                   <ThemeProvider>
                     <DialogProvider>
-                      <NewRestaurantProvider>
-                        <NewDishProvider>
-                          <IntentHandler />
-                          <SyncRunner />
-                          <Slot />
-                        </NewDishProvider>
-                      </NewRestaurantProvider>
+                      <ToastProvider>
+                        <NewRestaurantProvider>
+                          <NewDishProvider>
+                            <IntentHandler />
+                            <SyncRunner />
+                            <Slot />
+                          </NewDishProvider>
+                        </NewRestaurantProvider>
+                      </ToastProvider>
                     </DialogProvider>
                   </ThemeProvider>
                 </AuthProvider>

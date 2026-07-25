@@ -76,3 +76,39 @@ export async function getAutocomplete(
   const data = await fetchJson(`${PLACES_BASE}/autocomplete/json?${params.toString()}`);
   return autocompleteResponse.parse(data);
 }
+
+const geocodeResponse = z.object({
+  status: z.string(),
+  error_message: z.string().optional(),
+  results: z.array(z.object({ formatted_address: z.string() })).default([]),
+});
+
+/**
+ * Turns coordinates into a street address, via Google.
+ *
+ * `expo-location`'s `reverseGeocodeAsync` needs the device's location
+ * permission on Android — which this app deliberately does not request just to
+ * name a point someone tapped on a map. Every lookup failed silently and the
+ * field fell back to raw coordinates. Google's geocoder needs only the API key
+ * the map already uses, which is how v1 did it.
+ *
+ * Returns null when there is no address for the point, rather than throwing:
+ * a nameless location is still a perfectly good location.
+ */
+export async function reverseGeocode(
+  apiKey: string,
+  location: { latitude: number; longitude: number },
+): Promise<string | null> {
+  const params = new URLSearchParams({
+    latlng: `${location.latitude},${location.longitude}`,
+    key: apiKey,
+    language: 'es',
+  });
+
+  const data = await fetchJson(
+    `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`,
+  );
+  const parsed = geocodeResponse.parse(data);
+
+  return parsed.results[0]?.formatted_address ?? null;
+}

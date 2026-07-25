@@ -6,8 +6,8 @@ import { View, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
-import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
+import { useToast } from '@/components/ui/Toast';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import { updateDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
@@ -25,7 +25,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishEditScreen() {
-  const { tell } = useDialog();
+  const { notify } = useToast();
   const { id } = useGlobalSearchParams<{ id: string }>();
   const { colors } = useTheme();
 
@@ -97,7 +97,7 @@ export default function DishEditScreen() {
 
       await deleteImages(drizzleDb, removedImages);
 
-      await tell({ title: 'Cambios guardados', icon: 'checkmark-circle-outline' });
+      notify('Cambios guardados');
       router.back();
     } catch (error) {
       reportError('No se pudo actualizar el plato', error);

@@ -7,8 +7,8 @@ import { View } from 'react-native';
 import FormInput from '@/components/FormInput';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
-import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
+import { useToast } from '@/components/ui/Toast';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
 import { createRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
@@ -23,7 +23,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function RestaurantCreateScreen() {
-  const { tell } = useDialog();
+  const { notify } = useToast();
   const { useBackRedirect, prefillName, prefillLatitude, prefillLongitude } =
     useGlobalSearchParams<{
       useBackRedirect?: string;
@@ -75,7 +75,7 @@ export default function RestaurantCreateScreen() {
         await uploadImages(drizzleDb, selectedImages, 'RESTAURANT', restaurantId);
       }
 
-      await tell({ title: 'Restaurante guardado', icon: 'checkmark-circle-outline' });
+      notify('Restaurante guardado');
       if (useBackRedirect && useBackRedirect === 'true') {
         setNewRestaurantId(restaurantId);
         router.back();

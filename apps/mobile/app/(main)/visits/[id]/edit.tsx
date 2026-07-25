@@ -5,8 +5,8 @@ import { useForm } from 'react-hook-form';
 
 import FormDatePicker from '@/components/FormDatePicker';
 import FormInput from '@/components/FormInput';
-import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
+import { useToast } from '@/components/ui/Toast';
 import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
@@ -27,7 +27,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function VisitEditScreen() {
-  const { tell } = useDialog();
+  const { notify } = useToast();
   const { id } = useGlobalSearchParams<{ id: string }>();
   const router = useRouter();
 
@@ -107,7 +107,7 @@ export default function VisitEditScreen() {
 
       await deleteImages(drizzleDb, removedImages);
 
-      await tell({ title: 'Cambios guardados', icon: 'checkmark-circle-outline' });
+      notify('Cambios guardados');
       router.replace({
         pathname: '/visits/[id]/view',
         params: { id },

@@ -6,8 +6,8 @@ import { View } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
-import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
+import { useToast } from '@/components/ui/Toast';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
 import { createDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
@@ -23,7 +23,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishCreateScreen() {
-  const { tell } = useDialog();
+  const { notify } = useToast();
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
   const {
     control,
@@ -65,7 +65,7 @@ export default function DishCreateScreen() {
         await uploadImages(drizzleDb, selectedImages, 'DISH', dishId);
       }
 
-      await tell({ title: 'Plato guardado', icon: 'checkmark-circle-outline' });
+      notify('Plato guardado');
       if (useBackRedirect && useBackRedirect === 'true') {
         setNewDish({
           id: dishId,

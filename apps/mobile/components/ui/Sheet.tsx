@@ -78,10 +78,16 @@ export function Sheet({
             {
               backgroundColor: colors.surface,
               maxHeight: `${maxHeightRatio * 100}%`,
-              paddingBottom: Math.max(insets.bottom, 12),
+              paddingBottom: 14,
+              marginHorizontal: 10,
+              marginBottom: Math.max(insets.bottom, 10),
             },
           ]}
-          className="rounded-t-[26px]"
+          // Rounded on all four corners and inset from the edges. Making a
+          // modal sit flush against Android's navigation bar meant fighting the
+          // inset system, and it broke the layout twice; a card that floats
+          // deliberately reads better than one that almost reaches the edge.
+          className="rounded-[26px]"
         >
           {/* Grab handle: says "this came from the bottom and goes back there". */}
           <View className="items-center pb-1 pt-2.5">

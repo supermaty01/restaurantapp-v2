@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
-import { getAutocomplete, getPlaceDetails } from '@/services/places';
+import { getAutocomplete, getPlaceDetails, reverseGeocode } from '@/services/places';
 
 import type { MapPressEvent, Region } from 'react-native-maps';
 
@@ -138,32 +138,22 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   }, []);
 
   const fetchAddress = async (latitude: number, longitude: number) => {
+    if (!GOOGLE_PLACES_API_KEY) {
+      setAddress(null);
+      return;
+    }
+
     setLoadingAddress(true);
-
     try {
-      const geocode = await Location.reverseGeocodeAsync({
-        latitude,
-        longitude,
-      });
-
+      // Google's geocoder, not expo-location's: the latter needs the device
+      // location permission on Android, which this app does not request just
+      // to name a point you tapped, so every lookup failed silently and the
+      // field fell back to raw coordinates. This is how v1 did it.
+      const formatted = await reverseGeocode(GOOGLE_PLACES_API_KEY, { latitude, longitude });
       resolvedFor.current = coordKey({ latitude, longitude });
-      const addressInfo = geocode[0];
-      if (addressInfo) {
-        const formattedAddress = [
-          addressInfo.name || '',
-          addressInfo.street || '',
-          addressInfo.city || '',
-          addressInfo.region || '',
-          addressInfo.country || '',
-        ]
-          .filter(Boolean)
-          .join(', ');
-
-        setAddress(formattedAddress || 'Ubicación no disponible');
-      } else {
-        setAddress(null);
-      }
+      setAddress(formatted);
     } catch {
+      // A nameless point is still a valid point; the caller shows coordinates.
       setAddress(null);
     } finally {
       setLoadingAddress(false);

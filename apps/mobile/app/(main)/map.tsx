@@ -289,7 +289,6 @@ export default function MapScreen() {
               latitude={restaurant.latitude}
               longitude={restaurant.longitude}
               name={restaurant.name}
-              rating={restaurant.rating ?? null}
               selected={focusedId === restaurant.id}
               onPress={() =>
                 router.push({
