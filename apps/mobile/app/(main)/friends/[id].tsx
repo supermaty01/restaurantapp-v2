@@ -16,6 +16,7 @@ import {
 import type { FeedEntry, FriendshipState, PublicProfile } from '@/features/social/api';
 import { FeedCard } from '@/features/social/components/FeedCard';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
+import { usePagedResource } from '@/features/social/hooks/usePagedResource';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
 
@@ -37,10 +38,13 @@ export default function UserProfileScreen() {
     deps: [id],
   });
 
-  const entries = useAsyncResource<FeedEntry[]>(() => fetchUserEntries(id), {
-    enabled: Boolean(id),
-    deps: [id],
-  });
+  // Paged like the feed: a friend with a long diary used to stop at twenty
+  // entries with nothing to say it had.
+  const entries = usePagedResource<FeedEntry>(
+    (before) => fetchUserEntries(id, before),
+    (entry) => entry.occurredAt,
+    { enabled: Boolean(id), deps: [id] },
+  );
 
   const act = useCallback(
     async (action: () => Promise<FriendshipState>, failure: string) => {
@@ -84,11 +88,20 @@ export default function UserProfileScreen() {
   return (
     <Screen padded={false}>
       <FlatList
-        data={entries.data ?? []}
+        data={entries.items}
         keyExtractor={(item) => `${item.kind}:${item.entityUuid}`}
         renderItem={({ item }) => <FeedCard entry={item} />}
         contentContainerClassName="px-5 pb-8 gap-3"
         showsVerticalScrollIndicator={false}
+        onEndReached={entries.loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          entries.loadingMore ? (
+            <View className="py-5">
+              <ActivityIndicator />
+            </View>
+          ) : null
+        }
         refreshControl={
           <RefreshControl
             refreshing={entries.loading}

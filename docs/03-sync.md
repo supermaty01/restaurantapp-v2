@@ -27,12 +27,26 @@ Esto mantiene el código de la app en enteros y confina toda la complejidad de u
 1. Leer `change_log` con `synced = false`, agrupado por tabla, en orden de dependencia (restaurants → dishes/visits → uniones → images).
 2. `upsert` por lotes a Supabase (`onConflict: id`), condicionado en el servidor a `updated_at` entrante ≥ existente (función SQL `upsert_if_newer` para no pisar cambios más nuevos de otro dispositivo).
 3. Marcar `synced = true` solo tras confirmación.
+4. **Fase aparte al final: las uniones.** Ver abajo.
 
 ### Pull
 
 1. Cursor local `last_pulled_at` por tabla (en `app_settings`).
 2. `select * where user_id = me and updated_at > cursor` por tabla, aplicar en SQLite con la misma regla last-write-wins, avanzar cursor.
 3. Primera sesión en un dispositivo nuevo = pull completo (bootstrap).
+4. Una fila que llega por pull nace con su entrada de `change_log` ya marcada `synced`. Sin eso, el auto-reparador (`linkLocalData`, que encola toda fila sin entrada — así es como un primer login sube un diario anterior a la cuenta) no puede distinguirla de una fila local nueva, y el dispositivo le devuelve al servidor sus propias filas. Para los escalares es inofensivo; para las uniones resucita enlaces que otro dispositivo acababa de borrar.
+
+### Las uniones viajan con su padre
+
+`restaurant_tag`, `dish_tag`, `dish_visit` y `visit_participant` no pasan por `change_log`.
+
+Una unión no tiene uuid, ni marcas de tiempo, ni identidad propia: *es* el par de uuids. No hay nada que apuntar en la bitácora ni nada que comparar por última-escritura-gana.
+
+Así que la unidad de trabajo es un padre, no un enlace: «el restaurante #4 tiene exactamente estas etiquetas». Al enviar un padre, su conjunto completo de enlaces reemplaza lo que hubiera en el servidor. Es idempotente, y un enlace borrado desaparece sin necesitar una lápida que lo explique.
+
+Se envían **después de todos los padres**, porque un `dish_visit` adelantado a su plato lo rechazaría la clave foránea. Y en el pull solo se reemplazan los padres que volvieron en esa pasada: reescribir todas las uniones desharía los enlaces que el dispositivo hizo sin conexión.
+
+Registro en `services/sync/tables.ts` (`LINK_TABLES`), mecánica en `services/sync/links.ts`.
 
 ### Disparadores
 
