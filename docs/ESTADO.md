@@ -50,6 +50,36 @@ Los repositorios escriben la fila y su entrada de `change_log` por separado. No 
 
 ---
 
+---
+
+## Feedback en dispositivo, ronda 2 (25 de julio de 2026)
+
+Verde: TypeScript en 0, **169 tests** + 24 del worker + 39 aserciones SQL, lint sin errores, `expo export` compila.
+
+### Resuelto
+
+| Tu nota                                          | Qué pasaba de verdad                                                                                                                                                          |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Los filtros dejaron de funcionar                 | `groupByMonth` ordenaba siempre de más nuevo a más viejo e ignoraba el orden elegido. Además el filtro por etiquetas era UI muerta en Visitas: no tienen etiquetas            |
+| El mes no cubre la vista al hacer scroll         | El margen horizontal vivía en el `contentContainer`, así que la cabecera fijada quedaba metida hacia dentro y las fotos pasaban por los lados                                 |
+| Solo imágenes en la línea de tiempo              | Dos columnas con nombre y fecha. Un muro de fotos es bonito e imposible de buscar                                                                                             |
+| No se puede valorar algo creado sin valoración   | Bug de v1: `RatingStars` pintaba «Sin calificación» como texto también en edición, así que no había estrellas que pulsar. De paso, pulsar la valoración actual ahora la quita |
+| Las tarjetas cambian de tamaño con/sin estrellas | Alto reservado siempre                                                                                                                                                        |
+| El mapa se centra en Medellín                    | Nuevo `useCurrentRegion`. **No pide permiso** — pedir ubicación solo para centrar un mapa es de mala educación — solo actúa si ya está concedido                              |
+| Swipe up/down para salir de la foto              | Ya existía pero estaba muerto por el problema del Modal. Ahora además descarta por velocidad y encoge la imagen al arrastrar                                                  |
+| El icono de la app en Inicio                     | Hecho                                                                                                                                                                         |
+| Añadir etiquetas es terrible                     | Era: pulsar `+`, esperar modal, buscar, cerrar, comprobar. Ahora las que más usas están en línea como chips                                                                   |
+| Las fotos y «los 2 botones feos»                 | Eran dos botones grises y cada foto a ancho completo con un botón rojo debajo. Ahora tira de miniaturas con su × y una hoja para cámara/galería                               |
+| Añadir restaurantes es terrible                  | Era un `Picker` nativo: sin búsqueda, sin foto, inservible con cientos de sitios. Ahora fila con lo elegido + hoja con buscador y «crear uno nuevo» dentro                    |
+
+### 🔜 Pendiente de tu feedback
+
+1. **`DishPicker`**: le falta el mismo tratamiento que al de restaurantes.
+2. **El mapa**: dijiste que no está bien implementado. Solo he corregido el centrado; la pantalla en sí sigue sin revisar.
+3. **«Armonía» en detalle y creación**: los formularios ya no son una lista plana, pero el trabajo de que _fluya_ está a medias. Los selectores de plato y las pantallas de detalle son lo que queda.
+
+---
+
 ## Rediseño visual: cerrado (25 de julio de 2026)
 
 Verde: TypeScript en 0, **159 tests** de app + 24 del worker + **39 aserciones SQL**, lint sin errores, `expo export` compila.
