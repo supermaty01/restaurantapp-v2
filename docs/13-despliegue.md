@@ -113,6 +113,53 @@ el Worker cae automáticamente a ese modo.
 El login OAuth de la app usa **PKCE** (`flowType: 'pkce'`), que es lo que exige
 el flujo nativo con deep link.
 
+### Google: el cliente OAuth tiene que ser de tipo «Aplicación web»
+
+Es el error que más cuesta encontrar, porque el mensaje no lo dice:
+
+> `Unable to exchange external code: 4/0A`
+
+Significa que Google devolvió el código de autorización correctamente, pero
+Supabase **no pudo canjearlo** con Google desde su servidor. La causa casi
+siempre es una de estas dos, y ambas se arreglan en Google Cloud Console →
+_APIs y servicios → Credenciales_:
+
+1. **El cliente OAuth es de tipo «Android» (o «iOS») en vez de «Aplicación
+   web».** Los clientes nativos **no tienen client secret**, y Supabase
+   necesita uno para hacer el canje servidor a servidor. Aunque la app sea
+   nativa, aquí quien habla con Google es Supabase, no el móvil: el cliente
+   debe ser **Web application**.
+2. **El client secret pegado en Supabase no corresponde a ese client id**, o se
+   copió con espacios.
+
+Además, en ese mismo cliente web, en _URIs de redireccionamiento
+autorizados_, tiene que estar exactamente:
+
+```
+https://<proyecto>.supabase.co/auth/v1/callback
+```
+
+No `restaurantapp://auth/callback`: ese es el salto siguiente, el que Supabase
+hace hacia la app, y va en Supabase (paso 2 de arriba), no en Google.
+
+### Que la pantalla de permisos diga «RestaurantApp»
+
+Si Google muestra «…permitirá que `xxxx.supabase.co` acceda a esta información»
+es porque la pantalla de consentimiento no tiene nombre de aplicación y Google
+cae al dominio del redirect.
+
+En Google Cloud Console → _APIs y servicios → Pantalla de consentimiento de
+OAuth_:
+
+- **Nombre de la aplicación**: `RestaurantApp`.
+- **Logotipo**: el icono de la app (mejora bastante la percepción).
+- **Correo de asistencia** y **dominio del desarrollador**.
+
+Con eso el diálogo pasa a decir el nombre. Ojo: mientras la app esté en modo
+**Testing** Google añade un aviso de app no verificada; para quitarlo hace
+falta pasar a producción y, si se piden scopes sensibles, verificación. Para
+los scopes básicos (`email`, `profile`) no hace falta verificación.
+
 > Nota free tier: el proyecto se **pausa por inactividad**. El cron del Worker lo mantiene despierto, o se asume arranque frío.
 
 ## 4. Cloudflare Worker 🚧 (fase 4)

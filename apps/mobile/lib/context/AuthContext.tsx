@@ -25,6 +25,8 @@ interface AuthContextValue {
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
   signUpWithEmail: (email: string, password: string) => Promise<AuthResult>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<AuthResult>;
+  /** Completes a login from a redirect the system delivered to the app. */
+  completeOAuth: (url: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
 }
 
@@ -36,6 +38,7 @@ const AuthContext = createContext<AuthContextValue>({
   signInWithEmail: async () => ({ error: 'not-configured' }),
   signUpWithEmail: async () => ({ error: 'not-configured' }),
   signInWithOAuth: async () => ({ error: 'not-configured' }),
+  completeOAuth: async () => ({ error: 'not-configured' }),
   signOut: async () => {},
 });
 
@@ -86,6 +89,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [supabase],
   );
 
+  /**
+   * Turns an OAuth redirect URL into a session.
+   *
+   * Shared by two entry points: `openAuthSessionAsync`, which normally returns
+   * the redirect straight to us, and the `auth/callback` route, which catches
+   * it when the system delivers the deep link to the app instead — a cold
+   * start, or a browser tab that had already been dismissed.
+   */
+  const completeOAuth = useCallback(
+    async (url: string): Promise<AuthResult> => {
+      if (!supabase) return { error: 'not-configured' };
+
+      const callback = parseOAuthCallback(url);
+      devLog('Auth', 'OAuth callback:', callback.type);
+
+      switch (callback.type) {
+        case 'code': {
+          const { error } = await supabase.auth.exchangeCodeForSession(callback.code);
+          return { error: error?.message ?? null };
+        }
+        case 'session': {
+          const { error } = await supabase.auth.setSession({
+            access_token: callback.accessToken,
+            refresh_token: callback.refreshToken,
+          });
+          return { error: error?.message ?? null };
+        }
+        case 'error':
+          return { error: callback.message };
+        case 'unrecognised':
+          return {
+            error: `El proveedor no devolvió ninguna credencial${
+              callback.params.length ? ` (recibido: ${callback.params.join(', ')})` : ''
+            }. Revisa que ${REDIRECT_TO} esté en las Redirect URLs de Supabase.`,
+          };
+      }
+    },
+    [supabase],
+  );
+
   const signInWithOAuth = useCallback(
     async (provider: OAuthProvider): Promise<AuthResult> => {
       if (!supabase) return { error: 'not-configured' };
@@ -101,36 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_TO);
       if (result.type !== 'success') return { error: 'cancelled' };
 
-      // The redirect can come back as a PKCE code, as ready-made tokens, or as
-      // an error — all three have to be handled or the login dead-ends.
-      const callback = parseOAuthCallback(result.url);
-      devLog('Auth', 'OAuth callback:', callback.type);
-
-      switch (callback.type) {
-        case 'code': {
-          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(
-            callback.code,
-          );
-          return { error: exchangeError?.message ?? null };
-        }
-        case 'session': {
-          const { error: setError } = await supabase.auth.setSession({
-            access_token: callback.accessToken,
-            refresh_token: callback.refreshToken,
-          });
-          return { error: setError?.message ?? null };
-        }
-        case 'error':
-          return { error: callback.message };
-        case 'unrecognised':
-          return {
-            error: `El proveedor no devolvió ninguna credencial${
-              callback.params.length ? ` (recibido: ${callback.params.join(', ')})` : ''
-            }. Revisa que ${REDIRECT_TO} esté en las Redirect URLs de Supabase.`,
-          };
-      }
+      return completeOAuth(result.url);
     },
-    [supabase],
+    [supabase, completeOAuth],
   );
 
   const signOut = useCallback(async () => {
@@ -148,9 +164,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signInWithEmail,
       signUpWithEmail,
       signInWithOAuth,
+      completeOAuth,
       signOut,
     }),
-    [loading, session, signInWithEmail, signUpWithEmail, signInWithOAuth, signOut],
+    [loading, session, signInWithEmail, signUpWithEmail, signInWithOAuth, completeOAuth, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
