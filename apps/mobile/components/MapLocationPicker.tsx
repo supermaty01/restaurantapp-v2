@@ -42,6 +42,11 @@ const openAppSettings = () => {
 // coordinates yet. See lib/hooks/useCurrentRegion.
 const DEFAULT_REGION: Region = FALLBACK_REGION;
 
+/** Identity for a coordinate pair, rounded to ~1 m. */
+function coordKey({ latitude, longitude }: { latitude: number; longitude: number }): string {
+  return `${latitude.toFixed(5)},${longitude.toFixed(5)}`;
+}
+
 const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   location,
   onLocationChange,
@@ -70,6 +75,11 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   const [selectedLocation, setSelectedLocation] = useState(location);
   const [address, setAddress] = useState<string | null>(null);
+  // Coordinates whose address we already know. Picking a place from search
+  // gives us its formatted address for free; without this the `location`
+  // effect below immediately re-geocoded and overwrote it — usually with the
+  // failure text, since reverse geocoding needs a permission we do not ask for.
+  const resolvedFor = useRef<string | null>(null);
   const [loadingAddress, setLoadingAddress] = useState(false);
   const [gettingCurrentLocation, setGettingCurrentLocation] = useState(false);
 
@@ -94,10 +104,13 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       setMapRegion(newRegion);
       setSelectedLocation(location);
       mapRef.current?.animateToRegion(newRegion, 500);
-      void fetchAddress(location.latitude, location.longitude);
+
+      if (resolvedFor.current !== coordKey(location)) {
+        void fetchAddress(location.latitude, location.longitude);
+      }
     } else {
       setSelectedLocation(null);
-      setAddress('Ubicación no disponible');
+      setAddress(null);
     }
   }, [location]);
 
@@ -130,6 +143,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         longitude,
       });
 
+      resolvedFor.current = coordKey({ latitude, longitude });
       const addressInfo = geocode[0];
       if (addressInfo) {
         const formattedAddress = [
@@ -144,10 +158,10 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
         setAddress(formattedAddress || 'Ubicación no disponible');
       } else {
-        setAddress('Ubicación no disponible');
+        setAddress(null);
       }
     } catch {
-      setAddress('Ubicación no disponible');
+      setAddress(null);
     } finally {
       setLoadingAddress(false);
     }
@@ -250,6 +264,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
       mapRef.current?.animateToRegion(newRegion, 500);
 
+      resolvedFor.current = coordKey(coords);
       setAddress(data.result?.formatted_address || description);
       setSearchQuery(description);
       setSuggestions([]);
@@ -327,7 +342,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
   const handleClearSelection = () => {
     setSelectedLocation(null);
-    setAddress('Ubicación no disponible');
+    setAddress(null);
     setSearchQuery('');
     setSuggestions([]);
     onLocationChange?.(null);
@@ -462,7 +477,14 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
               marginBottom: 4,
             }}
           >
-            {address ?? 'Ubicación no disponible'}
+            {/* A failed address lookup is not a missing location. Falling back
+                to the coordinates says "this is set, we just cannot name it";
+                "Ubicación no disponible" said the opposite, and said it even
+                when a pin was clearly sitting on the map. */}
+            {address ??
+              (selectedLocation
+                ? `${selectedLocation.latitude.toFixed(5)}, ${selectedLocation.longitude.toFixed(5)}`
+                : 'Toca el mapa para elegir un punto')}
           </Text>
         )}
 

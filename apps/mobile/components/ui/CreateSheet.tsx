@@ -37,7 +37,6 @@ export function CreateSheet({ visible, onClose }: { visible: boolean; onClose: (
           icon="calendar"
           title="Una visita"
           description="Dónde comiste, con quién y qué pediste"
-          emphasis
           onPress={() => go('/(main)/visits/new')}
         />
         <Option
@@ -62,13 +61,11 @@ function Option({
   title,
   description,
   onPress,
-  emphasis = false,
 }: {
   icon: IconName;
   title: string;
   description: string;
   onPress: () => void;
-  emphasis?: boolean;
 }) {
   const { colors } = useTheme();
 
@@ -77,16 +74,10 @@ function Option({
       accessibilityLabel={title}
       onPress={onPress}
       scaleTo={0.98}
-      className={`flex-row items-center gap-3.5 rounded-xl border p-3.5 ${
-        emphasis ? 'border-primary/30 bg-primary/8' : 'border-line bg-surface'
-      }`}
+      className="flex-row items-center gap-3.5 rounded-xl border border-primary/30 bg-primary/8 p-3.5"
     >
-      <View
-        className={`h-11 w-11 items-center justify-center rounded-pill ${
-          emphasis ? 'bg-primary' : 'bg-sunken'
-        }`}
-      >
-        <Ionicons name={icon} size={20} color={emphasis ? colors.onPrimary : colors.inkMuted} />
+      <View className="h-11 w-11 items-center justify-center rounded-pill bg-primary">
+        <Ionicons name={icon} size={20} color={colors.onPrimary} />
       </View>
       <View className="min-w-0 flex-1">
         <Txt variant="heading" weight="bold" serif={false}>

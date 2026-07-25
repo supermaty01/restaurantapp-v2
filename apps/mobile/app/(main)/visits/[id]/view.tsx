@@ -1,8 +1,8 @@
 import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert } from 'react-native';
 
 import { DetailMissing, DetailScaffold } from '@/components/ui/DetailScaffold';
+import { useDialog } from '@/components/ui/Dialog';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import VisitDetails from '@/features/visits/components/VisitDetails';
@@ -20,6 +20,7 @@ export default function VisitDetailScreen() {
   const drizzleDb = useDatabase();
   const visit = useVisitById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
+  const { ask } = useDialog();
 
   async function handleShare() {
     try {
@@ -32,30 +33,24 @@ export default function VisitDetailScreen() {
     }
   }
 
-  function handleDelete() {
-    Alert.alert(
-      'Eliminar visita',
+  async function handleDelete() {
+    const confirmed = await ask({
+      title: 'Eliminar visita',
       // Nothing references a visit, so this really is permanent.
-      'Se borrará definitivamente. Esta acción no se puede deshacer.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Eliminar',
-          style: 'destructive',
-          onPress: () => {
-            void (async () => {
-              try {
-                await hardDeleteVisit(drizzleDb, Number(id));
-                router.back();
-              } catch (error) {
-                reportError('No se pudo eliminar la visita', error);
-              }
-            })();
-          },
-        },
-      ],
-      { cancelable: true },
-    );
+      message: 'Se borrará definitivamente. Esta acción no se puede deshacer.',
+      icon: 'trash-outline',
+      confirmLabel: 'Eliminar',
+      cancelLabel: 'Cancelar',
+      destructive: true,
+    });
+    if (!confirmed) return;
+
+    try {
+      await hardDeleteVisit(drizzleDb, Number(id));
+      router.back();
+    } catch (error) {
+      reportError('No se pudo eliminar la visita', error);
+    }
   }
 
   if (!visit) {

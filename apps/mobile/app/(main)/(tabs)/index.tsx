@@ -122,7 +122,6 @@ export default function HomeScreen() {
             value={visits}
             label="Visitas"
             icon="calendar-outline"
-            inverted
             onPress={() => router.push('/(main)/(tabs)/journal?tab=visits')}
           />
         </View>

@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { IntentHandler } from '@/components/IntentHandler';
 import { SyncRunner } from '@/components/SyncRunner';
+import { DialogProvider } from '@/components/ui/Dialog';
 import migrations from '@/drizzle/migrations';
 import '../global.css';
 import { AuthProvider } from '@/lib/context/AuthContext';
@@ -114,13 +115,15 @@ export default function RootLayout() {
             <MigrationsRunner>
               <AuthProvider>
                 <ThemeProvider>
-                  <NewRestaurantProvider>
-                    <NewDishProvider>
-                      <IntentHandler />
-                      <SyncRunner />
-                      <Slot />
-                    </NewDishProvider>
-                  </NewRestaurantProvider>
+                  <DialogProvider>
+                    <NewRestaurantProvider>
+                      <NewDishProvider>
+                        <IntentHandler />
+                        <SyncRunner />
+                        <Slot />
+                      </NewDishProvider>
+                    </NewRestaurantProvider>
+                  </DialogProvider>
                 </ThemeProvider>
               </AuthProvider>
             </MigrationsRunner>

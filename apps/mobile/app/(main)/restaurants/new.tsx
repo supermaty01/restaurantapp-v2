@@ -117,9 +117,7 @@ export default function RestaurantCreateScreen() {
       </FormSection>
 
       <FormSection title="Ubicación" hint="Para verlo en el mapa y llegar hasta él">
-        <View className="overflow-hidden rounded-xl border border-line">
-          <MapLocationPicker location={location} onLocationChange={setLocation} />
-        </View>
+        <MapLocationPicker location={location} onLocationChange={setLocation} />
       </FormSection>
 
       <FormSection title="Etiquetas" hint="Para agruparlo y filtrarlo luego">

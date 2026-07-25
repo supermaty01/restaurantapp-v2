@@ -46,7 +46,17 @@ export function Sheet({
   const insets = useSafeAreaInsets();
 
   return (
-    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      onRequestClose={onClose}
+      // Without these the modal stops at the system bars on Android, leaving a
+      // strip of the app visible under the sheet instead of the sheet sitting
+      // on the bottom edge.
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Animated.View entering={FadeIn.duration(180)} exiting={FadeOut.duration(150)}>
           <Pressable

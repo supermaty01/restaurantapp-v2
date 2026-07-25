@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useGlobalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';
 import { DetailField, DetailMissing, DetailScaffold } from '@/components/ui/DetailScaffold';
+import { useDialog } from '@/components/ui/Dialog';
 import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
@@ -33,6 +34,7 @@ export default function DishDetailScreen() {
   const { colors } = useTheme();
   const dish = useDishById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
+  const { ask } = useDialog();
 
   async function handleShare() {
     try {
@@ -49,34 +51,24 @@ export default function DishDetailScreen() {
     try {
       const canDeletePermanently = await canHardDeleteDish(drizzleDb, Number(id));
 
-      Alert.alert(
-        'Eliminar plato',
-        canDeletePermanently
+      const confirmed = await ask({
+        title: 'Eliminar plato',
+        message: canDeletePermanently
           ? 'Se borrará definitivamente. Esta acción no se puede deshacer.'
           : 'Seguirá apareciendo en las visitas que ya lo referencian.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Eliminar',
-            style: 'destructive',
-            onPress: () => {
-              void (async () => {
-                try {
-                  if (canDeletePermanently) {
-                    await hardDeleteDish(drizzleDb, Number(id));
-                  } else {
-                    await softDeleteDish(drizzleDb, Number(id));
-                  }
-                  router.back();
-                } catch (error) {
-                  reportError('No se pudo eliminar el plato', error);
-                }
-              })();
-            },
-          },
-        ],
-        { cancelable: true },
-      );
+        icon: 'trash-outline',
+        confirmLabel: 'Eliminar',
+        cancelLabel: 'Cancelar',
+        destructive: true,
+      });
+      if (!confirmed) return;
+
+      if (canDeletePermanently) {
+        await hardDeleteDish(drizzleDb, Number(id));
+      } else {
+        await softDeleteDish(drizzleDb, Number(id));
+      }
+      router.back();
     } catch (error) {
       reportError('No se pudo comprobar si el plato está en uso', error);
     }

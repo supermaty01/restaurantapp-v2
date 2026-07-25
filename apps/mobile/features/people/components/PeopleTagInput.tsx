@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Pressable } from 'react-native';
 
+import { FieldLabel } from '@/components/ui/Surface';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 interface PeopleTagInputProps {
@@ -16,7 +17,7 @@ interface PeopleTagInputProps {
  * free text resolved to person rows on save (visitRepository). The pending/
  * accepted account flow lands in phase 5.
  */
-export function PeopleTagInput({ value, onChange, label = 'Con quién' }: PeopleTagInputProps) {
+export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) {
   const { colors } = useTheme();
   const [draft, setDraft] = useState('');
 
@@ -34,7 +35,9 @@ export function PeopleTagInput({ value, onChange, label = 'Con quién' }: People
 
   return (
     <View className="mb-4">
-      <Text className="text-xl font-semibold text-ink mb-2">{label}</Text>
+      {/* The label is optional: inside a FormSection the heading already says
+          what this is, and printing it twice is just noise. */}
+      {label ? <FieldLabel>{label}</FieldLabel> : null}
 
       <View className="flex-row items-center gap-2">
         <TextInput

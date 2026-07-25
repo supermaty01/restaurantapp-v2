@@ -1,9 +1,10 @@
 import { useRouter, useGlobalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, View } from 'react-native';
+import { View } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';
 import { DetailMissing, DetailScaffold } from '@/components/ui/DetailScaffold';
+import { useDialog } from '@/components/ui/Dialog';
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import RestaurantDetails from '@/features/restaurants/components/RestaurantDetails';
@@ -26,6 +27,7 @@ export default function RestaurantDetailScreen() {
   const drizzleDb = useDatabase();
   const restaurant = useRestaurantById(Number(id));
   const [isSharing, setIsSharing] = useState(false);
+  const { ask } = useDialog();
 
   async function handleShare() {
     try {
@@ -45,34 +47,24 @@ export default function RestaurantDetailScreen() {
       // is exactly the kind of surprise that loses data in the user's head.
       const canDeletePermanently = await canHardDeleteRestaurant(drizzleDb, Number(id));
 
-      Alert.alert(
-        'Eliminar restaurante',
-        canDeletePermanently
+      const confirmed = await ask({
+        title: 'Eliminar restaurante',
+        message: canDeletePermanently
           ? 'Se borrará definitivamente. Esta acción no se puede deshacer.'
           : 'Seguirá apareciendo en los platos y visitas que ya lo referencian.',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Eliminar',
-            style: 'destructive',
-            onPress: () => {
-              void (async () => {
-                try {
-                  if (canDeletePermanently) {
-                    await hardDeleteRestaurant(drizzleDb, Number(id));
-                  } else {
-                    await softDeleteRestaurant(drizzleDb, Number(id));
-                  }
-                  router.back();
-                } catch (error) {
-                  reportError('No se pudo eliminar el restaurante', error);
-                }
-              })();
-            },
-          },
-        ],
-        { cancelable: true },
-      );
+        icon: 'trash-outline',
+        confirmLabel: 'Eliminar',
+        cancelLabel: 'Cancelar',
+        destructive: true,
+      });
+      if (!confirmed) return;
+
+      if (canDeletePermanently) {
+        await hardDeleteRestaurant(drizzleDb, Number(id));
+      } else {
+        await softDeleteRestaurant(drizzleDb, Number(id));
+      }
+      router.back();
     } catch (error) {
       reportError('No se pudo comprobar si el restaurante está en uso', error);
     }

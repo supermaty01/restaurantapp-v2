@@ -18,10 +18,29 @@ function describe(error: unknown, depth = 0): string {
   return cause === undefined ? error.message : `${error.message}\n↳ ${describe(cause, depth + 1)}`;
 }
 
+/**
+ * How failures reach the screen.
+ *
+ * `reportError` is called from plain functions and catch blocks, not from
+ * components, so it cannot use a hook to reach the themed dialog. The provider
+ * registers itself here at mount instead; until it does — or if it is ever
+ * unmounted — this falls back to the platform `Alert`, because an error that
+ * cannot be shown is worse than one shown in the wrong font.
+ */
+type Presenter = (title: string, message: string) => void;
+
+const nativeAlert: Presenter = (title, message) => Alert.alert(title, message);
+
+let present: Presenter = nativeAlert;
+
+export function setErrorPresenter(presenter: Presenter | null): void {
+  present = presenter ?? nativeAlert;
+}
+
 export function reportError(userMessage: string, error: unknown, title = 'Error'): void {
   const detail = describe(error);
 
   console.error(`${userMessage}:`, error);
 
-  Alert.alert(title, __DEV__ && detail ? `${userMessage}\n\n[dev] ${detail}` : userMessage);
+  present(title, __DEV__ && detail ? `${userMessage}\n\n[dev] ${detail}` : userMessage);
 }

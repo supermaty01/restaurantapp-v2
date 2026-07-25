@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { Alert, SectionList, View } from 'react-native';
+import { SectionList, View } from 'react-native';
 
+import { useDialog } from '@/components/ui/Dialog';
 import { Fab } from '@/components/ui/Fab';
 import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
@@ -33,6 +34,7 @@ export default function TagsScreen() {
   const drizzleDb = useDatabase();
   const tags = useTagsList(false);
   const usage = useTagUsage();
+  const { ask } = useDialog();
 
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedTag, setSelectedTag] = useState<TagDTO | null>(null);
@@ -77,15 +79,13 @@ export default function TagsScreen() {
     if (inUse > 0) {
       // It is a soft delete, so nothing is lost — but the tag disappearing from
       // things it labels is still a surprise worth naming first.
-      const confirmed = await new Promise<boolean>((resolve) => {
-        Alert.alert(
-          'Quitar la etiqueta',
-          `Está en ${inUse} ${inUse === 1 ? 'elemento' : 'elementos'}. Dejará de aparecer en ellos.`,
-          [
-            { text: 'Cancelar', style: 'cancel', onPress: () => resolve(false) },
-            { text: 'Quitar', style: 'destructive', onPress: () => resolve(true) },
-          ],
-        );
+      const confirmed = await ask({
+        title: 'Quitar la etiqueta',
+        message: `Está en ${inUse} ${inUse === 1 ? 'elemento' : 'elementos'}. Dejará de aparecer en ellos.`,
+        icon: 'pricetag-outline',
+        confirmLabel: 'Quitar',
+        cancelLabel: 'Cancelar',
+        destructive: true,
       });
       if (!confirmed) return { success: false, error: 'cancelado' };
     }

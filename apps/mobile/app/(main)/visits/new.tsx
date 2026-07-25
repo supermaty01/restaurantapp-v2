@@ -112,15 +112,17 @@ export default function VisitCreateScreen() {
         <PeopleTagInput value={participants} onChange={setParticipants} />
       </FormSection>
 
-      <FormSection title="Notas y fotos" hint="Opcional">
+      <FormSection title="Comentarios" hint="Opcional">
         <FormInput
           control={control}
           name="comments"
-          label="Comentarios"
           placeholder="Qué tal estuvo…"
           multiline
           numberOfLines={4}
         />
+      </FormSection>
+
+      <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
       </FormSection>
     </FormScaffold>
