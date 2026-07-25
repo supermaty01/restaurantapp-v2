@@ -72,11 +72,17 @@ Verde: TypeScript en 0, **169 tests** + 24 del worker + 39 aserciones SQL, lint 
 | Las fotos y «los 2 botones feos»                 | Eran dos botones grises y cada foto a ancho completo con un botón rojo debajo. Ahora tira de miniaturas con su × y una hoja para cámara/galería                               |
 | Añadir restaurantes es terrible                  | Era un `Picker` nativo: sin búsqueda, sin foto, inservible con cientos de sitios. Ahora fila con lo elegido + hoja con buscador y «crear uno nuevo» dentro                    |
 
-### 🔜 Pendiente de tu feedback
+### Resuelto después (misma sesión)
 
-1. **`DishPicker`**: le falta el mismo tratamiento que al de restaurantes.
-2. **El mapa**: dijiste que no está bien implementado. Solo he corregido el centrado; la pantalla en sí sigue sin revisar.
-3. **«Armonía» en detalle y creación**: los formularios ya no son una lista plana, pero el trabajo de que _fluya_ está a medias. Los selectores de plato y las pantallas de detalle son lo que queda.
+- **`DishPicker`**: los platos que ya tiene el restaurante aparecen como chips a un toque. Casi toda visita repite algo que ya has comido allí, así que el caso común no debería exigir abrir nada.
+- **El mapa**: buscador sobre tus lugares —antes solo se podía desplazar a mano— y marcadores propios con el color de la app y su valoración. El pin rojo por defecto hacía tu diario indistinguible de los puntos de interés que pinta Google.
+- **La fecha de una visita**: chips «Hoy / Ayer / Anteayer» en vez de abrir siempre el calendario, y tope en la fecha de hoy.
+
+Se retiran tres componentes que ya no usa nadie: `DishSelectorModal`, `TagSelectorModal` y `TagItem`.
+
+### 🔜 Lo que sigue abierto
+
+**«Armonía» en detalle y creación.** Es lo más subjetivo de tu feedback y lo que menos he cerrado. Los formularios ya no son una lista plana de campos y los tres selectores que llamabas terribles están resueltos, pero el _orden_ de un formulario de visita sigue siendo el de las columnas de la base de datos, no el de cómo se registra una comida. Idea concreta pendiente: **empezar por la foto**, que suele ser lo que acabas de hacer, para que se lea como una entrada de diario y no como un alta.
 
 ---
 
