@@ -1,5 +1,5 @@
 import { requireSupabase } from '@/services/supabase/client';
-import type { RemoteRecord, SyncTransport } from '@/services/sync/transport';
+import type { LinkRow, RemoteRecord, SyncTransport } from '@/services/sync/transport';
 
 /**
  * Real SyncTransport over supabase-js (docs/03). push upserts (the server's
@@ -26,6 +26,34 @@ export function createSupabaseTransport(): SyncTransport {
       const { data, error } = await query;
       if (error) throw new Error(`pull ${table}: ${error.message}`);
       return (data ?? []) as RemoteRecord[];
+    },
+
+    async replaceLinks(table, parentColumn, parentUuids, rows) {
+      if (parentUuids.length === 0) return;
+
+      // Delete first, unconditionally. Upserting the incoming rows would leave
+      // behind the links the app removed — the whole point of replacing is that
+      // a junction row has no tombstone to announce its own deletion.
+      const { error: deleteError } = await requireSupabase()
+        .from(table)
+        .delete()
+        .in(parentColumn, parentUuids);
+      if (deleteError) throw new Error(`replaceLinks ${table}: ${deleteError.message}`);
+
+      if (rows.length === 0) return;
+      const { error } = await requireSupabase().from(table).insert(rows);
+      if (error) throw new Error(`replaceLinks ${table}: ${error.message}`);
+    },
+
+    async pullLinks(table, parentColumn, parentUuids) {
+      if (parentUuids.length === 0) return [];
+
+      const { data, error } = await requireSupabase()
+        .from(table)
+        .select('*')
+        .in(parentColumn, parentUuids);
+      if (error) throw new Error(`pullLinks ${table}: ${error.message}`);
+      return (data ?? []) as LinkRow[];
     },
   };
 }

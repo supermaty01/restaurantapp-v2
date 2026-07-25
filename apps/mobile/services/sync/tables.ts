@@ -144,3 +144,71 @@ export const SYNC_TABLES: SyncTableConfig[] = [
 export function findTable(name: string): SyncTableConfig | undefined {
   return SYNC_TABLES.find((t) => t.name === name);
 }
+
+/**
+ * A junction table: the links between two synced rows.
+ *
+ * These were in the Postgres mirror from the first migration and nothing ever
+ * sent them, so a diary reached the cloud with its tags, its dishes-per-visit
+ * and its tagged people all stripped off. Nobody noticed because the app reads
+ * those from the device, where they were still there.
+ *
+ * They do not fit `SyncTableConfig`: a link has no uuid, no timestamps and no
+ * identity of its own — it *is* the pair of uuids. So it cannot be logged in
+ * `change_log` or reconciled last-write-wins. Instead the links of a row travel
+ * with the row: whenever a parent is pushed, its complete set of links replaces
+ * whatever the server held. Idempotent, and a removed link disappears without
+ * needing a tombstone.
+ */
+export interface LinkSide {
+  /** drizzle key on the local junction row (holds a local integer id). */
+  local: string;
+  /** column in the remote junction row (holds a uuid). */
+  remote: string;
+  /** registry name of the table it points at. */
+  references: string;
+}
+
+export interface LinkTableConfig {
+  /** Remote (Postgres) junction table name. */
+  name: string;
+  table: SQLiteTable;
+  /** The side that owns the link; replacing is scoped by this. */
+  parent: LinkSide;
+  child: LinkSide;
+  /** Columns carried on the link itself, copied verbatim. */
+  extras?: { local: string; remote: string }[];
+}
+
+export const LINK_TABLES: LinkTableConfig[] = [
+  {
+    name: 'restaurant_tag',
+    table: schema.restaurantTags,
+    parent: { local: 'restaurantId', remote: 'restaurant_uuid', references: 'restaurants' },
+    child: { local: 'tagId', remote: 'tag_uuid', references: 'tags' },
+  },
+  {
+    name: 'dish_tag',
+    table: schema.dishTags,
+    parent: { local: 'dishId', remote: 'dish_uuid', references: 'dishes' },
+    child: { local: 'tagId', remote: 'tag_uuid', references: 'tags' },
+  },
+  {
+    name: 'dish_visit',
+    table: schema.dishVisits,
+    parent: { local: 'visitId', remote: 'visit_uuid', references: 'visits' },
+    child: { local: 'dishId', remote: 'dish_uuid', references: 'dishes' },
+  },
+  {
+    name: 'visit_participant',
+    table: schema.visitParticipants,
+    parent: { local: 'visitId', remote: 'visit_uuid', references: 'visits' },
+    child: { local: 'personId', remote: 'person_uuid', references: 'people' },
+    extras: [{ local: 'tagStatus', remote: 'tag_status' }],
+  },
+];
+
+/** The junctions owned by a given entity table. */
+export function linksOf(parentTable: string): LinkTableConfig[] {
+  return LINK_TABLES.filter((link) => link.parent.references === parentTable);
+}

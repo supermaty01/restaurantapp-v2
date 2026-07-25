@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import type { SyncTableConfig } from '@/services/sync/tables';
 import { column, findTable } from '@/services/sync/tables';
@@ -20,7 +21,7 @@ interface LocalRowShape {
 }
 
 /** uuid of a referenced row given its local id (for push). */
-async function uuidForLocalId(
+export async function uuidForLocalId(
   db: AppDatabase,
   cfg: SyncTableConfig,
   localId: number,
@@ -34,7 +35,7 @@ async function uuidForLocalId(
 }
 
 /** local id of a referenced row given its uuid (for pull). */
-async function localIdForUuid(
+export async function localIdForUuid(
   db: AppDatabase,
   cfg: SyncTableConfig,
   uuid: string,
@@ -140,7 +141,30 @@ export async function applyRemoteRecord(
   const local = existing[0] as { id: number; updatedAt: string } | undefined;
 
   if (!local) {
-    await db.insert(cfg.table).values(values);
+    const inserted = (await db
+      .insert(cfg.table)
+      .values(values)
+      .returning({ id: column(cfg.table, 'id') })) as { id: number }[];
+
+    // Mark it as already-synced in the outbox.
+    //
+    // Not bookkeeping for its own sake: `linkLocalData` enqueues every row that
+    // has no change_log entry, which is how a first login uploads a diary that
+    // predates the account. A row that arrived by *pull* looks identical to it,
+    // so the next push would send it straight back — and with it, this device's
+    // idea of the row's links. A link another device had just removed would be
+    // re-asserted and reappear. An entry that is already `synced` makes the
+    // row's provenance visible without pushing anything.
+    const id = inserted[0]?.id;
+    if (id !== undefined) {
+      await db.insert(schema.changeLog).values({
+        tableName: cfg.name,
+        rowId: id,
+        rowUuid: record.uuid,
+        operation: 'insert',
+        synced: true,
+      });
+    }
     return;
   }
 

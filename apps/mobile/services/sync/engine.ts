@@ -3,9 +3,10 @@ import { eq, inArray } from 'drizzle-orm';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { linkLocalData } from '@/services/sync/linkLocalData';
+import { applyLinks, collectLinks, parentIdsByUuid } from '@/services/sync/links';
 import { applyRemoteRecord, toRemoteRecord, toTombstoneRecord } from '@/services/sync/records';
-import { column, SYNC_TABLES } from '@/services/sync/tables';
-import type { RemoteRecord, SyncTransport } from '@/services/sync/transport';
+import { column, linksOf, SYNC_TABLES } from '@/services/sync/tables';
+import type { LinkRow, RemoteRecord, SyncTransport } from '@/services/sync/transport';
 
 const CURSOR_PREFIX = 'sync_cursor_';
 
@@ -65,6 +66,8 @@ export class SyncEngine {
     if (pending.length === 0) return;
 
     const pushedIds: number[] = [];
+    /** Parents that moved this pass, per table: whose links need resending. */
+    const touched = new Map<string, { id: number; uuid: string }[]>();
 
     // Dependency order: FK targets (restaurants) push before children (dishes).
     for (const cfg of SYNC_TABLES) {
@@ -92,6 +95,9 @@ export class SyncEngine {
 
         if (local) {
           records.push(await toRemoteRecord(this.db, cfg, local, this.accountUuid));
+          const list = touched.get(cfg.name) ?? [];
+          list.push({ id: local.id, uuid: local.uuid });
+          touched.set(cfg.name, list);
         } else {
           // Hard-deleted locally: push a tombstone so the deletion propagates.
           records.push(toTombstoneRecord(cfg, uuid, this.accountUuid));
@@ -109,6 +115,11 @@ export class SyncEngine {
       pushedIds.push(...forTable.map((c) => c.id));
     }
 
+    // Links last, once every parent and every child row exists on the server.
+    // Sending them alongside their parent would push a dish_visit before the
+    // dish, and the mirror's foreign keys would reject the batch.
+    await this.pushLinks(touched);
+
     // Also in batches: `inArray` becomes one bound parameter per id, and past
     // SQLite's variable limit the statement is rejected outright rather than
     // running slowly. A first sync sends one entry per existing row, so the
@@ -123,6 +134,8 @@ export class SyncEngine {
 
   /** Applies remote changes into the local DB, advancing per-table cursors. */
   async pull(): Promise<void> {
+    const touched = new Map<string, string[]>();
+
     for (const cfg of SYNC_TABLES) {
       const cursor = await this.getCursor(cfg.name);
       const records = await this.transport.pull(cfg.name, cursor);
@@ -131,12 +144,77 @@ export class SyncEngine {
       for (const record of records) {
         await applyRemoteRecord(this.db, cfg, record);
       }
+      touched.set(
+        cfg.name,
+        records.filter((r) => !r.deleted).map((r) => r.uuid),
+      );
 
       const maxUpdated = records.reduce(
         (max, r) => (r.updated_at > max ? r.updated_at : max),
         cursor ?? '',
       );
       await this.setCursor(cfg.name, maxUpdated);
+    }
+
+    await this.pullLinks(touched);
+  }
+
+  /**
+   * Resends the complete link set of every parent that moved.
+   *
+   * Scoped to the parents in this pass rather than the whole diary: a full
+   * replace is cheap for one row and a rewrite of every junction table for a
+   * device that has thousands.
+   */
+  private async pushLinks(touched: Map<string, { id: number; uuid: string }[]>): Promise<void> {
+    for (const [parentTable, parents] of touched) {
+      for (const cfg of linksOf(parentTable)) {
+        const rows: LinkRow[] = [];
+        for (const parent of parents) {
+          rows.push(
+            ...(await collectLinks(this.db, cfg, parent.id, parent.uuid, this.accountUuid)),
+          );
+        }
+        for (const batch of chunk(
+          parents.map((p) => p.uuid),
+          PUSH_BATCH,
+        )) {
+          const scoped = rows.filter((row) => batch.includes(row[cfg.parent.remote] as string));
+          await this.transport.replaceLinks(cfg.name, cfg.parent.remote, batch, scoped);
+        }
+      }
+    }
+  }
+
+  /** The mirror image: whatever the server says a pulled parent's links are. */
+  private async pullLinks(touched: Map<string, string[]>): Promise<void> {
+    for (const [parentTable, uuids] of touched) {
+      if (uuids.length === 0) continue;
+
+      for (const cfg of linksOf(parentTable)) {
+        const ids = await parentIdsByUuid(this.db, parentTable, uuids);
+        if (ids.size === 0) continue;
+
+        for (const batch of chunk([...ids.keys()], PUSH_BATCH)) {
+          const remote = await this.transport.pullLinks(cfg.name, cfg.parent.remote, batch);
+
+          const byParent = new Map<string, LinkRow[]>();
+          for (const link of remote) {
+            const key = link[cfg.parent.remote];
+            if (typeof key !== 'string') continue;
+            byParent.set(key, [...(byParent.get(key) ?? []), link]);
+          }
+
+          // Every parent in the batch, not only those with links: a parent
+          // whose last link was removed elsewhere comes back with none, and
+          // that absence is exactly what has to be applied.
+          for (const uuid of batch) {
+            const id = ids.get(uuid);
+            if (id === undefined) continue;
+            await applyLinks(this.db, cfg, id, byParent.get(uuid) ?? []);
+          }
+        }
+      }
     }
   }
 

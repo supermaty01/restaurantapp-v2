@@ -1,4 +1,4 @@
-import type { RemoteRecord, SyncTransport } from '@/services/sync/transport';
+import type { LinkRow, RemoteRecord, SyncTransport } from '@/services/sync/transport';
 
 /**
  * In-memory stand-in for the Supabase mirror, used to test the sync engine
@@ -8,6 +8,8 @@ import type { RemoteRecord, SyncTransport } from '@/services/sync/transport';
  */
 export class FakeServer {
   private tables = new Map<string, Map<string, RemoteRecord>>();
+  /** Junctions, kept as flat lists: a link has no key to store it under. */
+  private links = new Map<string, LinkRow[]>();
 
   private tableOf(name: string): Map<string, RemoteRecord> {
     let t = this.tables.get(name);
@@ -35,6 +37,23 @@ export class FakeServer {
     return rows.sort((a, b) => (a.updated_at < b.updated_at ? -1 : 1)).map((r) => ({ ...r }));
   }
 
+  replaceLinks(table: string, parentColumn: string, parentUuids: string[], rows: LinkRow[]): void {
+    const kept = (this.links.get(table) ?? []).filter(
+      (row) => !parentUuids.includes(row[parentColumn] as string),
+    );
+    this.links.set(table, [...kept, ...rows.map((r) => ({ ...r }))]);
+  }
+
+  linksFor(table: string, parentColumn: string, parentUuids: string[]): LinkRow[] {
+    return (this.links.get(table) ?? [])
+      .filter((row) => parentUuids.includes(row[parentColumn] as string))
+      .map((r) => ({ ...r }));
+  }
+
+  linkCount(table: string): number {
+    return (this.links.get(table) ?? []).length;
+  }
+
   /** A transport bound to this server (one per simulated device). */
   transport(): SyncTransport {
     return {
@@ -42,6 +61,11 @@ export class FakeServer {
         this.upsert(table, records);
       },
       pull: async (table, cursor) => this.since(table, cursor),
+      replaceLinks: async (table, parentColumn, parentUuids, rows) => {
+        this.replaceLinks(table, parentColumn, parentUuids, rows);
+      },
+      pullLinks: async (table, parentColumn, parentUuids) =>
+        this.linksFor(table, parentColumn, parentUuids),
     };
   }
 

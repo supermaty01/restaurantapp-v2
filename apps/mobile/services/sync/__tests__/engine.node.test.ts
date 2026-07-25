@@ -223,6 +223,8 @@ describe('SyncEngine', () => {
         }
       },
       pull: async (table: string, cursor: string | null) => server.since(table, cursor),
+      replaceLinks: async () => {},
+      pullLinks: async () => [],
     };
 
     await new SyncEngine(db, racyTransport, ACCOUNT).push();
@@ -232,6 +234,40 @@ describe('SyncEngine', () => {
       .from(schema.changeLog)
       .where(eq(schema.changeLog.synced, false));
     expect(stillPending.map((c) => c.rowUuid)).toEqual(['queued-mid-push']);
+  });
+
+  it('does not push back a row it has just pulled', async () => {
+    // linkLocalData enqueues every row with no change_log entry, which is how a
+    // first login uploads a diary older than the account. A pulled row looks
+    // exactly like one, so without a marker the device echoes the server's own
+    // rows back at it — harmless for scalars (last-write-wins keeps the newer)
+    // and destructive for links, where this device's stale set would overwrite
+    // a change another device had just made.
+    const server = new FakeServer();
+    const source = makeTestDb();
+    await createRestaurant(source.db, {
+      name: 'Guadalupe',
+      comments: null,
+      rating: 5,
+      latitude: null,
+      longitude: null,
+    });
+    await engineFor(source.db, server).sync();
+
+    const mirror = makeTestDb();
+    await engineFor(mirror.db, server).pull();
+
+    const outbox = await mirror.db.select().from(schema.changeLog);
+    expect(outbox).not.toHaveLength(0);
+    expect(outbox.every((entry) => entry.synced)).toBe(true);
+
+    // And a subsequent push finds nothing to send.
+    await engineFor(mirror.db, server).push();
+    const stillUnsynced = await mirror.db
+      .select()
+      .from(schema.changeLog)
+      .where(eq(schema.changeLog.synced, false));
+    expect(stillUnsynced).toHaveLength(0);
   });
 
   it('self-heals a row whose change_log entry was never written', async () => {
