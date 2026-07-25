@@ -1,6 +1,6 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-24
+**Última actualización:** 2026-07-25
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
@@ -43,6 +43,48 @@ Repaso en frío de todo lo escrito. Cada corrección lleva su test de regresión
 ### Riesgo conocido: sin transacciones
 
 Los repositorios escriben la fila y su entrada de `change_log` por separado. No se pueden usar transacciones agnósticas del driver (con better-sqlite3 un callback `async` en `transaction()` **crashea el proceso**; comprobado). Mitigación: `linkLocalData` (una consulta `NOT EXISTS` por tabla) corre al inicio de cada push y reencola cualquier fila sin entrada, convirtiendo una divergencia permanente en consistencia eventual. Cubierto por test.
+
+---
+
+---
+
+## Sesión del 25 de julio de 2026
+
+Verde: TypeScript en 0, **121 tests** de app + 24 del worker + **39 aserciones SQL**, lint sin errores, `expo export` compila.
+
+### Cerrado
+
+**Paleta fuera de los puntos de uso.** Los ~150 ternarios `isDarkMode ? '#x' : '#y'` repartidos por 30 ficheros pasan a tokens. Quedan dos usos de `isDarkMode` y ninguno es un color: el estilo de la barra de estado y el icono luna/sol. De paso salieron a la luz: `MapLocationPicker` mantenía su **propia** paleta local llamada `colors`, y `SegmentedTabs` seguía con clases que ya no existían (se habría quedado sin fondo).
+
+**🔴 Los gestos del visor de imágenes estaban muertos.** El pinch y el doble tap no respondían, pero la causa no era la composición de gestos: el visor vive dentro de un `Modal` de React Native, que renderiza en su propia jerarquía nativa, **fuera** de la raíz a la que se engancha gesture-handler. Todo gesto declarado ahí dentro es inerte, sin error ni aviso. Eso explica el síntoma exacto: seguía funcionando la X (un `Pressable`) y deslizar entre fotos (scroll nativo). Arrastrar para cerrar tampoco funcionaba. `FilterSortModal` ya lo hacía bien, así que el patrón se conocía y el visor era la única omisión. Hay test estructural que lo impide en el futuro.
+
+**Perfil propio editable y perfil de otras personas** (migración 0007). La decisión de cuánto se ve la toma el servidor: un desconocido recibe solo lo público, un amigo también lo marcado para amigos, y la biografía solo viaja si hay amistad.
+
+**Rediseño visual.** Ver [docs/14](14-diseno.md). Sombras cálidas, escala tipográfica, `PressableScale`, `FadeInUp`, `Skeleton`, barra de pestañas flotante, control segmentado, Inicio rediseñado, filas de lista y etiquetas, cabecera y FAB compartidos por las tres colecciones.
+
+### Notas de proceso
+
+El runner de SQL da ahora **una base de datos limpia a cada fichero de test**. Compartirla hacía que las altas de un fichero se colasen en los conteos del siguiente — un fallo por motivos ajenos al código, y lo que es peor, también un aprobado por ellos.
+
+Dos tests míos fallaron al verificarlos, y las dos veces el test tenía razón:
+
+- La aserción del visor usaba `toContain('GestureHandlerRootView')` y **pasaba con el bug reintroducido**, porque `GestureHandlerRootViewX` contiene esa subcadena. Ahora exige el elemento JSX.
+- El contraste de las etiquetas suponía que luminosidad HSL era luminancia percibida. No lo es.
+
+### 🔜 Siguiente
+
+1. **Reintentar el login con Google** y pasarme el mensaje nuevo. Sigue bloqueando todo lo online.
+2. **Aplicar las migraciones 0005, 0006 y 0007**, y correr `npm run db:test`.
+3. Rediseño de las pantallas que faltan: detalles (restaurante, plato, visita), formularios de alta y edición, ajustes, mapa.
+4. Sync de las tablas puente (`restaurant_tag`, `dish_tag`, `dish_visit`, `visit_participant`).
+5. IA: aparcada a propósito hasta el final.
+
+### Pendientes menores
+
+- **Etiquetar personas en una visita funciona, pero la persona no se muestra tras crearla.** Confirmado en dispositivo; acordado dejarlo para el rediseño de la sección de amigos.
+- **Swipe entre pestañas**: sigue sin estar (SDK 56 prohibió los navegadores a mano).
+- `jszip` sigue en `dependencies` aunque solo lo use un test.
+- 81 avisos de lint por _React Compiler readiness_; el compilador no está activado.
 
 ---
 
