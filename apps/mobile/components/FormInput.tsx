@@ -33,7 +33,7 @@ function FormInput<TFieldValues extends FieldValues, TTransformed = TFieldValues
   keyboardType,
   ...rest
 }: FormInputProps<TFieldValues, TTransformed>) {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <Controller
@@ -59,7 +59,7 @@ function FormInput<TFieldValues extends FieldValues, TTransformed = TFieldValues
               'w-full min-h-12 px-4 border border-line rounded-lg bg-surface text-ink',
               inputClassName,
             )}
-            placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
+            placeholderTextColor={colors.inkMuted}
             keyboardType={keyboardType}
             accessibilityLabel={label ?? rest.placeholder}
             {...rest}

@@ -57,7 +57,7 @@ export default function FilterSortModal({
   restaurants = [],
 }: FilterSortModalProps) {
   const tags = useTagsList();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   const [localOptions, setLocalOptions] = useState<FilterSortOptions>(options);
   const translateY = useSharedValue(0);
@@ -176,7 +176,7 @@ export default function FilterSortModal({
                     width: 40,
                     height: 4,
                     borderRadius: 2,
-                    backgroundColor: isDarkMode ? '#555' : '#ccc',
+                    backgroundColor: colors.lineStrong,
                   }}
                 />
               </ReanimatedAnimated.View>
@@ -185,7 +185,7 @@ export default function FilterSortModal({
             <View className="flex-row items-center justify-between px-4 pb-3 border-b border-line">
               <Text className="text-lg font-bold text-ink">Filtros y Ordenación</Text>
               <TouchableOpacity onPress={onClose}>
-                <Ionicons name="close" size={24} color={isDarkMode ? '#fff' : '#333'} />
+                <Ionicons name="close" size={24} color={colors.ink} />
               </TouchableOpacity>
             </View>
 
@@ -310,7 +310,7 @@ export default function FilterSortModal({
                     <Ionicons
                       name={localOptions.sortOrder === 'asc' ? 'arrow-up' : 'arrow-down'}
                       size={16}
-                      color={isDarkMode ? '#fff' : '#333'}
+                      color={colors.ink}
                     />
                     <Text className="text-sm text-ink-muted ml-1">
                       {localOptions.sortOrder === 'asc' ? 'Ascendente' : 'Descendente'}

@@ -17,7 +17,7 @@ interface PeopleTagInputProps {
  * accepted account flow lands in phase 5.
  */
 export function PeopleTagInput({ value, onChange, label = 'Con quién' }: PeopleTagInputProps) {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const [draft, setDraft] = useState('');
 
   const addPerson = () => {
@@ -42,7 +42,7 @@ export function PeopleTagInput({ value, onChange, label = 'Con quién' }: People
           onChangeText={setDraft}
           onSubmitEditing={addPerson}
           placeholder="Añade a alguien y pulsa +"
-          placeholderTextColor={isDarkMode ? '#9ca3af' : '#6b7280'}
+          placeholderTextColor={colors.inkMuted}
           returnKeyType="done"
           className="flex-1 min-h-12 px-4 border border-line rounded-lg bg-surface text-ink"
         />
@@ -67,7 +67,7 @@ export function PeopleTagInput({ value, onChange, label = 'Con quién' }: People
               accessibilityLabel={`Quitar a ${name}`}
             >
               <Text className="text-primary mr-1">{name}</Text>
-              <Ionicons name="close" size={16} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+              <Ionicons name="close" size={16} color={colors.primary} />
             </Pressable>
           ))}
         </View>

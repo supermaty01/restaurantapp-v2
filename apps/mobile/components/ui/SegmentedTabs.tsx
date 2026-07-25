@@ -23,16 +23,16 @@ interface SegmentedTabsProps {
  * react-navigation navigators since SDK 56) and is far less machinery.
  */
 export function SegmentedTabs({ tabs, initialKey }: SegmentedTabsProps) {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const [activeKey, setActiveKey] = useState(initialKey ?? tabs[0]?.key ?? '');
 
   const activeTab = tabs.find((tab) => tab.key === activeKey) ?? tabs[0];
-  const accent = isDarkMode ? '#7A9455' : '#93AE72';
-  const inactive = isDarkMode ? '#a0a0a0' : '#6b7280';
+  const accent = colors.primary;
+  const inactive = colors.inkMuted;
 
   return (
     <View className="flex-1">
-      <View className="flex-row bg-card dark:bg-dark-card">
+      <View className="flex-row border-b border-line bg-surface">
         {tabs.map((tab) => {
           const isActive = tab.key === activeTab?.key;
           return (
@@ -41,14 +41,18 @@ export function SegmentedTabs({ tabs, initialKey }: SegmentedTabsProps) {
               onPress={() => setActiveKey(tab.key)}
               className="flex-1 items-center py-3"
               style={{
-                borderBottomWidth: 3,
+                borderBottomWidth: 2,
+                marginBottom: -1,
                 borderBottomColor: isActive ? accent : 'transparent',
               }}
               accessibilityRole="tab"
               accessibilityState={{ selected: isActive }}
               accessibilityLabel={tab.label}
             >
-              <Text className="text-base font-bold" style={{ color: isActive ? accent : inactive }}>
+              <Text
+                className="font-semi text-[15px]"
+                style={{ color: isActive ? accent : inactive }}
+              >
                 {tab.label}
               </Text>
             </Pressable>

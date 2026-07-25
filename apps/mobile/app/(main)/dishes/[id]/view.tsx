@@ -21,7 +21,7 @@ export default function DishDetailScreen() {
   const { id } = useGlobalSearchParams(); // Obtiene el id desde la ruta
   const drizzleDb = useDatabase();
   const dish = useDishById(Number(id));
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const [isSharing, setIsSharing] = useState(false);
 
   function handleEdit() {
@@ -157,7 +157,7 @@ export default function DishDetailScreen() {
           <View className="flex-1">
             <Text className="text-base font-bold text-ink">{dish.restaurant.name}</Text>
           </View>
-          <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? '#777' : '#999'} />
+          <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
         </TouchableOpacity>
 
         <Text className="text-base font-bold text-ink-subtle mb-2">Precio</Text>

@@ -45,7 +45,7 @@ const PRICE_LABELS: Record<number, string> = {
 export default function MapScreen() {
   const restaurants = useRestaurantMapList();
   const router = useRouter();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const mapRef = useRef<MapView>(null);
   const [locating, setLocating] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<PoiDetails | null>(null);
@@ -270,7 +270,7 @@ export default function MapScreen() {
               position: 'absolute',
               bottom: 24,
               alignSelf: 'center',
-              backgroundColor: isDarkMode ? '#2A2A2A' : '#fff',
+              backgroundColor: colors.surface,
               borderRadius: 20,
               paddingHorizontal: 16,
               paddingVertical: 10,
@@ -283,7 +283,7 @@ export default function MapScreen() {
               shadowRadius: 4,
             }}
           >
-            <ActivityIndicator size="small" color={isDarkMode ? '#B27A4D' : '#905c36'} />
+            <ActivityIndicator size="small" color={colors.primary} />
             <Text className="text-ink-muted ml-2 text-sm">Verificando lugar...</Text>
           </View>
         )}
@@ -295,7 +295,7 @@ export default function MapScreen() {
             position: 'absolute',
             bottom: drawerVisible ? DRAWER_HEIGHT + 24 : 24,
             right: 16,
-            backgroundColor: isDarkMode ? '#2A2A2A' : '#fff',
+            backgroundColor: colors.surface,
             borderRadius: 28,
             width: 48,
             height: 48,
@@ -308,7 +308,7 @@ export default function MapScreen() {
             shadowRadius: 4,
           }}
         >
-          <Ionicons name="locate" size={24} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+          <Ionicons name="locate" size={24} color={colors.primary} />
         </TouchableOpacity>
 
         <Animated.View
@@ -332,9 +332,7 @@ export default function MapScreen() {
           pointerEvents={drawerVisible ? 'auto' : 'none'}
         >
           <View {...drawerPanResponder.panHandlers} style={styles.mapDrawerHandle}>
-            <View
-              style={[styles.mapDrawerNotch, { backgroundColor: isDarkMode ? '#555' : '#ccc' }]}
-            />
+            <View style={[styles.mapDrawerNotch, { backgroundColor: colors.lineStrong }]} />
           </View>
           <View
             style={{
@@ -345,7 +343,7 @@ export default function MapScreen() {
             className="bg-surface"
           >
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-              <Ionicons name="restaurant" size={18} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+              <Ionicons name="restaurant" size={18} color={colors.primary} />
               <Text numberOfLines={1} className="text-ink text-lg font-semibold ml-2 flex-1">
                 {selectedPoi?.name}
               </Text>

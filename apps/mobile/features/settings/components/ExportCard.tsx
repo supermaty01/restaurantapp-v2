@@ -19,7 +19,7 @@ const ExportCard: React.FC<ExportCardProps> = ({
   exportProgress,
   disabled,
 }) => {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   return (
     <TouchableOpacity
       className="bg-surface p-4 rounded-xl mb-4"
@@ -29,21 +29,16 @@ const ExportCard: React.FC<ExportCardProps> = ({
     >
       <View className="flex-row items-center justify-between">
         <View className="flex-row items-center">
-          <Ionicons
-            name="cloud-upload-outline"
-            size={24}
-            color={isDarkMode ? '#B27A4D' : '#905c36'}
-            className="mr-2"
-          />
+          <Ionicons name="cloud-upload-outline" size={24} color={colors.primary} className="mr-2" />
           <Text className="text-lg font-bold text-ink ml-2">Exportar datos</Text>
         </View>
-        <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? '#777' : '#999'} />
+        <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
       </View>
       <Text className="text-ink-muted mt-1">
         Crea una copia de seguridad de todos tus datos e imágenes
       </Text>
 
-      {isExporting && <ProgressBar progress={exportProgress} isDarkMode={isDarkMode} />}
+      {isExporting && <ProgressBar progress={exportProgress} />}
     </TouchableOpacity>
   );
 };

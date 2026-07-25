@@ -70,7 +70,7 @@ export default function TagSelectorModal({
                   <View
                     className={clsx(
                       'size-6 mr-2 rounded-md',
-                      isSelected ? 'bg-primary' : 'bg-gray-300',
+                      isSelected ? 'bg-primary' : 'bg-line-strong',
                     )}
                   >
                     {isSelected && <Ionicons name="checkmark" size={20} />}
@@ -93,7 +93,7 @@ export default function TagSelectorModal({
               <Ionicons name="add" size={18} color="#fff" />
               <Text className="text-on-primary ml-1 font-semibold">Crear</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={onClose} className="px-4 py-2 bg-gray-300 rounded-md">
+            <TouchableOpacity onPress={onClose} className="px-4 py-2 bg-line-strong rounded-md">
               <Text className="text-ink">Cerrar</Text>
             </TouchableOpacity>
           </View>

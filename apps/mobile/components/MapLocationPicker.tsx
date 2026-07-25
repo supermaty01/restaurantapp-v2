@@ -49,7 +49,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   onLocationChange,
   editable = true,
 }) => {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const mapRef = useRef<MapView | null>(null);
 
   const [mapRegion, setMapRegion] = useState<Region>({
@@ -72,15 +72,6 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     latitude: number;
     longitude: number;
   } | null>(null);
-
-  const colors = {
-    card: isDarkMode ? '#1C1C1E' : '#FFFFFF',
-    input: isDarkMode ? '#2A2A2D' : '#FFFFFF',
-    border: isDarkMode ? '#3A3A3C' : '#E5E7EB',
-    text: isDarkMode ? '#E5E7EB' : '#111827',
-    mutedText: isDarkMode ? '#A1A1AA' : '#6B7280',
-    suggestionPressed: isDarkMode ? '#2F2F33' : '#F3F4F6',
-  };
 
   useEffect(() => {
     if (location) {
@@ -341,24 +332,24 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
             style={{
               flexDirection: 'row',
               alignItems: 'center',
-              backgroundColor: colors.input,
+              backgroundColor: colors.surface,
               borderWidth: 1,
-              borderColor: colors.border,
+              borderColor: colors.line,
               borderRadius: 10,
               paddingHorizontal: 12,
               minHeight: 48,
             }}
           >
-            <Ionicons name="search" size={18} color={colors.mutedText} style={{ marginRight: 8 }} />
+            <Ionicons name="search" size={18} color={colors.inkMuted} style={{ marginRight: 8 }} />
 
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Buscar un lugar"
-              placeholderTextColor={colors.mutedText}
+              placeholderTextColor={colors.inkMuted}
               style={{
                 flex: 1,
-                color: colors.text,
+                color: colors.ink,
                 paddingVertical: 12,
               }}
             />
@@ -371,7 +362,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 }}
                 hitSlop={10}
               >
-                <Ionicons name="close-circle" size={18} color={colors.mutedText} />
+                <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -383,7 +374,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                 alignItems: 'center',
               }}
             >
-              <ActivityIndicator size="small" color={isDarkMode ? '#fff' : '#000'} />
+              <ActivityIndicator size="small" color={colors.ink} />
             </View>
           )}
 
@@ -391,9 +382,9 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
             <View
               style={{
                 marginTop: 8,
-                backgroundColor: colors.card,
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: colors.border,
+                borderColor: colors.line,
                 borderRadius: 10,
                 overflow: 'hidden',
               }}
@@ -409,13 +400,13 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
                       paddingHorizontal: 14,
                       paddingVertical: 12,
                       borderBottomWidth: isLast ? 0 : 1,
-                      borderBottomColor: colors.border,
-                      backgroundColor: colors.card,
+                      borderBottomColor: colors.line,
+                      backgroundColor: colors.surface,
                     }}
                   >
                     <Text
                       style={{
-                        color: colors.text,
+                        color: colors.ink,
                         fontSize: 14,
                       }}
                     >
@@ -434,8 +425,8 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           borderRadius: 12,
           overflow: 'hidden',
           borderWidth: 1,
-          borderColor: colors.border,
-          backgroundColor: colors.card,
+          borderColor: colors.line,
+          backgroundColor: colors.surface,
         }}
       >
         <MapView
@@ -453,12 +444,12 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
       <View style={{ paddingTop: 12, alignItems: 'center' }}>
         {loadingAddress ? (
-          <ActivityIndicator size="small" color={isDarkMode ? '#fff' : '#000'} />
+          <ActivityIndicator size="small" color={colors.ink} />
         ) : (
           <Text
             style={{
               textAlign: 'center',
-              color: colors.text,
+              color: colors.ink,
               marginBottom: 4,
             }}
           >

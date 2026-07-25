@@ -36,7 +36,7 @@ const VisitItem = React.memo<VisitItemProps>(
             cachePolicy="memory-disk"
           />
         ) : (
-          <View className="w-14 h-14 rounded bg-gray-300" />
+          <View className="w-14 h-14 rounded bg-line-strong" />
         )}
         <View className="flex-1 ml-3">
           <View className="flex-row items-center">

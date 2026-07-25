@@ -26,7 +26,7 @@ import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishEditScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   const {
     control,
@@ -109,7 +109,7 @@ export default function DishEditScreen() {
   if (loading) {
     return (
       <View className="flex-1 bg-canvas justify-center items-center">
-        <ActivityIndicator size="large" color={isDarkMode ? '#B27A4D' : '#905c36'} />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }

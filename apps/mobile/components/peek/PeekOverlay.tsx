@@ -20,7 +20,7 @@ const TOP_PADDING = 30;
 const TARGET_RADIUS = 16;
 
 export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayProps) {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const progress = useRef(new Animated.Value(0)).current;
   const contentOpacity = useRef(new Animated.Value(0)).current;
@@ -131,10 +131,10 @@ export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayPro
   const cardBody = (
     <>
       <PeekContent data={displayedSession.preview} />
-      <View style={[styles.footer, { borderTopColor: isDarkMode ? '#444444' : '#E0E0E0' }]}>
+      <View style={[styles.footer, { borderTopColor: colors.line }]}>
         <Text
           style={{
-            color: isDarkMode ? '#888' : '#999',
+            color: colors.inkSubtle,
             fontSize: 11,
             textAlign: 'center',
           }}
@@ -162,7 +162,7 @@ export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayPro
             width: animatedStyles.width,
             height: animatedStyles.height,
             borderRadius: animatedStyles.borderRadius,
-            backgroundColor: isDarkMode ? '#2A2A2A' : '#FFFFFF',
+            backgroundColor: colors.surface,
           },
         ]}
       >
@@ -175,7 +175,7 @@ export default function PeekOverlay({ activeSession, isPeeking }: PeekOverlayPro
             styles.measureCard,
             {
               width: targetWidth,
-              backgroundColor: isDarkMode ? '#2A2A2A' : '#FFFFFF',
+              backgroundColor: colors.surface,
             },
           ]}
           onLayout={(event) => {

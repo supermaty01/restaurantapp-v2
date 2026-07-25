@@ -1,8 +1,13 @@
-"""Replaces `isDarkMode ? '#dark' : '#light'` with a semantic token.
+"""Replaces v1's hand-picked colours with the Clay tokens.
 
-v1 picked colours by hand at every call site, so the palette lived in 147
-scattered ternaries and nothing guaranteed two screens agreed on "muted grey".
-Each pair below maps to the Clay token that means the same thing.
+v1 chose every colour at the call site — `isDarkMode ? '#B27A4D' : '#905c36'` —
+so the palette lived in ~150 scattered ternaries and nothing made two screens
+agree on what "muted grey" meant. Each pair below maps to the token that means
+the same thing; the class ternaries collapse outright, because a single Clay
+class is already correct in both schemes.
+
+One-shot migration, kept in the repo as the record of the mapping. Run with:
+    python scripts/wip-decolor.py apps/mobile
 """
 
 import io
@@ -10,7 +15,8 @@ import re
 import sys
 from pathlib import Path
 
-PAIRS = {
+# (dark, light) -> token in lib/design/tokens.ts
+COLOUR_PAIRS = {
     ("#1C1C1E", "#FFFFFF"): "surface",
     ("#2A2A2A", "#FFFFFF"): "surface",
     ("#2A2A2A", "#fff"): "surface",
@@ -22,71 +28,95 @@ PAIRS = {
     ("#6b7280", "#9ca3af"): "inkSubtle",
     ("#777", "#999"): "inkSubtle",
     ("#888", "#999"): "inkSubtle",
-    ("#7A9455", "#93AE72"): "sage",
     ("#888", "#666"): "inkMuted",
     ("#9ca3af", "#6b7280"): "inkMuted",
     ("#A1A1AA", "#6B7280"): "inkMuted",
     ("#a0a0a0", "#6b7280"): "inkMuted",
     ("#aaa", "#666"): "inkMuted",
     ("#ccc", "#666"): "inkMuted",
-    ("#B27A4D", "#905c36"): "primary",
     ("#E0E0E0", "#333333"): "ink",
     ("#E5E7EB", "#111827"): "ink",
     ("#fff", "#000"): "ink",
     ("#fff", "#333"): "ink",
+    # v1's two brand colours: the brown accent became the single Clay accent,
+    # the green survives only as the category/positive tone.
+    ("#B27A4D", "#905c36"): "primary",
+    ("#7A9455", "#93AE72"): "sage",
     ("#FFA500", "#F59E0B"): "accent",
 }
 
-# className ternaries whose two branches now mean the same thing.
+# Class ternaries whose branches now mean the same thing.
 CLASS_TERNARIES = {
     "'bg-dark-card' : 'bg-surface'": "bg-surface",
     "'bg-dark-muted' : 'bg-canvas'": "bg-canvas",
     "'bg-dark-muted border-gray-600' : 'bg-sunken border-line'": "bg-sunken border-line",
     "'h-full bg-dark-primary' : 'h-full bg-primary'": "h-full bg-primary",
+    "'text-ink-subtle' : 'text-ink-muted'": "text-ink-muted",
+    "'text-on-primary' : 'text-ink'": "text-ink",
+    "'bg-surface' : 'bg-sunken'": "bg-sunken",
 }
 
-root = Path(sys.argv[1])
-changed = []
+DESTRUCTURE = re.compile(r"const \{([^}]*)\} = useTheme\(\);")
 
-for path in sorted(root.rglob("*.tsx")):
-    if "node_modules" in path.parts:
-        continue
-    original = io.open(path, encoding="utf-8").read()
-    text = original
 
-    for (dark, light), token in PAIRS.items():
-        text = text.replace(f"isDarkMode ? '{dark}' : '{light}'", f"colors.{token}")
+def fix_destructure(text: str) -> str:
+    """Keeps the useTheme destructure in step with what the file still uses.
 
-    for ternary, cls in CLASS_TERNARIES.items():
-        # `${isDarkMode ? 'a' : 'b'}` inside a template literal → plain classes
-        text = text.replace("${isDarkMode ? " + ternary + "}", cls)
-        text = text.replace("isDarkMode ? " + ternary, f"'{cls}'")
+    `isDarkMode` survives where it drives something that is genuinely not a
+    colour — the StatusBar style, the moon/sun icon.
+    """
 
-    if text == original:
-        continue
+    def replace(match: "re.Match[str]") -> str:
+        keys = [k.strip() for k in match.group(1).split(",") if k.strip()]
+        body = text.replace(match.group(0), "")
+        wanted = [k for k in keys if re.search(rf"\b{re.escape(k)}\b", body)]
+        if "colors." in body and "colors" not in wanted:
+            wanted.append("colors")
+        if not wanted:
+            return ""
+        return "const { " + ", ".join(wanted) + " } = useTheme();"
 
-    # Swap the destructure only when isDarkMode is genuinely gone.
-    body = re.sub(r"const \{[^}]*\} = useTheme\(\);", "", text)
-    if "isDarkMode" not in body:
+    return DESTRUCTURE.sub(replace, text)
+
+
+def main() -> int:
+    root = Path(sys.argv[1] if len(sys.argv) > 1 else "apps/mobile")
+    changed = []
+
+    for path in sorted(root.rglob("*.tsx")):
+        if "node_modules" in path.parts:
+            continue
+
+        original = io.open(path, encoding="utf-8").read()
+        text = original
+
+        for (dark, light), token in COLOUR_PAIRS.items():
+            text = text.replace(f"isDarkMode ? '{dark}' : '{light}'", f"colors.{token}")
+
+        for ternary, classes in CLASS_TERNARIES.items():
+            text = text.replace("${isDarkMode ? " + ternary + "}", classes)
+            text = text.replace("isDarkMode ? " + ternary, f"'{classes}'")
+
+        if text == original:
+            continue
+
+        text = fix_destructure(text)
+        # Tidy the double spaces left inside template literals.
         text = re.sub(
-            r"const \{ isDarkMode \} = useTheme\(\);",
-            "const { colors } = useTheme();",
+            r"\{`([^`]*?)`\}",
+            lambda m: "{`" + re.sub(r" {2,}", " ", m.group(1)).strip() + "`}",
             text,
         )
-    elif "colors" not in re.findall(r"const \{([^}]*)\} = useTheme\(\)", text)[0] if re.findall(r"const \{([^}]*)\} = useTheme\(\)", text) else False:
-        pass
+        text = re.sub(r"\n\n\n+", "\n\n", text)
 
-    # Files that still need isDarkMode as well as colors.
-    if "colors." in text and re.search(r"const \{ isDarkMode \} = useTheme\(\);", text):
-        text = re.sub(
-            r"const \{ isDarkMode \} = useTheme\(\);",
-            "const { isDarkMode, colors } = useTheme();",
-            text,
-        )
+        io.open(path, "w", encoding="utf-8").write(text)
+        changed.append(str(path.relative_to(root)))
 
-    io.open(path, "w", encoding="utf-8").write(text)
-    changed.append(str(path.relative_to(root)))
+    print(f"{len(changed)} ficheros")
+    for name in changed:
+        print("  ", name)
+    return 0
 
-print(f"{len(changed)} ficheros")
-for name in changed:
-    print("  ", name)
+
+if __name__ == "__main__":
+    raise SystemExit(main())

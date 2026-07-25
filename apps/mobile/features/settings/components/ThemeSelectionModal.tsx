@@ -11,7 +11,7 @@ interface ThemeSelectionModalProps {
 }
 
 const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({ visible, onClose }) => {
-  const { themeMode, setThemeMode, isDarkMode } = useTheme();
+  const { themeMode, setThemeMode, colors } = useTheme();
 
   const handleThemeChange = async (mode: 'light' | 'dark' | 'system') => {
     await setThemeMode(mode);
@@ -26,7 +26,7 @@ const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({ visible, onCl
           <View className="flex-row justify-between items-center mb-4">
             <Text className="text-xl font-bold text-ink">Seleccionar tema</Text>
             <TouchableOpacity onPress={onClose}>
-              <Ionicons name="close" size={24} color={isDarkMode ? '#E0E0E0' : '#333333'} />
+              <Ionicons name="close" size={24} color={colors.ink} />
             </TouchableOpacity>
           </View>
 
@@ -36,13 +36,13 @@ const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({ visible, onCl
             }`}
             onPress={() => handleThemeChange('light')}
           >
-            <Ionicons name="sunny" size={24} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+            <Ionicons name="sunny" size={24} color={colors.primary} />
             <Text className="text-lg text-ink ml-3">Claro</Text>
             {themeMode === 'light' && (
               <Ionicons
                 name="checkmark"
                 size={24}
-                color={isDarkMode ? '#B27A4D' : '#905c36'}
+                color={colors.primary}
                 style={styles.checkIcon}
               />
             )}
@@ -54,13 +54,13 @@ const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({ visible, onCl
             }`}
             onPress={() => handleThemeChange('dark')}
           >
-            <Ionicons name="moon" size={24} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+            <Ionicons name="moon" size={24} color={colors.primary} />
             <Text className="text-lg text-ink ml-3">Oscuro</Text>
             {themeMode === 'dark' && (
               <Ionicons
                 name="checkmark"
                 size={24}
-                color={isDarkMode ? '#B27A4D' : '#905c36'}
+                color={colors.primary}
                 style={styles.checkIcon}
               />
             )}
@@ -72,13 +72,13 @@ const ThemeSelectionModal: React.FC<ThemeSelectionModalProps> = ({ visible, onCl
             }`}
             onPress={() => handleThemeChange('system')}
           >
-            <Ionicons name="phone-portrait" size={24} color={isDarkMode ? '#B27A4D' : '#905c36'} />
+            <Ionicons name="phone-portrait" size={24} color={colors.primary} />
             <Text className="text-lg text-ink ml-3">Sistema</Text>
             {themeMode === 'system' && (
               <Ionicons
                 name="checkmark"
                 size={24}
-                color={isDarkMode ? '#B27A4D' : '#905c36'}
+                color={colors.primary}
                 style={styles.checkIcon}
               />
             )}

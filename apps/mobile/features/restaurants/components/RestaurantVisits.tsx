@@ -38,7 +38,7 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
                   cachePolicy="memory-disk"
                 />
               ) : (
-                <View className="w-14 h-14 rounded bg-gray-300 mr-3" />
+                <View className="w-14 h-14 rounded bg-line-strong mr-3" />
               )}
               <View className="flex-1">
                 <Text className="text-base font-bold text-ink">

@@ -79,7 +79,7 @@ function DishPeekContent({ data }: { data: Extract<PeekPreviewData, { type: 'dis
 }
 
 function VisitPeekContent({ data }: { data: Extract<PeekPreviewData, { type: 'visit' }> }) {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <>
@@ -95,7 +95,7 @@ function VisitPeekContent({ data }: { data: Extract<PeekPreviewData, { type: 'vi
       ) : null}
       <Text className="text-lg font-bold text-ink mb-1">{data.date}</Text>
       <View className="flex-row items-center mb-2">
-        <Ionicons name="restaurant-outline" size={14} color={isDarkMode ? '#aaa' : '#666'} />
+        <Ionicons name="restaurant-outline" size={14} color={colors.inkMuted} />
         <Text className="text-sm text-ink-muted ml-1">{data.restaurantName}</Text>
       </View>
       {data.comments ? <Text className="text-sm text-ink-muted">{data.comments}</Text> : null}

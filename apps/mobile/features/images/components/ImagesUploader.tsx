@@ -117,14 +117,14 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
       <Text className="text-xl font-bold mb-2 text-ink">Fotos</Text>
       <View className="flex-row gap-2 mb-4">
         <TouchableOpacity
-          className="bg-gray-300 px-3 py-2 rounded-md"
+          className="bg-line-strong px-3 py-2 rounded-md"
           onPress={pickFromGallery}
           disabled={disabled}
         >
           <Text className="text-ink">Seleccionar archivos</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          className="bg-gray-300 px-3 py-2 rounded-md"
+          className="bg-line-strong px-3 py-2 rounded-md"
           onPress={pickFromCamera}
           disabled={disabled}
         >

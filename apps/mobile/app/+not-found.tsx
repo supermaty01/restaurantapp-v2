@@ -10,7 +10,7 @@ import { SHARE_FILE_EXTENSION } from '@/services/share/types';
 export default function NotFoundScreen() {
   const router = useRouter();
   const pathname = usePathname();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const [checking, setChecking] = useState(true);
   const [isFileImport, setIsFileImport] = useState(false);
 
@@ -70,28 +70,18 @@ export default function NotFoundScreen() {
 
   if (checking || isFileImport) {
     return (
-      <View
-        className={`flex-1 justify-center items-center ${isDarkMode ? 'bg-dark-muted' : 'bg-canvas'}`}
-      >
-        <ActivityIndicator size="large" color={isDarkMode ? '#7A9455' : '#93AE72'} />
-        <Text className={`mt-4 text-base ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
-          Procesando...
-        </Text>
+      <View className={`flex-1 justify-center items-center bg-canvas`}>
+        <ActivityIndicator size="large" color={colors.sage} />
+        <Text className={`mt-4 text-base text-ink-muted`}>Procesando...</Text>
       </View>
     );
   }
 
   return (
-    <View
-      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-canvas'}`}
-    >
-      <Ionicons name="alert-circle-outline" size={64} color={isDarkMode ? '#888' : '#666'} />
-      <Text className={`mt-4 text-xl font-bold ${isDarkMode ? 'text-on-primary' : 'text-ink'}`}>
-        Página no encontrada
-      </Text>
-      <Text
-        className={`mt-2 text-base text-center ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}
-      >
+    <View className={`flex-1 justify-center items-center p-6 bg-canvas`}>
+      <Ionicons name="alert-circle-outline" size={64} color={colors.inkMuted} />
+      <Text className={`mt-4 text-xl font-bold text-ink`}>Página no encontrada</Text>
+      <Text className={`mt-2 text-base text-center text-ink-muted`}>
         La página que buscas no existe.
       </Text>
       <TouchableOpacity

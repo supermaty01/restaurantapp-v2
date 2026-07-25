@@ -3,19 +3,15 @@ import { View, Text } from 'react-native';
 
 interface ProgressBarProps {
   progress: number;
-  isDarkMode?: boolean | undefined;
 }
 
-const ProgressBar: React.FC<ProgressBarProps> = ({ progress, isDarkMode }) => {
+const ProgressBar: React.FC<ProgressBarProps> = ({ progress }) => {
   return (
     <View className="mt-4">
-      <View className="h-2 bg-sunken rounded-full overflow-hidden">
-        <View
-          className={isDarkMode ? 'h-full bg-dark-primary' : 'h-full bg-primary'}
-          style={{ width: `${progress}%` }}
-        />
+      <View className="h-2 overflow-hidden rounded-pill bg-sunken">
+        <View className="h-full rounded-pill bg-primary" style={{ width: `${progress}%` }} />
       </View>
-      <Text className="text-center text-ink-muted mt-1">{progress}% completado</Text>
+      <Text className="mt-1.5 text-center text-[13px] text-ink-muted">{progress}% completado</Text>
     </View>
   );
 };

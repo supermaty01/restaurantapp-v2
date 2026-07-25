@@ -21,7 +21,7 @@ export default function ImportScreen() {
   const router = useRouter();
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const drizzleDb = useDatabase();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   const [loading, setLoading] = useState(true);
   const [shareData, setShareData] = useState<ShareFileData | null>(null);
@@ -172,24 +172,18 @@ export default function ImportScreen() {
   };
 
   return (
-    <View
-      className={`flex-1 justify-center items-center p-6 ${isDarkMode ? 'bg-dark-muted' : 'bg-canvas'}`}
-    >
+    <View className={`flex-1 justify-center items-center p-6 bg-canvas`}>
       {loading ? (
         <View className="items-center">
-          <ActivityIndicator size="large" color={isDarkMode ? '#7A9455' : '#93AE72'} />
-          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
+          <ActivityIndicator size="large" color={colors.sage} />
+          <Text className={`mt-4 text-lg text-ink-muted`}>
             Importando {getEntityTypeLabel().toLowerCase()}...
           </Text>
         </View>
       ) : error ? (
         <View className="items-center">
           <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
-          <Text
-            className={`mt-4 text-lg text-center ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}
-          >
-            {error}
-          </Text>
+          <Text className={`mt-4 text-lg text-center text-ink-muted`}>{error}</Text>
           <TouchableOpacity
             className="mt-6 bg-primary px-6 py-3 rounded-xl"
             onPress={() => router.replace('/')}
@@ -199,14 +193,8 @@ export default function ImportScreen() {
         </View>
       ) : (
         <View className="items-center">
-          <Ionicons
-            name={getEntityTypeIcon()}
-            size={64}
-            color={isDarkMode ? '#7A9455' : '#93AE72'}
-          />
-          <Text className={`mt-4 text-lg ${isDarkMode ? 'text-ink-subtle' : 'text-ink-muted'}`}>
-            Procesando...
-          </Text>
+          <Ionicons name={getEntityTypeIcon()} size={64} color={colors.sage} />
+          <Text className={`mt-4 text-lg text-ink-muted`}>Procesando...</Text>
         </View>
       )}
 

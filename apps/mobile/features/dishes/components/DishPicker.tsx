@@ -47,7 +47,7 @@ function DishPicker<
   const [isModalVisible, setIsModalVisible] = useState(false);
   const { newDish, setNewDish } = useNewDish();
   const router = useRouter();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   // Usar el hook para obtener los platos del restaurante
   const dishes = useDishesByRestaurant(restaurantId);
@@ -142,7 +142,7 @@ function DishPicker<
             <Text className="text-lg font-bold mb-3 text-ink">Seleccionar Platos</Text>
 
             {isLoading ? (
-              <ActivityIndicator size="large" color={isDarkMode ? '#B27A4D' : '#905c36'} />
+              <ActivityIndicator size="large" color={colors.primary} />
             ) : dishes.length === 0 ? (
               <Text className="text-ink-subtle text-center mt-4">No hay platos disponibles</Text>
             ) : (

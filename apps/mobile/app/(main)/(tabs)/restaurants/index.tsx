@@ -38,7 +38,7 @@ const buildPreviewData = (item: RestaurantListDTO) => {
 
 export default function RestaurantsScreen() {
   const router = useRouter();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
   const { isPeeking } = usePeekState();
 
   const restaurants = useRestaurantList(false);
@@ -190,29 +190,17 @@ export default function RestaurantsScreen() {
         <Text className="text-2xl font-bold text-ink">Restaurantes</Text>
         <View className="flex-row items-center" style={{ gap: 12 }}>
           <TouchableOpacity onPress={() => router.push('/map')}>
-            <Ionicons name="map-outline" size={22} color={isDarkMode ? '#ccc' : '#666'} />
+            <Ionicons name="map-outline" size={22} color={colors.inkMuted} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setIsGridView(!isGridView)}>
-            <Ionicons
-              name={isGridView ? 'list' : 'grid'}
-              size={22}
-              color={isDarkMode ? '#ccc' : '#666'}
-            />
+            <Ionicons name={isGridView ? 'list' : 'grid'} size={22} color={colors.inkMuted} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setFilterModalVisible(true)}>
             <View className="relative">
               <Ionicons
                 name="filter"
                 size={24}
-                color={
-                  hasActiveFilters
-                    ? isDarkMode
-                      ? '#7A9455'
-                      : '#93AE72'
-                    : isDarkMode
-                      ? '#ccc'
-                      : '#666'
-                }
+                color={hasActiveFilters ? colors.primary : colors.inkMuted}
               />
               {hasActiveFilters && (
                 <View className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full" />
@@ -223,18 +211,18 @@ export default function RestaurantsScreen() {
       </View>
       <View className="mb-3">
         <View className="flex-row items-center bg-surface rounded-lg px-3 py-2 border border-line">
-          <Ionicons name="search" size={18} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
+          <Ionicons name="search" size={18} color={colors.inkMuted} />
           <TextInput
             className="flex-1 ml-2 text-sm text-ink"
             placeholder="Buscar por nombre..."
-            placeholderTextColor={isDarkMode ? '#6b7280' : '#9ca3af'}
+            placeholderTextColor={colors.inkSubtle}
             value={searchQuery}
             onChangeText={setSearchQuery}
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
+              <Ionicons name="close-circle" size={18} color={colors.inkMuted} />
             </TouchableOpacity>
           )}
         </View>

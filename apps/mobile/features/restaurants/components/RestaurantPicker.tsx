@@ -47,7 +47,7 @@ function RestaurantPicker<
   fixedValue,
 }: RestaurantPickerProps<TFieldValues, TName, TTransformed>) {
   const { newRestaurantId, setNewRestaurantId } = useNewRestaurant();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   const unsortedRestaurants = useRestaurantList();
   const restaurants = [...unsortedRestaurants].sort((a, b) => a.name.localeCompare(b.name));
@@ -87,14 +87,14 @@ function RestaurantPicker<
               <Picker.Item
                 label="Selecciona un restaurante"
                 value={-1}
-                style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', fontSize: 15 }}
+                style={{ color: colors.inkMuted, fontSize: 15 }}
               />
               {restaurants.map((restaurant) => (
                 <Picker.Item
                   key={restaurant.id}
                   label={restaurant.name}
                   value={restaurant.id}
-                  style={{ color: isDarkMode ? '#9ca3af' : '#6b7280', fontSize: 15 }}
+                  style={{ color: colors.inkMuted, fontSize: 15 }}
                 />
               ))}
             </Picker>

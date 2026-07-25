@@ -13,7 +13,7 @@ interface VisitDishesProps {
 
 export default function VisitDishes({ visit }: VisitDishesProps) {
   const router = useRouter();
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   // Obtener los IDs de los platos de la visita
   const dishIds = visit.dishes.map((dish) => dish.id);
@@ -45,7 +45,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
                   cachePolicy="memory-disk"
                 />
               ) : (
-                <View className="w-14 h-14 rounded bg-gray-300 mr-3" />
+                <View className="w-14 h-14 rounded bg-line-strong mr-3" />
               )}
               <View className="flex-1">
                 <View className="flex-row items-center">
@@ -58,11 +58,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
                 </View>
                 {item.comments && <Text className="text-sm text-ink-subtle">{item.comments}</Text>}
               </View>
-              <Ionicons
-                name="chevron-forward-outline"
-                size={20}
-                color={isDarkMode ? '#777' : '#999'}
-              />
+              <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
             </TouchableOpacity>
           );
         }}

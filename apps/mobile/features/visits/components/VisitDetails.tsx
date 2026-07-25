@@ -10,7 +10,7 @@ interface VisitDetailsProps {
 }
 
 export default function VisitDetails({ visit }: VisitDetailsProps) {
-  const { isDarkMode } = useTheme();
+  const { colors } = useTheme();
 
   return (
     <View className="p-4 h-full bg-surface">
@@ -24,7 +24,7 @@ export default function VisitDetails({ visit }: VisitDetailsProps) {
         <View className="flex-1">
           <Text className="text-base font-bold text-ink">{visit.restaurant.name}</Text>
         </View>
-        <Ionicons name="chevron-forward-outline" size={20} color={isDarkMode ? '#777' : '#999'} />
+        <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
       </TouchableOpacity>
 
       <Text className="text-base font-bold text-ink-subtle mb-2">Comentarios</Text>

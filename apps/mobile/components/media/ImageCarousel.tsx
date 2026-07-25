@@ -71,8 +71,8 @@ export function ImageCarousel({ images, height = CAROUSEL_HEIGHT }: ImageCarouse
 
   if (images.length === 0) {
     return (
-      <View className="bg-gray-400 justify-center items-center" style={{ width, height }}>
-        <Text className="text-on-primary">Sin imágenes</Text>
+      <View className="items-center justify-center bg-sunken" style={{ width, height }}>
+        <Text className="text-[14px] text-ink-subtle">Sin imágenes</Text>
       </View>
     );
   }
@@ -97,7 +97,7 @@ export function ImageCarousel({ images, height = CAROUSEL_HEIGHT }: ImageCarouse
             <View
               key={image.id}
               className={`w-2 h-2 rounded-full mx-1 ${
-                activeIndex === index ? 'bg-black dark:bg-surface' : 'bg-gray-300'
+                activeIndex === index ? 'bg-primary' : 'bg-line-strong'
               }`}
             />
           ))}

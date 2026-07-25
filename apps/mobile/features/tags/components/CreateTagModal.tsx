@@ -6,7 +6,6 @@ import { Modal, View, Text, TouchableOpacity, ScrollView, Dimensions, Alert } fr
 import { z } from 'zod';
 
 import FormInput from '@/components/FormInput';
-import { useTheme } from '@/lib/context/ThemeContext';
 
 import type { SubmitHandler } from 'react-hook-form';
 import type { NativeSyntheticEvent, NativeScrollEvent } from 'react-native';
@@ -84,7 +83,6 @@ export default function CreateTagModal({
   editTag,
   isEditing = false,
 }: CreateTagModalProps) {
-  const { isDarkMode } = useTheme();
   const { control, handleSubmit, reset, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { name: '' },
@@ -182,13 +180,7 @@ export default function CreateTagModal({
                       onPress={() => setSelectedColor(color)}
                       className={clsx(
                         'm-2 rounded-full border-2 aspect-square justify-center items-center',
-                        isSelected
-                          ? isDarkMode
-                            ? 'border-white border-[3px]'
-                            : 'border-black border-[3px]'
-                          : isDarkMode
-                            ? 'border-white/20'
-                            : 'border-black/20',
+                        isSelected ? 'border-ink border-[3px]' : 'border-ink/20',
                       )}
                       style={{ backgroundColor: color, width: circleWidth, height: circleWidth }}
                     />
@@ -204,13 +196,7 @@ export default function CreateTagModal({
                 key={index}
                 className={clsx(
                   'w-2 h-2 rounded-full mx-1',
-                  currentPage === index
-                    ? isDarkMode
-                      ? 'bg-surface'
-                      : 'bg-black'
-                    : isDarkMode
-                      ? 'bg-gray-600'
-                      : 'bg-gray-300',
+                  currentPage === index ? 'bg-ink' : 'bg-line-strong',
                 )}
               />
             ))}
@@ -227,7 +213,10 @@ export default function CreateTagModal({
             )}
 
             <View className="flex-row ml-auto">
-              <TouchableOpacity onPress={onClose} className="px-4 py-2 rounded-md bg-gray-300 mr-2">
+              <TouchableOpacity
+                onPress={onClose}
+                className="px-4 py-2 rounded-md bg-line-strong mr-2"
+              >
                 <Text className="text-ink font-semibold">Cancelar</Text>
               </TouchableOpacity>
               <TouchableOpacity
