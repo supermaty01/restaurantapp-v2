@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Modal, Pressable, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { FadeIn, FadeOut, ZoomIn } from 'react-native-reanimated';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
@@ -108,72 +109,76 @@ export function DialogProvider({ children }: { children: ReactNode }) {
         statusBarTranslucent
         navigationBarTranslucent
       >
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <Animated.View
-            entering={FadeIn.duration(140)}
-            exiting={FadeOut.duration(120)}
-            style={{ flex: 1, backgroundColor: 'rgba(26, 21, 18, 0.5)' }}
-            className="items-center justify-center px-8"
-          >
-            {/* Tapping outside dismisses, which for a confirmation means "no". */}
-            <Pressable
-              accessibilityLabel="Cerrar"
-              onPress={() => close(false)}
-              style={{ position: 'absolute', inset: 0 }}
-            />
-
+        {/* Same reason as Sheet: a modal does not inherit the app's inset
+            context, and without it the dialog is laid out against zeros. */}
+        <SafeAreaProvider>
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <Animated.View
-              entering={ZoomIn.springify().damping(26).stiffness(300).mass(0.7)}
-              style={[elevation.high, { backgroundColor: colors.surface }]}
-              className="w-full max-w-[340px] items-center gap-3 rounded-[22px] p-6"
+              entering={FadeIn.duration(140)}
+              exiting={FadeOut.duration(120)}
+              style={{ flex: 1, backgroundColor: 'rgba(26, 21, 18, 0.5)' }}
+              className="items-center justify-center px-8"
             >
-              {request?.icon ? (
-                <View
-                  className={`mb-1 h-14 w-14 items-center justify-center rounded-pill ${
-                    request.destructive ? 'bg-danger/12' : 'bg-primary/12'
-                  }`}
-                >
-                  <Ionicons
-                    name={request.icon}
-                    size={24}
-                    color={request.destructive ? colors.danger : colors.primary}
-                  />
-                </View>
-              ) : null}
+              {/* Tapping outside dismisses, which for a confirmation means "no". */}
+              <Pressable
+                accessibilityLabel="Cerrar"
+                onPress={() => close(false)}
+                style={{ position: 'absolute', inset: 0 }}
+              />
 
-              <Txt variant="title" className="text-center">
-                {request?.title ?? ''}
-              </Txt>
-
-              {request?.message ? (
-                <Txt variant="callout" tone="muted" className="text-center">
-                  {request.message}
-                </Txt>
-              ) : null}
-
-              <View className="mt-2 w-full flex-row gap-2.5">
-                {request?.cancelLabel ? (
-                  <View className="flex-1">
-                    <Button
-                      label={request.cancelLabel}
-                      variant="secondary"
-                      block
-                      onPress={() => close(false)}
+              <Animated.View
+                entering={ZoomIn.springify().damping(26).stiffness(300).mass(0.7)}
+                style={[elevation.high, { backgroundColor: colors.surface }]}
+                className="w-full max-w-[340px] items-center gap-3 rounded-[22px] p-6"
+              >
+                {request?.icon ? (
+                  <View
+                    className={`mb-1 h-14 w-14 items-center justify-center rounded-pill ${
+                      request.destructive ? 'bg-danger/12' : 'bg-primary/12'
+                    }`}
+                  >
+                    <Ionicons
+                      name={request.icon}
+                      size={24}
+                      color={request.destructive ? colors.danger : colors.primary}
                     />
                   </View>
                 ) : null}
-                <View className="flex-1">
-                  <Button
-                    label={request?.confirmLabel ?? 'Vale'}
-                    variant={request?.destructive ? 'danger' : 'primary'}
-                    block
-                    onPress={() => close(true)}
-                  />
+
+                <Txt variant="title" className="text-center">
+                  {request?.title ?? ''}
+                </Txt>
+
+                {request?.message ? (
+                  <Txt variant="callout" tone="muted" className="text-center">
+                    {request.message}
+                  </Txt>
+                ) : null}
+
+                <View className="mt-2 w-full flex-row gap-2.5">
+                  {request?.cancelLabel ? (
+                    <View className="flex-1">
+                      <Button
+                        label={request.cancelLabel}
+                        variant="secondary"
+                        block
+                        onPress={() => close(false)}
+                      />
+                    </View>
+                  ) : null}
+                  <View className="flex-1">
+                    <Button
+                      label={request?.confirmLabel ?? 'Vale'}
+                      variant={request?.destructive ? 'danger' : 'primary'}
+                      block
+                      onPress={() => close(true)}
+                    />
+                  </View>
                 </View>
-              </View>
+              </Animated.View>
             </Animated.View>
-          </Animated.View>
-        </GestureHandlerRootView>
+          </GestureHandlerRootView>
+        </SafeAreaProvider>
       </Modal>
     </DialogContext.Provider>
   );

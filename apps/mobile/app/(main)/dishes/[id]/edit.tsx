@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Alert, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
+import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import { updateDish } from '@/features/dishes/repositories/dishRepository';
@@ -24,6 +25,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishEditScreen() {
+  const { tell } = useDialog();
   const { id } = useGlobalSearchParams<{ id: string }>();
   const { colors } = useTheme();
 
@@ -95,7 +97,7 @@ export default function DishEditScreen() {
 
       await deleteImages(drizzleDb, removedImages);
 
-      Alert.alert('Éxito', 'Plato actualizado correctamente.');
+      await tell({ title: 'Cambios guardados', icon: 'checkmark-circle-outline' });
       router.back();
     } catch (error) {
       reportError('No se pudo actualizar el plato', error);

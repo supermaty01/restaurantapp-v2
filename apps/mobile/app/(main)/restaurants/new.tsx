@@ -2,11 +2,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Alert } from 'react-native';
+import { View } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import RatingStars from '@/components/RatingStars';
+import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
@@ -22,6 +23,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function RestaurantCreateScreen() {
+  const { tell } = useDialog();
   const { useBackRedirect, prefillName, prefillLatitude, prefillLongitude } =
     useGlobalSearchParams<{
       useBackRedirect?: string;
@@ -73,7 +75,7 @@ export default function RestaurantCreateScreen() {
         await uploadImages(drizzleDb, selectedImages, 'RESTAURANT', restaurantId);
       }
 
-      Alert.alert('Éxito', 'Restaurante creado correctamente.');
+      await tell({ title: 'Restaurante guardado', icon: 'checkmark-circle-outline' });
       if (useBackRedirect && useBackRedirect === 'true') {
         setNewRestaurantId(restaurantId);
         router.back();

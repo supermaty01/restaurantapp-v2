@@ -12,6 +12,9 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
+import { BurgerGlyph } from '@/components/ui/BurgerGlyph';
+import { Button } from '@/components/ui/Button';
+import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
 import { getAutocomplete, getPlaceDetails } from '@/services/places';
@@ -446,7 +449,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
 
       <View
         style={{
-          borderRadius: 12,
+          borderRadius: 14,
           overflow: 'hidden',
           borderWidth: 1,
           borderColor: colors.line,
@@ -456,77 +459,73 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
         <MapView
           ref={mapRef}
           provider={PROVIDER_GOOGLE}
-          style={{ width: '100%', height: 250 }}
+          style={{ width: '100%', height: 200 }}
           region={mapRegion}
           onPress={handleMapPress}
           scrollEnabled={editable}
           zoomEnabled={editable}
         >
-          {selectedLocation && <Marker coordinate={selectedLocation} />}
+          {selectedLocation ? (
+            <Marker coordinate={selectedLocation} anchor={{ x: 0.5, y: 0.5 }}>
+              <View
+                style={{ backgroundColor: colors.primary }}
+                className="h-8 w-8 items-center justify-center rounded-pill"
+              >
+                <BurgerGlyph size={16} color={colors.onPrimary} />
+              </View>
+            </Marker>
+          ) : null}
         </MapView>
-      </View>
 
-      <View style={{ paddingTop: 12, alignItems: 'center' }}>
-        {loadingAddress ? (
-          <ActivityIndicator size="small" color={colors.ink} />
-        ) : (
-          <Text
-            style={{
-              textAlign: 'center',
-              color: colors.ink,
-              marginBottom: 4,
-            }}
-          >
-            {/* A failed address lookup is not a missing location. Falling back
+        {/* The address belongs to the map, so it lives in the same card: it was
+            floating underneath, which read as a caption for the whole form. */}
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: colors.line,
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            alignItems: 'center',
+          }}
+        >
+          {loadingAddress ? (
+            <ActivityIndicator size="small" color={colors.inkMuted} />
+          ) : (
+            <Txt variant="caption" tone={address ? 'muted' : 'subtle'} className="text-center">
+              {/* A failed address lookup is not a missing location. Falling back
                 to the coordinates says "this is set, we just cannot name it";
                 "Ubicación no disponible" said the opposite, and said it even
                 when a pin was clearly sitting on the map. */}
-            {address ??
-              (selectedLocation
-                ? `${selectedLocation.latitude.toFixed(5)}, ${selectedLocation.longitude.toFixed(5)}`
-                : 'Toca el mapa para elegir un punto')}
-          </Text>
-        )}
+              {address ??
+                (selectedLocation
+                  ? `${selectedLocation.latitude.toFixed(5)}, ${selectedLocation.longitude.toFixed(5)}`
+                  : 'Toca el mapa para elegir un punto')}
+            </Txt>
+          )}
 
-        {editable && !selectedLocation && (
-          <TouchableOpacity
-            className="bg-primary"
-            style={{
-              flexDirection: 'row',
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 8,
-              marginTop: 8,
-              alignItems: 'center',
-            }}
-            onPress={handleUseCurrentLocation}
-            disabled={gettingCurrentLocation}
-          >
-            {gettingCurrentLocation ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <>
-                <Ionicons name="location" size={18} color="white" style={{ marginRight: 6 }} />
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>Usar mi ubicación</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {editable && selectedLocation && (
-          <TouchableOpacity
-            style={{
-              paddingHorizontal: 14,
-              paddingVertical: 10,
-              borderRadius: 8,
-              marginTop: 8,
-            }}
-            className="bg-danger"
-            onPress={handleClearSelection}
-          >
-            <Text style={{ color: 'white', fontWeight: '600' }}>Borrar selección</Text>
-          </TouchableOpacity>
-        )}
+          {editable ? (
+            <View className="mt-2.5 flex-row gap-2">
+              {selectedLocation ? (
+                <Button
+                  label="Quitar"
+                  variant="ghost"
+                  size="sm"
+                  icon="close"
+                  onPress={handleClearSelection}
+                />
+              ) : (
+                <Button
+                  label="Usar mi ubicación"
+                  variant="secondary"
+                  size="sm"
+                  icon="locate"
+                  loading={gettingCurrentLocation}
+                  onPress={handleUseCurrentLocation}
+                />
+              )}
+            </View>
+          ) : null}
+        </View>
       </View>
     </View>
   );

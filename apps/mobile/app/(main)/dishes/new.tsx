@@ -2,10 +2,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Alert } from 'react-native';
+import { View } from 'react-native';
 
 import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
+import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
 import { createDish } from '@/features/dishes/repositories/dishRepository';
@@ -22,6 +23,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishCreateScreen() {
+  const { tell } = useDialog();
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
   const {
     control,
@@ -63,7 +65,7 @@ export default function DishCreateScreen() {
         await uploadImages(drizzleDb, selectedImages, 'DISH', dishId);
       }
 
-      Alert.alert('Éxito', 'Plato creado correctamente.');
+      await tell({ title: 'Plato guardado', icon: 'checkmark-circle-outline' });
       if (useBackRedirect && useBackRedirect === 'true') {
         setNewDish({
           id: dishId,

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View } from 'react-native';
 import { Marker } from 'react-native-maps';
 
+import { BurgerGlyph } from '@/components/ui/BurgerGlyph';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 
@@ -45,7 +46,7 @@ export function RestaurantMarker({
           style={{ backgroundColor: selected ? colors.ink : colors.primary }}
           className="flex-row items-center gap-1 rounded-pill px-2.5 py-1.5"
         >
-          <Ionicons name="restaurant" size={12} color={colors.onPrimary} />
+          <BurgerGlyph size={13} color={colors.onPrimary} />
           {rating ? (
             <>
               <Ionicons name="star" size={10} color={colors.accent} />

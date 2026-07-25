@@ -2,10 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import { Alert } from 'react-native';
 
 import FormDatePicker from '@/components/FormDatePicker';
 import FormInput from '@/components/FormInput';
+import { useDialog } from '@/components/ui/Dialog';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import DishPicker from '@/features/dishes/components/DishPicker';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
@@ -23,6 +23,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function VisitCreateScreen() {
+  const { tell } = useDialog();
   const { restaurantId: routeRestaurantId } = useGlobalSearchParams();
   const {
     control,
@@ -68,7 +69,7 @@ export default function VisitCreateScreen() {
         await uploadImages(drizzleDb, selectedImages, 'VISIT', visitId);
       }
 
-      Alert.alert('Éxito', 'Visita creada correctamente.');
+      await tell({ title: 'Visita guardada', icon: 'checkmark-circle-outline' });
 
       router.back();
     } catch (error) {
