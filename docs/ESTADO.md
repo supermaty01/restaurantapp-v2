@@ -48,6 +48,43 @@ Los repositorios escriben la fila y su entrada de `change_log` por separado. No 
 
 ---
 
+---
+
+## Rediseño visual: cerrado (25 de julio de 2026)
+
+Verde: TypeScript en 0, **159 tests** de app + 24 del worker + **39 aserciones SQL**, lint sin errores, `expo export` compila.
+
+Cubierto: sistema de diseño, navegación, Inicio, Diario (las tres listas), Feed, Perfil, amigos, búsqueda, filtros, etiquetas, peek, detalles, formularios y ajustes. Detalle en [docs/14](14-diseno.md).
+
+### Dos fallos que llegaron al dispositivo
+
+- **La app abría en «página no encontrada».** `app/index.tsx` seguía redirigiendo a `/restaurants` tras reestructurar las pestañas. La causa de fondo: expo-router toma las rutas como cadenas y nada las comprueba. Nuevo `lib/__tests__/routes.node.test.ts` que valida cada destino contra el árbol de rutas.
+- **Ese mismo test tiró el bundle.** Lo puse dentro de `app/`, y expo-router arrastra todo lo que hay ahí con `require.context`: acabó empaquetado en la app intentando importar `node:fs`. Compilaba, pasaba en Jest, y rompía el arranque. Movido a `lib/`, con `app-directory.node.test.ts` para que no vuelva a pasar.
+
+### Cosas que se descubrieron al rediseñar
+
+- **El filtro por restaurante en Platos era UI muerta**: el panel lo ofrecía y la lista nunca lo consumía, porque `DishListDTO` ni siquiera trae el restaurante. Ahora esa sección solo aparece en Visitas.
+- **El detalle de plato fingía una pestaña** «Detalles» con un subrayado pintado a mano.
+- **Editar una visita usaba `router.replace`**, así que al volver desde la edición te saltabas la visita que acababas de mirar.
+- **El peek pintaba las fotos con `contentFit="contain"` sobre gris**, así que toda imagen que no fuera 4:3 salía con bandas.
+
+### 🔜 Siguiente
+
+1. **Reintentar el login con Google** y pasarme el mensaje. Sigue bloqueando todo lo online.
+2. **Aplicar las migraciones 0005, 0006 y 0007**, y correr `npm run db:test`.
+3. Sync de las tablas puente (`restaurant_tag`, `dish_tag`, `dish_visit`, `visit_participant`).
+4. IA: el hueco ya está en el buscador de Inicio; falta el agente, la voz y los embeddings.
+
+### Pendientes menores
+
+- **Etiquetar personas en una visita funciona, pero la persona no se muestra tras crearla.**
+- **Swipe entre pestañas**: sigue sin estar (SDK 56 prohibió los navegadores a mano).
+- La moneda de los precios está fijada a COP en el detalle de plato.
+- `jszip` sigue en `dependencies` aunque solo lo use un test.
+- 79 avisos de lint por _React Compiler readiness_; el compilador no está activado.
+
+---
+
 ## Sesión del 25 de julio de 2026
 
 Verde: TypeScript en 0, **121 tests** de app + 24 del worker + **39 aserciones SQL**, lint sin errores, `expo export` compila.
