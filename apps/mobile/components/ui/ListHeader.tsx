@@ -33,7 +33,8 @@ export function ListHeader({
   actions = [],
   search,
 }: {
-  title: string;
+  /** Omitted inside Diario, where the segmented control names the list. */
+  title?: string | undefined;
   count?: number | undefined;
   /** Plural noun for the count: "lugares", "platos", "visitas". */
   countLabel?: string | undefined;
@@ -52,11 +53,17 @@ export function ListHeader({
     <View className="pt-1">
       <View className="flex-row items-center justify-between">
         <View className="min-w-0 flex-1">
-          <Txt variant="display" numberOfLines={1}>
-            {title}
-          </Txt>
+          {title ? (
+            <Txt variant="display" numberOfLines={1}>
+              {title}
+            </Txt>
+          ) : null}
           {count !== undefined && countLabel ? (
-            <Txt variant="caption" tone="subtle" className="mt-0.5">
+            <Txt
+              variant={title ? 'caption' : 'callout'}
+              tone="subtle"
+              className={title ? 'mt-0.5' : ''}
+            >
               {count} {count === 1 ? countLabel.replace(/s$/, '') : countLabel}
             </Txt>
           ) : null}

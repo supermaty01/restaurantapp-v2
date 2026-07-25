@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
 
+import { PressableScale } from './Motion';
 import { Txt } from './Txt';
 
 import type { Tabs } from 'expo-router';
@@ -26,11 +27,13 @@ type TabBarProps = Parameters<NonNullable<ComponentProps<typeof Tabs>['tabBar']>
 /** Filled when active, outline when not — the cheapest way to read "you are here". */
 const ICONS: Record<string, { on: IconName; off: IconName }> = {
   index: { on: 'home', off: 'home-outline' },
+  journal: { on: 'book', off: 'book-outline' },
   feed: { on: 'people', off: 'people-outline' },
-  'restaurants/index': { on: 'restaurant', off: 'restaurant-outline' },
-  'dishes/index': { on: 'fast-food', off: 'fast-food-outline' },
   profile: { on: 'person-circle', off: 'person-circle-outline' },
 };
+
+/** The ➕ sits between the second and third tab, dead centre of the bar. */
+const CREATE_AFTER_INDEX = 1;
 
 const SELECT_SPRING = { damping: 16, stiffness: 260, mass: 0.6 };
 
@@ -47,7 +50,12 @@ const SELECT_SPRING = { damping: 16, stiffness: 260, mass: 0.6 };
  * alone is a poor signal, and it is the one place in the app that wants a
  * moving element.
  */
-export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) {
+export function FloatingTabBar({
+  state,
+  descriptors,
+  navigation,
+  onCreate,
+}: TabBarProps & { onCreate: () => void }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -61,7 +69,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
         style={[elevation.medium, { backgroundColor: colors.surfaceAlt }]}
         className="w-full flex-row items-center justify-between rounded-pill border border-line px-2 py-2"
       >
-        {state.routes.map((route, index) => {
+        {state.routes.flatMap((route, index) => {
           const label = descriptors[route.key]?.options.title ?? route.name;
           const focused = state.index === index;
           const icons = ICONS[route.name] ?? { on: 'ellipse', off: 'ellipse-outline' };
@@ -77,7 +85,7 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
             }
           };
 
-          return (
+          const button = (
             <TabButton
               key={route.key}
               focused={focused}
@@ -88,9 +96,31 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
               onPress={onPress}
             />
           );
+
+          // Creating is an action, not a destination: it opens a sheet rather
+          // than navigating, so it is not a route and lives here instead.
+          return index === CREATE_AFTER_INDEX
+            ? [button, <CreateButton key="create" onPress={onCreate} />]
+            : [button];
         })}
       </View>
     </View>
+  );
+}
+
+function CreateButton({ onPress }: { onPress: () => void }) {
+  const { colors } = useTheme();
+
+  return (
+    <PressableScale
+      accessibilityLabel="Registrar"
+      onPress={onPress}
+      scaleTo={0.88}
+      className="mx-1 h-12 w-12 items-center justify-center rounded-pill bg-primary"
+      style={elevation.medium}
+    >
+      <Ionicons name="add" size={26} color={colors.onPrimary} />
+    </PressableScale>
   );
 }
 

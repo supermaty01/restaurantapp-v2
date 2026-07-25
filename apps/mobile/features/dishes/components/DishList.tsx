@@ -7,7 +7,6 @@ import type { FilterSortOptions } from '@/components/FilterSortModal';
 import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
 import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
-import { Fab } from '@/components/ui/Fab';
 import { ListHeader } from '@/components/ui/ListHeader';
 import DishItem from '@/features/dishes/components/DishItem';
 import { useDishList } from '@/features/dishes/hooks/useDishList';
@@ -29,7 +28,7 @@ const buildPreviewData = (item: DishListDTO) => {
   } as const;
 };
 
-export default function DishesScreen() {
+export function DishList() {
   const router = useRouter();
   const { isPeeking } = usePeekState();
 
@@ -176,9 +175,8 @@ export default function DishesScreen() {
   );
 
   return (
-    <View className="relative flex-1 bg-canvas px-5 pt-2">
+    <View className="relative flex-1 px-5">
       <ListHeader
-        title="Platos"
         count={filteredAndSortedDishes.length}
         countLabel="platos"
         actions={[
@@ -215,11 +213,6 @@ export default function DishesScreen() {
         initialNumToRender={8}
         maxToRenderPerBatch={6}
         windowSize={5}
-      />
-      <Fab
-        onPress={() => router.push('/dishes/new')}
-        accessibilityLabel="Nuevo plato"
-        aboveTabBar
       />
 
       <FilterSortModal

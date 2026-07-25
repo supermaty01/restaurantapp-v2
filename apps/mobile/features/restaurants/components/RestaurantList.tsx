@@ -1,28 +1,39 @@
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { FlatList, Text, View, useWindowDimensions } from 'react-native';
+import { FlatList, View, Text, useWindowDimensions } from 'react-native';
 
 import type { FilterSortOptions } from '@/components/FilterSortModal';
 import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
 import GridPeekItem from '@/components/GridPeekItem';
-import { Fab } from '@/components/ui/Fab';
+import RatingStars from '@/components/RatingStars';
 import { ListHeader } from '@/components/ui/ListHeader';
-import VisitItem from '@/features/visits/components/VisitItem';
-import { useVisitList } from '@/features/visits/hooks/useVisitList';
-import type { VisitListDTO } from '@/features/visits/types/visit-dto';
+import RestaurantItem from '@/features/restaurants/components/RestaurantItem';
+import { useRestaurantList } from '@/features/restaurants/hooks/useRestaurantList';
+import type { RestaurantListDTO } from '@/features/restaurants/types/restaurant-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
-import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
-const keyExtractor = (item: VisitListDTO) => item.id.toString();
+const keyExtractor = (item: RestaurantListDTO) => item.id.toString();
 
-export default function VisitsScreen() {
+const buildPreviewData = (item: RestaurantListDTO) => {
+  return {
+    type: 'restaurant',
+    id: item.id,
+    name: item.name,
+    comments: item.comments,
+    rating: item.rating,
+    tags: item.tags || [],
+    imageUrl: item.images?.[0]?.uri,
+  } as const;
+};
+
+export function RestaurantList() {
   const router = useRouter();
   const { isPeeking } = usePeekState();
 
-  const visits = useVisitList(false);
-  const prefs = useListPreferences('visit');
+  const restaurants = useRestaurantList(false);
+  const prefs = useListPreferences('restaurant');
 
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [filterOptions, setFilterOptions] = useState<FilterSortOptions>({
@@ -47,107 +58,95 @@ export default function VisitsScreen() {
     }
   }, [prefs.loaded, prefs.sortField, prefs.sortOrder]);
 
-  const buildPreviewData = useCallback((item: VisitListDTO) => {
-    return {
-      type: 'visit',
-      id: item.id,
-      date: formatVisitDate(item.visited_at),
-      restaurantName: item.restaurant.name,
-      comments: item.comments,
-      imageUrl: item.images?.[0]?.uri,
-    } as const;
-  }, []);
-
-  const restaurantOptions = useMemo(() => {
-    const uniqueRestaurants = new Map<number, { id: number; name: string }>();
-    visits.forEach((visit) => {
-      if (!uniqueRestaurants.has(visit.restaurant.id)) {
-        uniqueRestaurants.set(visit.restaurant.id, {
-          id: visit.restaurant.id,
-          name: visit.restaurant.name,
-        });
-      }
-    });
-    return Array.from(uniqueRestaurants.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [visits]);
-
   const hasActiveFilters =
-    filterOptions.selectedRestaurantId !== null ||
-    filterOptions.sortField !== 'date' ||
-    filterOptions.sortOrder !== 'desc';
+    filterOptions.selectedTags.length > 0 ||
+    filterOptions.minRating !== null ||
+    filterOptions.sortField !== 'name' ||
+    filterOptions.sortOrder !== 'asc';
 
-  const filteredAndSortedVisits = useMemo(() => {
-    let result = [...visits];
+  const filteredAndSortedRestaurants = useMemo(() => {
+    let result = [...restaurants];
 
     if (searchQuery.trim()) {
       const query = searchQuery.trim().toLowerCase();
-      result = result.filter((v) => v.restaurant.name.toLowerCase().includes(query));
+      result = result.filter((r) => r.name.toLowerCase().includes(query));
     }
 
-    if (filterOptions.selectedRestaurantId !== null) {
-      result = result.filter((visit) => visit.restaurant.id === filterOptions.selectedRestaurantId);
+    if (filterOptions.selectedTags.length > 0) {
+      result = result.filter((restaurant) =>
+        filterOptions.selectedTags.some((filterTag) =>
+          restaurant.tags?.some((tag) => tag.id === filterTag.id),
+        ),
+      );
+    }
+
+    if (filterOptions.minRating !== null) {
+      result = result.filter(
+        (restaurant) => restaurant.rating !== null && restaurant.rating >= filterOptions.minRating!,
+      );
     }
 
     result.sort((a, b) => {
       let comparison = 0;
-      if (filterOptions.sortField === 'date') {
-        comparison = new Date(a.visited_at).getTime() - new Date(b.visited_at).getTime();
-      } else if (filterOptions.sortField === 'restaurant') {
-        comparison = a.restaurant.name.localeCompare(b.restaurant.name);
+      if (filterOptions.sortField === 'name') {
+        comparison = a.name.localeCompare(b.name);
+      } else if (filterOptions.sortField === 'rating') {
+        const ratingA = a.rating ?? 0;
+        const ratingB = b.rating ?? 0;
+        comparison = ratingA - ratingB;
+      } else if (filterOptions.sortField === 'created') {
+        comparison = a.id - b.id;
       }
       return filterOptions.sortOrder === 'asc' ? comparison : -comparison;
     });
 
     return result;
-  }, [visits, filterOptions, searchQuery]);
+  }, [restaurants, filterOptions, searchQuery]);
 
-  const navigateToVisit = useCallback(
+  const navigateToRestaurant = useCallback(
     (id: number) => {
-      router.push({ pathname: '/visits/[id]/view', params: { id } });
+      router.push({ pathname: '/restaurants/[id]/view', params: { id } });
     },
     [router],
   );
 
   const renderListItem = useCallback(
-    ({ item }: { item: VisitListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri ?? null;
+    ({ item }: { item: RestaurantListDTO }) => {
+      const imageUrl = item.images?.[0]?.uri;
       const previewData = buildPreviewData(item);
-      const formattedVisitDate = formatDate(item.visited_at);
 
       return (
-        <VisitItem
-          imageUrl={imageUrl}
-          date={formattedVisitDate}
-          title={item.restaurant.name}
+        <RestaurantItem
+          name={item.name}
           comments={item.comments}
-          deleted={item.deleted}
-          restaurantDeleted={item.restaurant.deleted}
+          rating={item.rating}
+          tags={item.tags || []}
+          imageUrl={imageUrl}
           previewData={previewData}
-          onPress={() => navigateToVisit(item.id)}
+          onPress={() => navigateToRestaurant(item.id)}
         />
       );
     },
-    [buildPreviewData, navigateToVisit],
+    [navigateToRestaurant],
   );
 
   const renderGridItem = useCallback(
-    ({ item }: { item: VisitListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri ?? null;
+    ({ item }: { item: RestaurantListDTO }) => {
+      const imageUrl = item.images?.[0]?.uri;
       const previewData = buildPreviewData(item);
-      const formattedVisitDate = formatDate(item.visited_at);
 
       return (
         <GridPeekItem
           style={{ flex: 1 / numColumns }}
           previewData={previewData}
-          onPress={() => navigateToVisit(item.id)}
+          onPress={() => navigateToRestaurant(item.id)}
         >
           {imageUrl ? (
             <Image
               source={imageUrl}
               style={{ width: '100%', height: 100 }}
               contentFit="cover"
-              recyclingKey={`grid-visit-${item.id}`}
+              recyclingKey={`grid-rest-${item.id}`}
               cachePolicy="memory-disk"
             />
           ) : (
@@ -155,32 +154,34 @@ export default function VisitsScreen() {
           )}
           <View className="p-2">
             <Text className="text-sm font-bold text-ink" numberOfLines={1}>
-              {item.restaurant.name}
+              {item.name}
             </Text>
-            <Text className="text-xs text-ink-subtle">{formattedVisitDate}</Text>
+            <View className="flex-row mt-1">
+              <RatingStars value={item.rating} size={12} gap={1} readOnly />
+            </View>
           </View>
         </GridPeekItem>
       );
     },
-    [buildPreviewData, navigateToVisit, numColumns],
+    [navigateToRestaurant, numColumns],
   );
 
   const listEmptyComponent = useMemo(
     () => (
       <View className="flex-1 justify-center items-center mt-10">
-        <Text className="text-base text-ink">No se encontraron visitas.</Text>
+        <Text className="text-base text-ink">No se encontraron restaurantes.</Text>
       </View>
     ),
     [],
   );
 
   return (
-    <View className="relative flex-1 bg-canvas px-5 pt-2">
+    <View className="relative flex-1 px-5">
       <ListHeader
-        title="Visitas"
-        count={filteredAndSortedVisits.length}
-        countLabel="visitas"
+        count={filteredAndSortedRestaurants.length}
+        countLabel="lugares"
         actions={[
+          { icon: 'map-outline', label: 'Ver en el mapa', onPress: () => router.push('/map') },
           {
             icon: isGridView ? 'list-outline' : 'grid-outline',
             label: isGridView ? 'Ver como lista' : 'Ver como cuadrícula',
@@ -196,25 +197,25 @@ export default function VisitsScreen() {
         search={{
           value: searchQuery,
           onChange: setSearchQuery,
-          placeholder: 'Buscar una visita…',
+          placeholder: 'Buscar un lugar…',
         }}
       />
       <View className="h-4" />
       <FlatList
         key={isGridView ? `grid-${numColumns}` : 'list'}
-        data={filteredAndSortedVisits}
+        data={filteredAndSortedRestaurants}
         keyExtractor={keyExtractor}
         numColumns={isGridView ? numColumns : 1}
         columnWrapperStyle={isGridView ? { gap: 8 } : undefined}
         renderItem={isGridView ? renderGridItem : renderListItem}
         showsVerticalScrollIndicator={false}
+        contentContainerClassName="pb-28"
         ListEmptyComponent={listEmptyComponent}
         scrollEnabled={!isPeeking}
         initialNumToRender={8}
         maxToRenderPerBatch={6}
         windowSize={5}
       />
-      <Fab onPress={() => router.push('/visits/new')} accessibilityLabel="Nueva visita" />
 
       <FilterSortModal
         visible={filterModalVisible}
@@ -225,8 +226,7 @@ export default function VisitsScreen() {
           prefs.setSortField(opts.sortField);
           prefs.setSortOrder(opts.sortOrder);
         }}
-        entityType="visit"
-        restaurants={restaurantOptions}
+        entityType="restaurant"
       />
     </View>
   );

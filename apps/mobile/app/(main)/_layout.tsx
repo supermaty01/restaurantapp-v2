@@ -60,7 +60,7 @@ export default function MainLayout() {
           {/* The tab bar carries its own headers. */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          <Stack.Screen name="visits/index" options={{ title: 'Visitas' }} />
+          <Stack.Screen name="search" options={{ title: 'Buscar' }} />
           <Stack.Screen name="tags/index" options={{ title: 'Etiquetas' }} />
           <Stack.Screen name="friends/index" options={{ title: 'Amigos' }} />
           <Stack.Screen name="friends/search" options={{ title: 'Buscar personas' }} />

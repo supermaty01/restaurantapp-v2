@@ -51,21 +51,6 @@ export default function ProfileScreen() {
         <SignedOutCard configured={isConfigured} onPress={() => router.push('/(main)/account')} />
       )}
 
-      <SectionHeader title="Tu diario" className="mt-7" />
-      <View className="mt-3 gap-2.5">
-        <Row
-          icon="calendar-outline"
-          label="Visitas"
-          onPress={() => router.push('/(main)/visits')}
-        />
-        <Row
-          icon="pricetag-outline"
-          label="Etiquetas"
-          onPress={() => router.push('/(main)/tags')}
-        />
-        <Row icon="map-outline" label="Mapa" onPress={() => router.push('/(main)/map')} />
-      </View>
-
       <SectionHeader title="Personas" className="mt-7" />
       <View className="mt-3 gap-2.5">
         <Row
@@ -73,11 +58,6 @@ export default function ProfileScreen() {
           label="Amigos"
           badge={incoming.length || undefined}
           onPress={() => router.push('/(main)/friends')}
-        />
-        <Row
-          icon="person-add-outline"
-          label="Buscar personas"
-          onPress={() => router.push('/(main)/friends/search')}
         />
       </View>
 

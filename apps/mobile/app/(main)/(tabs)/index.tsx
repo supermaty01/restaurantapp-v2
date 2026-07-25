@@ -83,15 +83,15 @@ export default function HomeScreen() {
 
       <FadeInUp index={2}>
         <PressableScale
-          accessibilityLabel="Buscar lugares y platos"
-          onPress={() => router.push('/(main)/(tabs)/restaurants')}
+          accessibilityLabel="Buscar en tu diario"
+          onPress={() => router.push('/(main)/search')}
           scaleTo={0.985}
           className="mt-6 flex-row items-center gap-2.5 rounded-pill border border-line bg-surface px-4 py-3.5"
           style={elevation.low}
         >
           <Ionicons name="search" size={17} color={colors.inkSubtle} />
           <Txt variant="body" tone="subtle">
-            Buscar lugares y platos
+            Buscar en tu diario…
           </Txt>
         </PressableScale>
       </FadeInUp>
@@ -102,46 +102,29 @@ export default function HomeScreen() {
             value={restaurants}
             label="Lugares"
             icon="location-outline"
-            onPress={() => router.push('/(main)/(tabs)/restaurants')}
+            onPress={() => router.push('/(main)/(tabs)/journal?tab=places')}
           />
           <StatTile
             value={dishes}
             label="Platos"
             icon="fast-food-outline"
-            onPress={() => router.push('/(main)/(tabs)/dishes')}
+            onPress={() => router.push('/(main)/(tabs)/journal?tab=dishes')}
           />
           <StatTile
             value={visits}
             label="Visitas"
             icon="calendar-outline"
             inverted
-            onPress={() => router.push('/(main)/visits')}
+            onPress={() => router.push('/(main)/(tabs)/journal?tab=visits')}
           />
         </View>
       </FadeInUp>
 
       <FadeInUp index={4}>
-        <View className="mt-4 flex-row gap-2.5">
-          <QuickAction
-            icon="add"
-            label="Registrar visita"
-            emphasis
-            onPress={() => router.push('/(main)/visits/new')}
-          />
-          <QuickAction
-            icon="location-outline"
-            label="Nuevo lugar"
-            onPress={() => router.push('/(main)/restaurants/new')}
-          />
-          <QuickAction icon="map-outline" label="Mapa" onPress={() => router.push('/(main)/map')} />
-        </View>
-      </FadeInUp>
-
-      <FadeInUp index={5}>
         <SectionHeader
           title="Visitas recientes"
           actionLabel={visits > 0 ? 'Ver todas' : undefined}
-          onAction={visits > 0 ? () => router.push('/(main)/visits') : undefined}
+          onAction={visits > 0 ? () => router.push('/(main)/(tabs)/journal?tab=visits') : undefined}
           className="mt-8"
         />
       </FadeInUp>
@@ -209,45 +192,6 @@ function StatTile({
         serif={false}
         tone={inverted ? 'onInverse' : 'subtle'}
         style={inverted ? { opacity: 0.7 } : undefined}
-      >
-        {label}
-      </Txt>
-    </PressableScale>
-  );
-}
-
-function QuickAction({
-  icon,
-  label,
-  onPress,
-  emphasis = false,
-}: {
-  icon: IconName;
-  label: string;
-  onPress: () => void;
-  /** The screen's primary action: filled rather than outlined. */
-  emphasis?: boolean;
-}) {
-  const { colors } = useTheme();
-
-  return (
-    <PressableScale
-      accessibilityLabel={label}
-      onPress={onPress}
-      className={`flex-1 items-center gap-1.5 rounded-xl px-2 py-3.5 ${
-        emphasis ? 'bg-primary' : 'border border-line bg-surface'
-      }`}
-      style={elevation.low}
-    >
-      <Ionicons name={icon} size={20} color={emphasis ? colors.onPrimary : colors.primary} />
-      <Txt
-        variant="overline"
-        weight="bold"
-        serif={false}
-        tone={emphasis ? 'onPrimary' : 'muted'}
-        numberOfLines={1}
-        className="text-center"
-        style={{ letterSpacing: 0.2 }}
       >
         {label}
       </Txt>
