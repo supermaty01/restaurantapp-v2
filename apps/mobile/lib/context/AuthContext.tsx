@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 
 import { devLog } from '@/lib/helpers/dev-log';
 import { parseOAuthCallback } from '@/lib/helpers/oauth-callback';
+import { redactUrl } from '@/lib/helpers/redact';
 import { getSupabase, isSupabaseConfigured } from '@/services/supabase/client';
 
 import type { Session } from '@supabase/supabase-js';
@@ -102,11 +103,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!supabase) return { error: 'not-configured' };
 
       const callback = parseOAuthCallback(url);
-      devLog('Auth', 'OAuth callback:', callback.type);
+      devLog('Auth', 'redirect recibido:', redactUrl(url));
+      devLog('Auth', 'interpretado como:', callback.type);
 
       switch (callback.type) {
         case 'code': {
-          const { error } = await supabase.auth.exchangeCodeForSession(callback.code);
+          const { data, error } = await supabase.auth.exchangeCodeForSession(callback.code);
+          if (error) {
+            devLog(
+              'Auth',
+              'exchangeCodeForSession falló:',
+              error.message,
+              `(status ${error.status ?? '?'})`,
+            );
+          } else {
+            devLog('Auth', 'sesión creada para', data.session?.user.email ?? '(sin email)');
+          }
           return { error: error?.message ?? null };
         }
         case 'session': {
@@ -117,6 +129,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { error: error?.message ?? null };
         }
         case 'error':
+          // Supabase itself failed the exchange with the provider and passed
+          // the reason back in the redirect. Nothing the app did causes this.
+          devLog('Auth', 'el proveedor devolvió un error:', callback.message);
           return { error: callback.message };
         case 'unrecognised':
           return {
@@ -139,9 +154,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         provider,
         options: { redirectTo: REDIRECT_TO, skipBrowserRedirect: true },
       });
-      if (error || !data.url) return { error: error?.message ?? 'oauth-url-missing' };
+      if (error || !data.url) {
+        devLog('Auth', 'signInWithOAuth no devolvió URL:', error?.message ?? '(sin error)');
+        return { error: error?.message ?? 'oauth-url-missing' };
+      }
+
+      devLog('Auth', 'abriendo:', redactUrl(data.url));
+      devLog('Auth', 'redirectTo:', REDIRECT_TO);
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_TO);
+      devLog('Auth', 'el navegador cerró con:', result.type);
       if (result.type !== 'success') return { error: 'cancelled' };
 
       return completeOAuth(result.url);

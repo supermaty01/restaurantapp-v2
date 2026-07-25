@@ -16,6 +16,22 @@ const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
+/**
+ * What the app actually resolved, logged once at startup.
+ *
+ * `.env` values are often written quoted, and a stray quote or trailing space
+ * produces a URL that looks right in the file and is wrong in the request. This
+ * prints the shape without printing the key.
+ */
+if (__DEV__) {
+  console.warn(
+    '[Supabase]',
+    isSupabaseConfigured
+      ? `url=${JSON.stringify(url)} key=${anonKey?.slice(0, 6)}…(${anonKey?.length} chars)`
+      : 'sin configurar: faltan EXPO_PUBLIC_SUPABASE_URL o EXPO_PUBLIC_SUPABASE_ANON_KEY',
+  );
+}
+
 let client: SupabaseClient | null = null;
 
 if (isSupabaseConfigured) {

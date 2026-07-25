@@ -63,9 +63,7 @@ export default function AuthCallbackScreen() {
           icon="log-in-outline"
           title="No se pudo completar el inicio de sesión"
           message={error}
-          action={
-            <Button label="Volver" onPress={() => router.replace('/(main)/(tabs)')} />
-          }
+          action={<Button label="Volver" onPress={() => router.replace('/(main)/(tabs)')} />}
         />
       </View>
     );
