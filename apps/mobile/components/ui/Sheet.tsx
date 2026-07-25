@@ -59,7 +59,9 @@ export function Sheet({
         </Animated.View>
 
         <Animated.View
-          entering={SlideInDown.springify().damping(20).stiffness(220)}
+          // Well damped on purpose: a sheet that overshoots and settles reads
+          // as wobble, not as physics. It should arrive and stay put.
+          entering={SlideInDown.springify().damping(30).stiffness(260).mass(0.9)}
           exiting={SlideOutDown.duration(180)}
           style={[
             elevation.high,

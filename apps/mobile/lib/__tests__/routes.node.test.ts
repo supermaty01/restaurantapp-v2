@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { globSync } from '../components/__support__/glob';
+import { globSync } from '../../components/__support__/glob';
 
 /**
  * Every route the code navigates to must exist.
@@ -16,8 +16,12 @@ import { globSync } from '../components/__support__/glob';
  * this test.
  */
 
-const APP_DIR = join(__dirname);
-const SRC_DIRS = [APP_DIR, join(__dirname, '..', 'components'), join(__dirname, '..', 'features')];
+// This file must live OUTSIDE app/: expo-router bundles everything under that
+// directory as a route via require.context, so a node test there ends up in the
+// app and fails to resolve `node:fs` at runtime.
+const ROOT = join(__dirname, '..', '..');
+const APP_DIR = join(ROOT, 'app');
+const SRC_DIRS = [APP_DIR, join(ROOT, 'components'), join(ROOT, 'features')];
 
 /** `app/(main)/settings/index.tsx` → `/(main)/settings` */
 function routeFromFile(path: string): string {

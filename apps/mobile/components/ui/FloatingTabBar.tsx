@@ -35,7 +35,7 @@ const ICONS: Record<string, { on: IconName; off: IconName }> = {
 /** The ➕ sits between the second and third tab, dead centre of the bar. */
 const CREATE_AFTER_INDEX = 1;
 
-const SELECT_SPRING = { damping: 16, stiffness: 260, mass: 0.6 };
+const SELECT_SPRING = { damping: 24, stiffness: 300, mass: 0.6 };
 
 /**
  * A tab bar that floats above the content instead of being welded to the

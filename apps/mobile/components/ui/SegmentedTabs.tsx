@@ -22,7 +22,7 @@ interface SegmentedTabsProps {
   initialKey?: string | undefined;
 }
 
-const SELECT_SPRING = { damping: 18, stiffness: 240, mass: 0.6 };
+const SELECT_SPRING = { damping: 26, stiffness: 300, mass: 0.6 };
 
 /**
  * In-screen tab switcher.

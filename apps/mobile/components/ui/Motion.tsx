@@ -14,8 +14,8 @@ import type { ViewStyle } from 'react-native';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-/** Quick and slightly springy: felt, not watched. */
-const PRESS_SPRING = { damping: 18, stiffness: 320, mass: 0.5 };
+/** Quick and barely springy: felt, not watched. */
+const PRESS_SPRING = { damping: 26, stiffness: 380, mass: 0.5 };
 
 /**
  * A pressable that yields under the finger.
