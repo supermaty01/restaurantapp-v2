@@ -57,12 +57,18 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
     onChange(value.filter((existing) => !sameTag(existing, tag)));
   };
 
-  const addTyped = () => {
-    add({ name: draft });
-    setDraft('');
-  };
+  const typed = draft.trim();
 
-  const query = draft.trim().toLowerCase();
+  /**
+   * `@` means "an account", always.
+   *
+   * Otherwise typing `@caro1234` and pressing + would quietly create a person
+   * called "@caro1234" who is not Caro, is not connected to anything, and looks
+   * exactly like a successful tag. The whole point of the prefix is that it
+   * refers to someone real, so if it matches no friend it matches nothing.
+   */
+  const handleMode = typed.startsWith('@');
+  const query = (handleMode ? typed.slice(1) : typed).toLowerCase();
 
   /** Friends first, then people tagged before who have no account of their own. */
   const suggestions = useMemo(() => {
@@ -78,17 +84,42 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
       (person) => !fromFriends.some((friend) => friend.name === person.name),
     );
 
-    return [...fromFriends, ...fromHistory]
+    // Under `@`, only accounts are candidates — a name in the history is not
+    // one, however well it matches.
+    const pool = handleMode ? fromFriends : [...fromFriends, ...fromHistory];
+
+    return pool
       .filter((tag) => !value.some((existing) => sameTag(existing, tag)))
       .filter(
         (tag) =>
           query.length === 0 ||
-          tag.name.toLowerCase().includes(query) ||
-          (tag.username ?? '').toLowerCase().includes(query),
+          (handleMode
+            ? (tag.username ?? '').toLowerCase().includes(query)
+            : tag.name.toLowerCase().includes(query) ||
+              (tag.username ?? '').toLowerCase().includes(query)),
       );
-  }, [friends, recent, value, query]);
+  }, [friends, recent, value, query, handleMode]);
 
-  const exactMatch = suggestions.some((tag) => tag.name.toLowerCase() === query);
+  const soleMatch = suggestions.length === 1 ? suggestions[0] : undefined;
+  const exactMatch = suggestions.some(
+    (tag) => (handleMode ? (tag.username ?? '').toLowerCase() : tag.name.toLowerCase()) === query,
+  );
+
+  const addTyped = () => {
+    if (handleMode) {
+      // A handle resolves to a friend or to nothing at all. Falling back to a
+      // plain name here is the failure mode this rule exists to prevent.
+      const match =
+        suggestions.find((tag) => (tag.username ?? '').toLowerCase() === query) ?? soleMatch;
+      if (!match) return;
+      add(match);
+      setDraft('');
+      return;
+    }
+
+    add({ name: typed });
+    setDraft('');
+  };
 
   return (
     <View className="gap-2.5">
@@ -132,10 +163,11 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
           value={draft}
           onChangeText={setDraft}
           onSubmitEditing={addTyped}
-          placeholder="Nombre de quien te acompañó"
+          placeholder="Un nombre, o @usuario para un amigo"
           placeholderTextColor={colors.inkSubtle}
           returnKeyType="done"
-          autoCapitalize="words"
+          autoCapitalize={handleMode ? 'none' : 'words'}
+          autoCorrect={!handleMode}
           className="min-h-12 flex-1 rounded-xl border border-line bg-surface px-4 text-ink"
         />
         <PressableScale
@@ -148,18 +180,29 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
         </PressableScale>
       </View>
 
-      {/* A typed name that matches nobody is not an error — it is the normal
-          case — so this only says what pressing + will do. */}
-      {query.length > 0 && !exactMatch ? (
+      {/* A typed *name* that matches nobody is not an error — it is the normal
+          case — so this only says what pressing + will do. A handle that
+          matches nobody *is* a dead end, and has to say so rather than
+          silently becoming a name. */}
+      {handleMode && query.length > 0 && suggestions.length === 0 ? (
+        <Txt variant="caption" tone="danger">
+          Ningún amigo con ese usuario. Escribe el nombre sin «@» para etiquetar a alguien sin
+          cuenta.
+        </Txt>
+      ) : !handleMode && query.length > 0 && !exactMatch ? (
         <Txt variant="caption" tone="subtle">
-          Se añadirá «{draft.trim()}» como alguien sin cuenta.
+          Se añadirá «{typed}» como alguien sin cuenta.
         </Txt>
       ) : null}
 
       {suggestions.length > 0 ? (
         <View className="gap-1.5">
           <Txt variant="caption" tone="subtle">
-            {enabled ? 'Amigos y personas frecuentes' : 'Personas frecuentes'}
+            {handleMode
+              ? 'Amigos'
+              : enabled
+                ? 'Amigos y personas frecuentes'
+                : 'Personas frecuentes'}
           </Txt>
           <ScrollView
             horizontal

@@ -1,3 +1,4 @@
+import type { Visibility } from '@/features/privacy/visibility';
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
 import type { VisitListDTO } from '../types/visit-dto';
@@ -7,6 +8,7 @@ export interface VisitListRow {
   visitedAt: string | null;
   visitComments: string | null;
   visitDeleted?: boolean | null;
+  visitVisibility?: Visibility | null;
   restaurantId?: number | null;
   restaurantName?: string | null;
   restaurantDeleted?: boolean | null;
@@ -28,6 +30,7 @@ export function mapVisitListRows(rows: VisitListRow[]): VisitListDTO[] {
         visited_at: row.visitedAt ?? '',
         comments: row.visitComments ?? null,
         deleted: row.visitDeleted ?? false,
+        visibility: row.visitVisibility ?? 'default',
         restaurant: {
           id: row.restaurantId ?? 0,
           name: row.restaurantName ?? '',

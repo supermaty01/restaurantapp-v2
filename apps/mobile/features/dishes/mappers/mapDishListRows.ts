@@ -1,3 +1,4 @@
+import type { Visibility } from '@/features/privacy/visibility';
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
 import type { DishListDTO } from '../types/dish-dto';
@@ -8,6 +9,7 @@ export interface DishListRow {
   dishComments: string | null;
   dishRating: number | null;
   dishDeleted?: boolean | null;
+  dishVisibility?: Visibility | null;
   tagId?: number | null;
   tagName?: string | null;
   tagColor?: string | null;
@@ -31,6 +33,7 @@ export function mapDishListRows(rows: DishListRow[]): DishListDTO[] {
         comments: row.dishComments ?? null,
         rating: row.dishRating ?? null,
         deleted: row.dishDeleted ?? false,
+        visibility: row.dishVisibility ?? 'default',
         tags: [],
         images: [],
       };

@@ -5,7 +5,12 @@ import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 
-import { VISIBILITIES, VISIBILITY_META, type Visibility } from './visibility';
+import {
+  EXPLICIT_VISIBILITIES,
+  VISIBILITIES,
+  VISIBILITY_META,
+  type Visibility,
+} from './visibility';
 
 /**
  * Who sees this entry.
@@ -15,25 +20,33 @@ import { VISIBILITIES, VISIBILITY_META, type Visibility } from './visibility';
  * is going to read it, and the words that answer that are the ones they use
  * out loud.
  *
- * The three options are always visible instead of hidden behind a picker: this
- * is a decision with consequences, and a control that has to be opened to see
- * its current value is a control people stop checking.
+ * The options are always visible instead of hidden behind a picker: this is a
+ * decision with consequences, and a control that has to be opened to see its
+ * current value is a control people stop checking.
+ *
+ * Two shapes. On an entry, "como mis ajustes" is one of the choices and the
+ * usual one. On the settings screen itself it is not offered — a default that
+ * deferred to itself would say nothing.
  */
 export function VisibilityField({
   value,
   onChange,
-  /** Marks the option that came from the user's default, so overriding is visible. */
-  defaultValue,
+  /** What "como mis ajustes" currently resolves to, shown next to that option. */
+  resolvesTo,
+  /** Settings screens pass `false`: there is no default to defer to there. */
+  allowDefault = true,
 }: {
   value: Visibility;
   onChange: (next: Visibility) => void;
-  defaultValue?: Visibility | undefined;
+  resolvesTo?: Visibility | undefined;
+  allowDefault?: boolean;
 }) {
   const { colors } = useTheme();
+  const options = allowDefault ? VISIBILITIES : EXPLICIT_VISIBILITIES;
 
   return (
     <View className="gap-2">
-      {VISIBILITIES.map((option) => {
+      {options.map((option) => {
         const meta = VISIBILITY_META[option];
         const active = option === value;
 
@@ -64,9 +77,11 @@ export function VisibilityField({
                 <Txt variant="body" weight="semi" serif={false}>
                   {meta.label}
                 </Txt>
-                {defaultValue === option ? (
+                {/* What deferring means right now. Without it the option is a
+                    promise with no content, and nobody picks one of those. */}
+                {option === 'default' && resolvesTo && resolvesTo !== 'default' ? (
                   <Txt variant="overline" tone="subtle" serif={false}>
-                    POR DEFECTO
+                    AHORA: {VISIBILITY_META[resolvesTo].label.toUpperCase()}
                   </Txt>
                 ) : null}
               </View>

@@ -1,6 +1,7 @@
 import { newUuid } from '@/lib/helpers/uuid';
 import { changeLog } from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
+import { notifyLocalChange } from '@/services/sync/pending';
 
 /**
  * Write-side sync plumbing (docs/02, docs/03). Every mutating repository routes
@@ -46,4 +47,8 @@ export async function recordChange(
     operation,
     changedAt: new Date().toISOString(),
   });
+
+  // Le dice a useSync que hay algo que enviar. Antes, escribir una entrada y
+  // quedarse en la app la dejaba en el móvil hasta el siguiente arranque.
+  notifyLocalChange();
 }

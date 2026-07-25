@@ -426,3 +426,22 @@ export async function rejectTag(visitUuid: string): Promise<void> {
 export async function restoreTag(visitUuid: string): Promise<void> {
   await callRpc<null>('restore_tag', { visit: visitUuid });
 }
+
+/**
+ * Publishes the account's general visibility settings.
+ *
+ * They have to live on the server too: it is the server that decides whether
+ * your friend may read a row, and an entry stored as `default` has nothing to
+ * resolve against if the preference only exists on your phone. The rows
+ * themselves never carry a copy — that was the bug (0014).
+ *
+ * Sent as one call because it is one decision by the user; three separate
+ * writes only create a window where the server holds half of it.
+ */
+export async function pushVisibilityDefaults(defaults: {
+  restaurant: string;
+  dish: string;
+  visit: string;
+}): Promise<void> {
+  await callRpc<null>('set_visibility_defaults', defaults);
+}

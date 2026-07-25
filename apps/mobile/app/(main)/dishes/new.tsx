@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { View } from 'react-native';
 
@@ -14,7 +14,7 @@ import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
 import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
-import type { Visibility } from '@/features/privacy/visibility';
+import { NEW_ENTRY_VISIBILITY, type Visibility } from '@/features/privacy/visibility';
 import { VisibilityField } from '@/features/privacy/VisibilityField';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { TagField } from '@/features/tags/components/TagField';
@@ -26,15 +26,12 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishCreateScreen() {
-  const { value: defaultVisibility, loaded: visibilityLoaded } = useDefaultVisibility('dish');
-  const [visibility, setVisibility] = useState<Visibility>(defaultVisibility);
+  // La entrada nace difiriendo al ajuste, no copiándolo: si el ajuste
+  // cambia mañana, esta entrada cambia con él. Solo tocar el control aquí
+  // la fija.
+  const { value: defaultVisibility } = useDefaultVisibility('dish');
+  const [visibility, setVisibility] = useState<Visibility>(NEW_ENTRY_VISIBILITY);
 
-  // The preference resolves asynchronously; adopt it until the user has
-  // touched the control, then leave their choice alone.
-  const [visibilityTouched, setVisibilityTouched] = useState(false);
-  useEffect(() => {
-    if (visibilityLoaded && !visibilityTouched) setVisibility(defaultVisibility);
-  }, [visibilityLoaded, defaultVisibility, visibilityTouched]);
   const { notify } = useToast();
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
   const {
@@ -85,7 +82,8 @@ export default function DishCreateScreen() {
           name: payload.name,
           comments: payload.comments,
           rating: payload.rating,
-          deleted: false, // recien creado
+          deleted: false,
+          visibility: 'default' as const, // recien creado
           tags: [], // No se necesitan
           images: [], // No se necesitan
         });
@@ -148,11 +146,8 @@ export default function DishCreateScreen() {
       <FormSection title="Quién ve este plato">
         <VisibilityField
           value={visibility}
-          onChange={(next) => {
-            setVisibilityTouched(true);
-            setVisibility(next);
-          }}
-          defaultValue={defaultVisibility}
+          onChange={setVisibility}
+          resolvesTo={defaultVisibility}
         />
       </FormSection>
 

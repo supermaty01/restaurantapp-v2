@@ -1,3 +1,4 @@
+import type { Visibility } from '@/features/privacy/visibility';
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
 import type { RestaurantListDTO } from '../types/restaurant-dto';
@@ -8,6 +9,7 @@ export interface RestaurantListRow {
   restaurantComments: string | null;
   restaurantRating: number | null;
   restaurantDeleted: boolean | null;
+  restaurantVisibility?: Visibility | null;
   tagId: number | null;
   tagName: string | null;
   tagColor: string | null;
@@ -29,6 +31,7 @@ export function mapRestaurantListRows(rows: RestaurantListRow[]): RestaurantList
         comments: row.restaurantComments,
         rating: row.restaurantRating,
         deleted: row.restaurantDeleted ?? false,
+        visibility: row.restaurantVisibility ?? 'default',
         tags: [],
         images: [],
       };

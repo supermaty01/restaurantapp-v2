@@ -73,6 +73,7 @@ export default function VisitEditScreen() {
           comments: null,
           rating: null,
           deleted: false,
+          visibility: 'default' as const,
           tags: [],
           images: [],
         })),

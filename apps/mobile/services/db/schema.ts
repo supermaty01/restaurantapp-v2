@@ -29,10 +29,12 @@ const syncColumns = () => ({
   updatedAt: text('updated_at').notNull().default(nowIso),
 });
 
+// 'default' es un valor guardado, no un hueco: significa "lo que digan mis
+// ajustes generales, ahora y más adelante". Ver features/privacy/visibility.ts.
 const visibilityColumn = () =>
-  text('visibility', { enum: ['private', 'friends', 'public'] })
+  text('visibility', { enum: ['default', 'private', 'friends', 'public'] })
     .notNull()
-    .default('private');
+    .default('default');
 
 // Tabla de usuarios
 export const users = sqliteTable('users', {

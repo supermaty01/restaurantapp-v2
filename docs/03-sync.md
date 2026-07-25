@@ -22,6 +22,16 @@ Esto mantiene el código de la app en enteros y confina toda la complejidad de u
 
 ## Protocolo
 
+### Cuándo corre
+
+Al iniciar sesión, al volver la app a primer plano, **poco después de cualquier escritura local** (2,5 s de reposo, reiniciados por cada cambio nuevo, para que guardar tres cosas seguidas sea un solo sync) y a mano desde Perfil.
+
+Lo de la escritura faltaba: escribir una entrada y quedarse en la app la dejaba en el móvil hasta el siguiente arranque. Para un diario que además es copia de seguridad eso es lo único que no puede pasar, y para el etiquetado significaba que la persona etiquetada no se enteraba hasta que quien la etiquetó mandara la app al fondo.
+
+`recordChange` emite una señal (`services/sync/pending.ts`) y `useSync` decide qué hacer con ella: los repositorios no tienen cuenta, ni red, ni por qué decidir cuándo se habla con un servidor.
+
+Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila guardada como `default` no significa nada para el servidor hasta que sabe cuál *es* el default de esa cuenta.
+
 ### Push
 
 1. Leer `change_log` con `synced = false`, agrupado por tabla, en orden de dependencia (restaurants → dishes/visits → uniones → images).

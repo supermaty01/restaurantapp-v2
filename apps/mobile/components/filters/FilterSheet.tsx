@@ -7,6 +7,7 @@ import { PressableScale } from '@/components/ui/Motion';
 import { Sheet } from '@/components/ui/Sheet';
 import { Chip } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
+import { VISIBILITIES, VISIBILITY_META, type Visibility } from '@/features/privacy/visibility';
 import Tag from '@/features/tags/components/Tag';
 import { useTagsList } from '@/features/tags/hooks/useTagsList';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
@@ -23,6 +24,15 @@ export interface FilterSortOptions {
   selectedRestaurantId: number | null;
   dateFrom: string | null;
   dateTo: string | null;
+  /**
+   * Only entries stored with these visibilities. Empty means all of them.
+   *
+   * The stored value, not the resolved one: "cuáles dejé en automático" is a
+   * different question from "cuáles se ven", and the one you need when auditing
+   * what you are sharing is the first — those are the ones a change to the
+   * general setting will move.
+   */
+  visibilities: Visibility[];
 }
 
 export const defaultFilterSortOptions: FilterSortOptions = {
@@ -33,6 +43,7 @@ export const defaultFilterSortOptions: FilterSortOptions = {
   selectedRestaurantId: null,
   dateFrom: null,
   dateTo: null,
+  visibilities: [],
 };
 
 export type EntityType = 'restaurant' | 'dish' | 'visit';
@@ -56,7 +67,8 @@ export function activeFilterCount(options: FilterSortOptions): number {
   return (
     options.selectedTags.length +
     (options.minRating !== null ? 1 : 0) +
-    (options.selectedRestaurantId !== null ? 1 : 0)
+    (options.selectedRestaurantId !== null ? 1 : 0) +
+    (options.visibilities.length > 0 ? 1 : 0)
   );
 }
 
@@ -165,6 +177,50 @@ export function FilterSheet({
       }
     >
       <ScrollView className="px-5" showsVerticalScrollIndicator={false}>
+        {/* Which entries are shared, as a filter rather than a report. The
+            question people actually have is "¿qué estoy compartiendo?", and
+            answering it by opening entries one by one is not answering it. */}
+        <Section title="Quién lo ve">
+          <View className="flex-row flex-wrap gap-2">
+            {VISIBILITIES.map((option) => {
+              const active = draft.visibilities.includes(option);
+              return (
+                <PressableScale
+                  key={option}
+                  accessibilityLabel={VISIBILITY_META[option].label}
+                  accessibilityState={{ selected: active }}
+                  onPress={() =>
+                    setDraft((current) => ({
+                      ...current,
+                      visibilities: active
+                        ? current.visibilities.filter((v) => v !== option)
+                        : [...current.visibilities, option],
+                    }))
+                  }
+                  scaleTo={0.95}
+                  className={`flex-row items-center gap-1.5 rounded-pill border px-3 py-2 ${
+                    active ? 'border-primary bg-primary/10' : 'border-line-strong bg-surface'
+                  }`}
+                >
+                  <Ionicons
+                    name={VISIBILITY_META[option].icon}
+                    size={13}
+                    color={active ? colors.primary : colors.inkSubtle}
+                  />
+                  <Txt
+                    variant="caption"
+                    weight="semi"
+                    serif={false}
+                    tone={active ? 'primary' : 'muted'}
+                  >
+                    {VISIBILITY_META[option].label}
+                  </Txt>
+                </PressableScale>
+              );
+            })}
+          </View>
+        </Section>
+
         <Section title="Ordenar por">
           <View className="flex-row flex-wrap gap-2">
             {sortFields.map((field) => (

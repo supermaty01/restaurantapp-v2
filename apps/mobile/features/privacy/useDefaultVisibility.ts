@@ -15,9 +15,10 @@ import {
 } from './defaultsStore';
 import {
   defaultVisibilityKey,
+  isExplicit,
   isVisibility,
+  type ExplicitVisibility,
   type ShareableEntity,
-  type Visibility,
 } from './visibility';
 
 /**
@@ -48,7 +49,7 @@ export function useDefaultVisibility(entity: ShareableEntity) {
     void (async () => {
       try {
         const stored = await getSetting(db, defaultVisibilityKey(entity));
-        if (!cancelled && stored && isVisibility(stored)) {
+        if (!cancelled && stored && isVisibility(stored) && isExplicit(stored)) {
           setDefaults({ ...getDefaults(), [entity]: stored });
         }
       } catch {
@@ -64,7 +65,7 @@ export function useDefaultVisibility(entity: ShareableEntity) {
   }, [db, entity]);
 
   const update = useCallback(
-    async (next: Visibility) => {
+    async (next: ExplicitVisibility) => {
       // Applied optimistically: a toggle should not wait on a disk write.
       setDefaults({ ...getDefaults(), [entity]: next });
       try {

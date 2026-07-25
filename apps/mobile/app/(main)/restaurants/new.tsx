@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { router, useGlobalSearchParams } from 'expo-router';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { View } from 'react-native';
 
@@ -11,7 +11,7 @@ import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
-import type { Visibility } from '@/features/privacy/visibility';
+import { NEW_ENTRY_VISIBILITY, type Visibility } from '@/features/privacy/visibility';
 import { VisibilityField } from '@/features/privacy/VisibilityField';
 import { useNewRestaurant } from '@/features/restaurants/hooks/useNewRestaurant';
 import { createRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
@@ -26,15 +26,12 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function RestaurantCreateScreen() {
-  const { value: defaultVisibility, loaded: visibilityLoaded } = useDefaultVisibility('restaurant');
-  const [visibility, setVisibility] = useState<Visibility>(defaultVisibility);
+  // La entrada nace difiriendo al ajuste, no copiándolo: si el ajuste
+  // cambia mañana, esta entrada cambia con él. Solo tocar el control aquí
+  // la fija.
+  const { value: defaultVisibility } = useDefaultVisibility('restaurant');
+  const [visibility, setVisibility] = useState<Visibility>(NEW_ENTRY_VISIBILITY);
 
-  // The preference resolves asynchronously; adopt it until the user has
-  // touched the control, then leave their choice alone.
-  const [visibilityTouched, setVisibilityTouched] = useState(false);
-  useEffect(() => {
-    if (visibilityLoaded && !visibilityTouched) setVisibility(defaultVisibility);
-  }, [visibilityLoaded, defaultVisibility, visibilityTouched]);
   const { notify } = useToast();
   const { useBackRedirect, prefillName, prefillLatitude, prefillLongitude } =
     useGlobalSearchParams<{
@@ -142,11 +139,8 @@ export default function RestaurantCreateScreen() {
       <FormSection title="Quién ve este lugar">
         <VisibilityField
           value={visibility}
-          onChange={(next) => {
-            setVisibilityTouched(true);
-            setVisibility(next);
-          }}
-          defaultValue={defaultVisibility}
+          onChange={setVisibility}
+          resolvesTo={defaultVisibility}
         />
       </FormSection>
 

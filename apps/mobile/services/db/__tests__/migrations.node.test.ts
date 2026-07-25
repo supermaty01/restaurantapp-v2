@@ -90,7 +90,7 @@ describe('migration 0007 — sync columns', () => {
     }
   });
 
-  it('backfills timestamps and defaults visibility to private', () => {
+  it('backfills timestamps and leaves visibility deferring to the setting', () => {
     seedV1(db);
     applyMigrations(db, { from: 7 });
 
@@ -100,7 +100,7 @@ describe('migration 0007 — sync columns', () => {
 
     expect(r.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(r.updated_at).toBe(r.created_at);
-    expect(r.visibility).toBe('private');
+    expect(r.visibility).toBe('default');
   });
 
   it('preserves foreign-key relationships (dish → restaurant)', () => {

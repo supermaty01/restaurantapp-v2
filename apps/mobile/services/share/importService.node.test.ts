@@ -33,7 +33,11 @@ describe('importService — v1 backfill', () => {
     const [row] = await db.select().from(schema.restaurants).where(eq(schema.restaurants.id, id!));
     expect(row?.uuid).toMatch(/^[0-9a-f-]{36}$/);
     expect(row?.createdAt).toBeTruthy();
-    expect(row?.visibility).toBe('private');
+    // Lo importado de la v1 no eligió nada -- ese campo no existía --, así que
+    // difiere al ajuste. Antes se quedaba clavado en 'private' y ningún cambio
+    // de configuración lo alcanzaba, que es como un diario entero acababa
+    // invisible para los amigos de su dueño.
+    expect(row?.visibility).toBe('default');
   });
 
   it('leaves no row with a NULL uuid across entities', async () => {

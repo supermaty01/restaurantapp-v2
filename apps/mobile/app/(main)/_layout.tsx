@@ -65,6 +65,10 @@ export default function MainLayout() {
           <Stack.Screen name="friends/index" options={{ title: 'Amigos' }} />
           <Stack.Screen name="friends/search" options={{ title: 'Buscar personas' }} />
           <Stack.Screen name="friends/[id]" options={{ title: 'Perfil' }} />
+          {/* Sin cabecera: la pantalla trae la suya, con el botón de volver y
+              el rótulo "Visita compartida". Sin registrarla aquí, expo-router
+              usa el nombre del fichero y sale un título "shared/[visit]". */}
+          <Stack.Screen name="shared/[visit]" options={{ headerShown: false }} />
           <Stack.Screen name="profile-edit" options={{ title: 'Editar perfil' }} />
           <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />

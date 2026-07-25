@@ -30,6 +30,9 @@ export interface VisitDetailsDTO {
 }
 
 export interface VisitListDTO {
+  /** Stored value, so the list can be filtered by what is shared. */
+  visibility: Visibility;
+
   id: number;
   /** Absent in visits imported from v1 (docs/09). */
   visited_at: string | null;

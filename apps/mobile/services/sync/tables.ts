@@ -1,4 +1,3 @@
-import { getDefaultVisibility } from '@/features/privacy/defaultsStore';
 import * as schema from '@/services/db/schema';
 
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -74,7 +73,9 @@ export const SYNC_TABLES: SyncTableConfig[] = [
         local: 'visibility',
         remote: 'visibility',
         required: true,
-        fallback: () => getDefaultVisibility('restaurant'),
+        // Sin fallback: 'default' es un valor real que el espejo entiende, y
+        // resolverlo aquí volvería a congelar el ajuste en la fila.
+        fallback: () => 'default',
       },
     ],
     foreignKeys: [],
@@ -100,7 +101,7 @@ export const SYNC_TABLES: SyncTableConfig[] = [
         local: 'visibility',
         remote: 'visibility',
         required: true,
-        fallback: () => getDefaultVisibility('dish'),
+        fallback: () => 'default',
       },
     ],
     foreignKeys: [{ local: 'restaurantId', remote: 'restaurant_uuid', references: 'restaurants' }],
@@ -115,7 +116,7 @@ export const SYNC_TABLES: SyncTableConfig[] = [
         local: 'visibility',
         remote: 'visibility',
         required: true,
-        fallback: () => getDefaultVisibility('visit'),
+        fallback: () => 'default',
       },
     ],
     foreignKeys: [{ local: 'restaurantId', remote: 'restaurant_uuid', references: 'restaurants' }],

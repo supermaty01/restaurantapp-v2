@@ -22,6 +22,9 @@ export interface DishDetailsDTO {
 }
 
 export interface DishListDTO {
+  /** Stored value, so the list can be filtered by what is shared. */
+  visibility: Visibility;
+
   id: number;
   name: string;
   comments: string | null;

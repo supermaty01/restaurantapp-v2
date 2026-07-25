@@ -60,6 +60,7 @@ export function DishList() {
 
   const hasActiveFilters =
     filterOptions.selectedTags.length > 0 ||
+    filterOptions.visibilities.length > 0 ||
     filterOptions.minRating !== null ||
     filterOptions.sortField !== 'name' ||
     filterOptions.sortOrder !== 'asc';
@@ -87,6 +88,13 @@ export function DishList() {
         result = result.filter((dish) => dish.rating !== null && dish.rating >= options.minRating!);
       }
 
+      // Filtrar por el valor *guardado*, no por el resuelto: "cuáles dejé en
+      // automático" es la pregunta que hay que poder responder para auditar lo
+      // que compartes, porque son justo las que se moverán si cambias el
+      // ajuste general.
+      if (options.visibilities.length > 0) {
+        result = result.filter((item) => options.visibilities.includes(item.visibility));
+      }
       return result;
     },
     [dishes, searchQuery],

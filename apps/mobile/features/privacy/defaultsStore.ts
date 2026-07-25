@@ -1,4 +1,4 @@
-import { FALLBACK_VISIBILITY, type ShareableEntity, type Visibility } from './visibility';
+import { FALLBACK_VISIBILITY, type ExplicitVisibility, type ShareableEntity } from './visibility';
 
 /**
  * The default visibilities, held in memory and shared by everything.
@@ -15,7 +15,7 @@ import { FALLBACK_VISIBILITY, type ShareableEntity, type Visibility } from './vi
  * Persistence belongs to `useDefaultVisibility`, which reads it in at mount and
  * writes it back on change. This is the cache the UI renders from.
  */
-type Defaults = Record<ShareableEntity, Visibility>;
+type Defaults = Record<ShareableEntity, ExplicitVisibility>;
 
 function blank(): Defaults {
   return {
@@ -48,7 +48,7 @@ export function getDefaults(): Defaults {
  * The sync push needs it to fill in rows written before the setting existed,
  * and it runs from a plain function rather than a component.
  */
-export function getDefaultVisibility(entity: ShareableEntity): Visibility {
+export function getDefaultVisibility(entity: ShareableEntity): ExplicitVisibility {
   return defaults[entity];
 }
 

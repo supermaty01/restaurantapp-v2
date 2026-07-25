@@ -80,9 +80,13 @@ function EntitySheet({ entity, onClose }: { entity: ShareableEntity; onClose: ()
       maxHeightRatio={0.65}
     >
       <View className="px-5 pb-4 pt-1">
+        {/* No "como mis ajustes" aquí: esto *son* los ajustes, y una opción
+            que difiriese a sí misma no diría nada. */}
         <VisibilityField
           value={value}
+          allowDefault={false}
           onChange={(next) => {
+            if (next === 'default') return;
             void update(next);
             onClose();
           }}

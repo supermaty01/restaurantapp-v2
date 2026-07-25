@@ -34,7 +34,9 @@ describe('restaurantRepository', () => {
     expect(row?.name).toBe('Guadalupe');
     expect(row?.uuid).toMatch(/[0-9a-f-]{36}/);
     expect(row?.createdAt).toBe(row?.updatedAt);
-    expect(row?.visibility).toBe('private');
+    // 'default', no 'private': la entrada difiere al ajuste general en vez de
+    // copiarlo, para que cambiar el ajuste mueva también lo ya escrito.
+    expect(row?.visibility).toBe('default');
 
     const [log] = await db.select().from(schema.changeLog).where(eq(schema.changeLog.rowId, id));
     expect(log?.operation).toBe('insert');

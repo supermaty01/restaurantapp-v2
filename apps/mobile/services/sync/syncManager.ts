@@ -1,3 +1,5 @@
+import { getDefaults } from '@/features/privacy/defaultsStore';
+import { pushVisibilityDefaults } from '@/features/social/api';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
@@ -15,6 +17,10 @@ export interface SyncOutcome {
 export async function runSync(db: AppDatabase, accountUuid: string): Promise<SyncOutcome> {
   const engine = new SyncEngine(db, createSupabaseTransport(accountUuid), accountUuid);
   try {
+    // Before the rows, because every row stored as `default` is meaningless to
+    // the server until it knows what this account's default *is*. Pushing them
+    // afterwards would leave a window where a friend sees nothing.
+    await pushVisibilityDefaults(getDefaults());
     await engine.sync();
     return { ok: true, error: null, at: new Date().toISOString() };
   } catch (error) {

@@ -88,6 +88,13 @@ export function VisitList() {
         result = result.filter((visit) => visit.restaurant.id === options.selectedRestaurantId);
       }
 
+      // Filtrar por el valor *guardado*, no por el resuelto: "cuáles dejé en
+      // automático" es la pregunta que hay que poder responder para auditar lo
+      // que compartes, porque son justo las que se moverán si cambias el
+      // ajuste general.
+      if (options.visibilities.length > 0) {
+        result = result.filter((item) => options.visibilities.includes(item.visibility));
+      }
       return result;
     },
     [visits, searchQuery],

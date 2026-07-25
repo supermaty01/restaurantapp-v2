@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
 
+import { useDefaultVisibility } from './useDefaultVisibility';
 import { ENTITY_LABEL, type ShareableEntity, type Visibility } from './visibility';
 import { VisibilityBadge, VisibilityField } from './VisibilityField';
 
@@ -31,6 +32,7 @@ export function VisibilityControl({
   onChange: (next: Visibility) => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+  const { value: fallsBackTo } = useDefaultVisibility(entity);
 
   return (
     <>
@@ -44,6 +46,7 @@ export function VisibilityControl({
       >
         <View className="gap-3 pb-2">
           <VisibilityField
+            resolvesTo={fallsBackTo}
             value={value}
             onChange={(next) => {
               void onChange(next);

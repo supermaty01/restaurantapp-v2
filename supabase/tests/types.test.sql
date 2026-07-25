@@ -35,10 +35,17 @@ select expect_eq(
   'a whole price is still whole');
 
 -- ── Visibility only accepts what the app can produce ─────────────────────────
+-- Una fila que no dice nada se guarda como 'default', no como 'private'.
+-- Parecen lo mismo -- el ajuste general de una cuenta nueva tambien es privado
+-- -- y no lo son: 'private' es una decision y 'default' es la ausencia de una,
+-- que es lo que permite que cambiar el ajuste general mueva lo ya escrito.
 select expect_eq(
   (select visibility from dishes where uuid = 'eeeeeeee-0000-0000-0000-000000000001'),
-  'private',
-  'entries default to private');
+  'default',
+  'una entrada nace difiriendo al ajuste, no copiandolo');
+select expect_eq(
+  effective_visibility('default', :someone, 'dish'), 'private',
+  'y sin ajustes eso significa privado, igual que antes');
 
 do $$ begin
   update dishes set visibility = 'everyone' where uuid = 'eeeeeeee-0000-0000-0000-000000000001';

@@ -11,6 +11,7 @@ import m0006 from './0006_boring_wrecking_crew.sql';
 import m0007 from './0007_add_sync_columns.sql';
 import m0008 from './0008_visit_date_optional.sql';
 import m0009 from './0009_people_accounts.sql';
+import m0010 from './0010_visibility_default.sql';
 
   export default {
     journal,
@@ -24,7 +25,8 @@ m0005,
 m0006,
 m0007,
 m0008,
-m0009
+m0009,
+m0010
     }
   }
   
