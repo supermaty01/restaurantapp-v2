@@ -147,3 +147,27 @@ describe('tag palette', () => {
     }
   });
 });
+
+describe('pure white and black tags', () => {
+  // The two most-used tag colours, and the two most likely to break: white on
+  // the light surface and black on the dark one are the worst cases the tint
+  // treatment has to survive.
+  it('offers them exactly, not an approximation', () => {
+    const neutrals = neutralShades();
+    expect(neutrals[0]).toBe('#ffffff');
+    expect(neutrals[neutrals.length - 1]).toBe('#000000');
+  });
+
+  it.each(['#ffffff', '#000000'])('%s stays legible as tag text on both surfaces', (colour) => {
+    expect(contrast(readableInk(colour, lightColors.surface), lightColors.surface)).toBeGreaterThan(
+      4.5,
+    );
+    expect(contrast(readableInk(colour, darkColors.surface), darkColors.surface)).toBeGreaterThan(
+      4.5,
+    );
+  });
+
+  it.each(['#ffffff', '#000000'])('%s stays legible as a filled chip', (colour) => {
+    expect(contrast(onColor(colour), colour)).toBeGreaterThan(4.5);
+  });
+});

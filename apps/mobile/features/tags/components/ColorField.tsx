@@ -109,10 +109,6 @@ export function ColorField({
           })}
         </View>
       </View>
-
-      <Txt variant="caption" tone="subtle">
-        {palettes.length * 5 + 5} colores. Todos legibles en tema claro y oscuro.
-      </Txt>
     </View>
   );
 }

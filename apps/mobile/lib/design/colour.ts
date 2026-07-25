@@ -229,7 +229,14 @@ export function shadesOf(hue: number): string[] {
   return SHADES.map(({ s, l }) => hsl(hue, s, l));
 }
 
-/** The neutral column: greys that still read as deliberate next to a hue. */
+/**
+ * The neutral column, anchored at pure white and pure black.
+ *
+ * The greys in between are warmed very slightly so they sit next to a hue
+ * without looking like a rendering error, but the two ends are exactly
+ * `#FFFFFF` and `#000000`: they are the two most-used tag colours and any
+ * approximation of them is just a wrong colour.
+ */
 export function neutralShades(): string[] {
-  return SHADES.map(({ l }) => hsl(30, 10, l));
+  return ['#ffffff', hsl(30, 8, 72), hsl(30, 8, 48), hsl(30, 8, 26), '#000000'];
 }

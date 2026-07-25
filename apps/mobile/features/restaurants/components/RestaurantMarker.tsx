@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Marker } from 'react-native-maps';
 
 import { MapPin } from '@/components/ui/MapPin';
@@ -33,13 +34,28 @@ export function RestaurantMarker({
 }) {
   const { colors } = useTheme();
 
+  const [tracking, setTracking] = useState(true);
+
+  useEffect(() => {
+    // Two frames is enough for layout to settle; a timeout rather than
+    // onLayout because the tip and the glyph are separate children and only
+    // the last one to land matters.
+    const timer = setTimeout(() => setTracking(false), 220);
+    return () => clearTimeout(timer);
+  }, [selected]);
+
   return (
     <Marker
       coordinate={{ latitude, longitude }}
       onPress={onPress}
-      // Without this, react-native-maps re-renders every custom marker view on
-      // each frame, and a screen of them drags the whole map.
-      tracksViewChanges={false}
+      // Starts true, then stops.
+      //
+      // With `false` from mount, react-native-maps takes a single snapshot of
+      // the marker view — and takes it before the children have laid out, so
+      // it captured the circle's background and nothing else: no glyph, no
+      // tip. Leaving it true forever is the other extreme: every marker view
+      // re-renders each frame and a screenful drags the whole map.
+      tracksViewChanges={tracking}
       // The tip, not the centre, sits on the coordinate.
       anchor={{ x: 0.5, y: 1 }}
       accessibilityLabel={name}

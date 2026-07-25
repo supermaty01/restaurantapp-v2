@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -36,8 +36,13 @@ export function ZoomableImage({ uri, width, height, onZoomChange }: ZoomableImag
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
 
+  // Mirrored into React state because gesture *enablement* is a render-time
+  // decision, not a worklet one.
+  const [zoomed, setZoomed] = useState(false);
+
   const notifyZoom = useCallback(
     (isZoomed: boolean) => {
+      setZoomed(isZoomed);
       onZoomChange?.(isZoomed);
     },
     [onZoomChange],
@@ -83,8 +88,16 @@ export function ZoomableImage({ uri, width, height, onZoomChange }: ZoomableImag
       runOnJS(notifyZoom)(true);
     });
 
-  // Only pans while zoomed in; at scale 1 the pager/dismiss gestures own the drag.
+  /**
+   * Only pans while zoomed in.
+   *
+   * `enabled` is load-bearing: without it this gesture activated on any drag
+   * and its handler returned early at scale 1 — so the drag was *claimed* and
+   * silently did nothing, and the lightbox's swipe-to-dismiss never fired. A
+   * gesture that does nothing still wins over its ancestors.
+   */
   const pan = Gesture.Pan()
+    .enabled(zoomed)
     .maxPointers(2)
     .onUpdate((event) => {
       if (scale.value <= MIN_SCALE) return;
