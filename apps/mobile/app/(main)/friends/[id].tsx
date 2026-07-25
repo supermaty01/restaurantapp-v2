@@ -19,7 +19,6 @@ import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
 
-
 /**
  * Someone else's profile.
  *

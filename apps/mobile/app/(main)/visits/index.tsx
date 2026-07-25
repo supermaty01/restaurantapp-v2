@@ -19,7 +19,7 @@ import { useVisitList } from '@/features/visits/hooks/useVisitList';
 import type { VisitListDTO } from '@/features/visits/types/visit-dto';
 import { usePeekState } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
-import { formatVisitDate } from '@/lib/helpers/date';
+import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 const keyExtractor = (item: VisitListDTO) => item.id.toString();
@@ -120,7 +120,7 @@ export default function VisitsScreen() {
     ({ item }: { item: VisitListDTO }) => {
       const imageUrl = item.images?.[0]?.uri ?? null;
       const previewData = buildPreviewData(item);
-      const formattedVisitDate = formatVisitDate(item.visited_at);
+      const formattedVisitDate = formatDate(item.visited_at);
 
       return (
         <VisitItem
@@ -142,7 +142,7 @@ export default function VisitsScreen() {
     ({ item }: { item: VisitListDTO }) => {
       const imageUrl = item.images?.[0]?.uri ?? null;
       const previewData = buildPreviewData(item);
-      const formattedVisitDate = formatVisitDate(item.visited_at);
+      const formattedVisitDate = formatDate(item.visited_at);
 
       return (
         <GridPeekItem

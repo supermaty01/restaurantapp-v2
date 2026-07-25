@@ -1,10 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import React from 'react';
 import { Text, View } from 'react-native';
 
 import type { PeekPreviewData } from '@/components/peek/types';
 import PeekablePressable from '@/components/PeekablePressable';
+import { Chip } from '@/components/ui/Surface';
+import { Thumbnail } from '@/components/ui/Thumbnail';
 
 interface VisitItemProps {
   imageUrl: string | null;
@@ -17,53 +17,41 @@ interface VisitItemProps {
   restaurantDeleted?: boolean | undefined;
 }
 
+/**
+ * A visit in a list (docs/14).
+ *
+ * The restaurant leads and the date is metadata beneath it — the old row put
+ * "12 ago - Trattoria" in one bold line, which made the date compete with the
+ * only part you actually scan for.
+ */
 const VisitItem = React.memo<VisitItemProps>(
   ({ imageUrl, date, title, comments, previewData, onPress, deleted, restaurantDeleted }) => {
     return (
       <PeekablePressable
         previewData={previewData}
         onPress={onPress}
-        scaleValue={1.03}
-        baseOpacity={deleted || restaurantDeleted ? 0.7 : 1}
-        className="bg-surface p-4 rounded-xl mb-3 shadow-sm flex-row items-center justify-between"
+        scaleValue={1.02}
+        baseOpacity={deleted || restaurantDeleted ? 0.6 : 1}
+        className="mb-3 flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5"
       >
-        {imageUrl ? (
-          <Image
-            source={imageUrl}
-            style={{ width: 56, height: 56, borderRadius: 4 }}
-            contentFit="cover"
-            recyclingKey={`visit-${imageUrl}`}
-            cachePolicy="memory-disk"
-          />
-        ) : (
-          <View className="w-14 h-14 rounded bg-line-strong" />
-        )}
-        <View className="flex-1 ml-3">
-          <View className="flex-row items-center">
-            <Text className="text-sm font-bold text-ink flex-1">
-              {date} - <Text className="text-ink">{title}</Text>
-            </Text>
-            {deleted ? (
-              <View className="bg-red-100 px-2 py-0.5 rounded ml-1">
-                <Text className="text-danger text-xs">Eliminada</Text>
-              </View>
-            ) : null}
-            {restaurantDeleted ? (
-              <View className="bg-orange-100 px-2 py-0.5 rounded ml-1">
-                <Text className="text-orange-600 text-xs">Rest. eliminado</Text>
-              </View>
-            ) : null}
-          </View>
-          {comments ? (
-            <Text className="text-sm text-ink-muted mb-4" numberOfLines={2}>
-              {comments}
-            </Text>
-          ) : (
-            <Text className="text-sm italic text-ink-muted mb-4">Sin comentarios</Text>
-          )}
-        </View>
+        <Thumbnail name={title} uri={imageUrl} size={66} icon="restaurant" />
 
-        <Ionicons name="chevron-forward-outline" size={20} color="#6b6b6b" className="" />
+        <View className="min-w-0 flex-1 justify-center">
+          <Text className="font-bold text-[15px] text-ink" numberOfLines={1}>
+            {title}
+          </Text>
+          <Text className="mt-0.5 text-[12px] text-ink-subtle" numberOfLines={1}>
+            {date}
+            {comments ? ` · ${comments}` : ''}
+          </Text>
+
+          {deleted || restaurantDeleted ? (
+            <View className="mt-1.5 flex-row gap-1.5">
+              {deleted ? <Chip label="Eliminada" tone="primary" /> : null}
+              {restaurantDeleted ? <Chip label="Sin restaurante" tone="accent" /> : null}
+            </View>
+          ) : null}
+        </View>
       </PeekablePressable>
     );
   },

@@ -1,11 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import React from 'react';
-import { View, Text } from 'react-native';
+import { Text, View } from 'react-native';
 
 import type { PeekPreviewData } from '@/components/peek/types';
 import PeekablePressable from '@/components/PeekablePressable';
 import RatingStars from '@/components/RatingStars';
+import { Thumbnail } from '@/components/ui/Thumbnail';
 import type { ImageDTO } from '@/features/images/types/image-dto';
 import Tag from '@/features/tags/components/Tag';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
@@ -20,6 +19,7 @@ interface DishItemProps {
   onPress?: (() => void) | undefined;
 }
 
+/** A dish in a list. Same anatomy as RestaurantItem (docs/14). */
 const DishItem = React.memo<DishItemProps>(
   ({ name, comments, tags, rating, images, previewData, onPress }) => {
     const imageUrl = images[0]?.uri ?? null;
@@ -28,42 +28,38 @@ const DishItem = React.memo<DishItemProps>(
       <PeekablePressable
         previewData={previewData}
         onPress={onPress}
-        scaleValue={1.03}
-        className="bg-surface p-4 rounded-xl mb-4 shadow-sm"
+        scaleValue={1.02}
+        className="mb-3 rounded-xl border border-line bg-surface p-2.5"
       >
-        <View className="flex-row mb-2">
-          {imageUrl ? (
-            <Image
-              source={imageUrl}
-              style={{ width: 64, height: 64, borderRadius: 8 }}
-              contentFit="cover"
-              recyclingKey={`dish-${imageUrl}`}
-              cachePolicy="memory-disk"
-            />
-          ) : null}
-          <View className={`flex-1 ${imageUrl ? 'ml-3' : ''}`}>
-            <View className="flex-row items-center justify-between">
-              <Text className="text-base font-bold text-ink max-w-[85%]">{name}</Text>
-              <Ionicons name="chevron-forward-outline" size={20} color="#6b6b6b" />
-            </View>
+        <View className="flex-row gap-3">
+          <Thumbnail name={name} uri={imageUrl} size={66} icon="fast-food" />
+
+          <View className="min-w-0 flex-1 justify-center">
+            <Text className="font-bold text-[15px] text-ink" numberOfLines={1}>
+              {name}
+            </Text>
+
             {comments ? (
-              <Text className="text-sm text-ink-muted mb-1" numberOfLines={2}>
+              <Text className="mt-0.5 text-[12px] text-ink-subtle" numberOfLines={2}>
                 {comments}
               </Text>
-            ) : (
-              <Text className="text-sm italic text-ink-muted mb-1">Sin comentarios</Text>
-            )}
+            ) : null}
+
+            {rating ? (
+              <View className="mt-1.5">
+                <RatingStars value={rating} size={14} gap={1} readOnly />
+              </View>
+            ) : null}
           </View>
         </View>
 
-        <View className="flex-row flex-wrap mb-2">
-          {tags.map((tag) => (
-            <Tag key={tag.id} color={tag.color} name={tag.name} />
-          ))}
-        </View>
-        <View className="flex-row justify-end">
-          <RatingStars value={rating} size={18} gap={2} readOnly />
-        </View>
+        {tags.length > 0 ? (
+          <View className="mt-2.5 flex-row flex-wrap gap-1.5">
+            {tags.map((tag) => (
+              <Tag key={tag.id} color={tag.color} name={tag.name} />
+            ))}
+          </View>
+        ) : null}
       </PeekablePressable>
     );
   },

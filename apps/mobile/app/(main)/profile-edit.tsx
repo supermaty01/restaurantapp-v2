@@ -13,7 +13,6 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
 
-
 /** Mirrors the database constraint, so a bad handle is caught before the trip. */
 const USERNAME_RULE = /^[a-z0-9_.]{3,30}$/;
 

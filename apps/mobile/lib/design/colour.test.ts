@@ -1,0 +1,82 @@
+import { contrastRatio, parseHex, readableInk, withAlpha } from './colour';
+import { darkColors, lightColors } from './tokens';
+
+function contrast(a: string, b: string): number {
+  return contrastRatio(parseHex(a)!, parseHex(b)!);
+}
+
+describe('parseHex', () => {
+  it('reads long and short form', () => {
+    expect(parseHex('#C0623D')).toEqual({ r: 192, g: 98, b: 61 });
+    expect(parseHex('#fff')).toEqual({ r: 255, g: 255, b: 255 });
+    expect(parseHex('C0623D')).toEqual({ r: 192, g: 98, b: 61 });
+  });
+
+  it('rejects anything that is not a colour', () => {
+    expect(parseHex('rebeccapurple')).toBeNull();
+    expect(parseHex('#12345')).toBeNull();
+    expect(parseHex('')).toBeNull();
+  });
+});
+
+describe('readableInk', () => {
+  // The colours the tag picker actually offers — the pale end is the whole
+  // reason this function exists.
+  const paleTagColours = ['#FFFF99', '#FFDAB9', '#FFD700', '#FFCC99', '#FFB6C1', '#FF9999'];
+
+  it.each(paleTagColours)('makes %s legible on the light surface', (colour) => {
+    expect(contrast(readableInk(colour, lightColors.surface), lightColors.surface)).toBeGreaterThan(
+      4.5,
+    );
+  });
+
+  // The other half of the problem: darkening a tag is right on paper and makes
+  // it disappear on a dark pill.
+  it.each(paleTagColours.concat(['#2A211C', '#8A3F26']))(
+    'makes %s legible on the dark surface too',
+    (colour) => {
+      expect(contrast(readableInk(colour, darkColors.surface), darkColors.surface)).toBeGreaterThan(
+        4.5,
+      );
+    },
+  );
+
+  it('leaves a colour that already contrasts enough untouched', () => {
+    expect(readableInk('#2A211C', lightColors.surface)).toBe('#2A211C');
+    expect(readableInk('#8A3F26', lightColors.surface)).toBe('#8A3F26');
+  });
+
+  it('keeps the hue, so the tag still looks like the colour it was given', () => {
+    // A pale red must move to a red, not to a neutral brown.
+    const ink = parseHex(readableInk('#FF9999', lightColors.surface));
+    expect(ink).not.toBeNull();
+    expect(ink!.r).toBeGreaterThan(ink!.g);
+    expect(ink!.r).toBeGreaterThan(ink!.b);
+  });
+
+  it('handles pure white and black without dividing by zero', () => {
+    expect(contrast(readableInk('#FFFFFF', '#FFFFFF'), '#FFFFFF')).toBeGreaterThan(4.5);
+    expect(contrast(readableInk('#000000', '#211C18'), '#211C18')).toBeGreaterThan(4.5);
+  });
+
+  it('passes through an unparseable value rather than throwing', () => {
+    expect(readableInk('transparent')).toBe('transparent');
+  });
+});
+
+describe('withAlpha', () => {
+  it('appends the alpha channel', () => {
+    expect(withAlpha('#C0623D', 0.16)).toBe('#c0623d29');
+    expect(withAlpha('#C0623D', 1)).toBe('#c0623dff');
+    expect(withAlpha('#C0623D', 0)).toBe('#c0623d00');
+  });
+
+  it('clamps out-of-range opacity', () => {
+    expect(withAlpha('#C0623D', 5)).toBe('#c0623dff');
+    expect(withAlpha('#C0623D', -1)).toBe('#c0623d00');
+  });
+
+  it('expands short form', () => {
+    expect(withAlpha('#fff', 0.5)).toBe('#ffffff80');
+  });
+});
