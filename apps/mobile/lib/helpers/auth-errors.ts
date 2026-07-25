@@ -30,6 +30,12 @@ const KNOWN: KnownError[] = [
       'La URL de retorno no está registrada en Google Cloud. Debe ser exactamente la Callback URL que muestra Supabase.',
   },
   {
+    // A PKCE flow state is single use. Seeing this usually means the same
+    // redirect was exchanged twice rather than that anything is misconfigured.
+    match: /flow[_ ]state[_ ]not[_ ]found|invalid flow state/i,
+    message: 'Ese enlace de acceso ya se había usado. Vuelve a intentar iniciar sesión.',
+  },
+  {
     match: /invalid[_ ]grant/i,
     message:
       'El código de acceso ya se había usado o ha caducado. Vuelve a intentarlo; si se repite, revisa la hora del dispositivo.',

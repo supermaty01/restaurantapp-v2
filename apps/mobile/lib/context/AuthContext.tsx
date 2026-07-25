@@ -47,6 +47,20 @@ const AuthContext = createContext<AuthContextValue>({
 // Deep link the OAuth flow returns to (declared in app.config.js scheme).
 const REDIRECT_TO = 'restaurantapp://auth/callback';
 
+/**
+ * Exchanges already under way, keyed by authorization code.
+ *
+ * A PKCE flow state is single use, and the same redirect legitimately reaches
+ * the app twice: `openAuthSessionAsync` resolves with it *and* the system
+ * delivers the deep link to `auth/callback`. Both called
+ * `exchangeCodeForSession`; the first succeeded and the second came back
+ * `flow_state_not_found`, so a login that had actually worked showed an error.
+ *
+ * Module level, not a ref: on a development build the deep link relaunches the
+ * app and the two attempts can even land in different component instances.
+ */
+const exchanges = new Map<string, Promise<AuthResult>>();
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const supabase = getSupabase();
   const [session, setSession] = useState<Session | null>(null);
@@ -109,18 +123,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       switch (callback.type) {
         case 'code': {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(callback.code);
-          if (error) {
+          const pending = exchanges.get(callback.code);
+          if (pending) {
+            devLog('Auth', 'ya se está canjeando este código; esperando al primero');
+            return pending;
+          }
+
+          const attempt = (async (): Promise<AuthResult> => {
+            const { data, error } = await supabase.auth.exchangeCodeForSession(callback.code);
+
+            if (!error) {
+              devLog('Auth', 'sesión creada para', data.session?.user.email ?? '(sin email)');
+              return { error: null };
+            }
+
             devLog(
               'Auth',
               'exchangeCodeForSession falló:',
               error.message,
               `(status ${error.status ?? '?'})`,
             );
-          } else {
-            devLog('Auth', 'sesión creada para', data.session?.user.email ?? '(sin email)');
+
+            // A consumed flow state means someone got there first. If that
+            // attempt produced a session, the login worked and this is noise.
+            const { data: current } = await supabase.auth.getSession();
+            if (current.session) {
+              devLog('Auth', 'pero ya hay sesión: el canje lo completó otro intento');
+              return { error: null };
+            }
+
+            return { error: describeAuthError(error.message) };
+          })();
+
+          exchanges.set(callback.code, attempt);
+          try {
+            return await attempt;
+          } finally {
+            // Kept briefly so a late duplicate still finds it, then dropped so
+            // the map cannot grow across sessions.
+            setTimeout(() => exchanges.delete(callback.code), 30_000);
           }
-          return { error: error?.message ?? null };
         }
         case 'session': {
           const { error } = await supabase.auth.setSession({

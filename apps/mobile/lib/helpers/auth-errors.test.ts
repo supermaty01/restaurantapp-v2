@@ -29,6 +29,16 @@ describe('describeAuthError', () => {
     expect(describeAuthError('Unable to exchange external code: 4/0AVMBsJ')).toContain('Auth Logs');
   });
 
+  it('explains a spent flow state without blaming configuration', () => {
+    // Seen when the same redirect is exchanged twice; the login itself may
+    // well have worked, so the message must not send anyone to the dashboard.
+    for (const raw of ['flow_state_not_found', 'invalid flow state, no valid flow state found']) {
+      const result = describeAuthError(raw);
+      expect(result).toContain('ya se había usado');
+      expect(result).not.toContain('Supabase');
+    }
+  });
+
   it('suggests retrying for a consumed or expired code', () => {
     expect(describeAuthError('invalid_grant')).toContain('caducado');
   });
