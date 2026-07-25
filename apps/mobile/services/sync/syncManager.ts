@@ -2,6 +2,7 @@ import { getDefaults } from '@/features/privacy/defaultsStore';
 import { pushVisibilityDefaults } from '@/features/social/api';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
+import { uploadPendingPhotos } from '@/services/sync/photos';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
 
 export interface SyncOutcome {
@@ -22,6 +23,19 @@ export async function runSync(db: AppDatabase, accountUuid: string): Promise<Syn
     // afterwards would leave a window where a friend sees nothing.
     await pushVisibilityDefaults(getDefaults());
     await engine.sync();
+
+    // After the rows, because a photo is addressed by the row that owns it, and
+    // because this is the part that can take minutes: getting the diary itself
+    // to the server should not wait behind a slow upload. Never throws — a
+    // photo that will not go up must not turn a successful sync into a failure.
+    const photos = await uploadPendingPhotos(db);
+    if (photos.uploaded > 0 || photos.pending > 0) {
+      console.log(
+        `[sync] fotos: ${photos.uploaded} subidas, ${photos.pending} en cola, ` +
+          `${photos.failed} sin poder subir`,
+      );
+    }
+
     return { ok: true, error: null, at: new Date().toISOString() };
   } catch (error) {
     return {

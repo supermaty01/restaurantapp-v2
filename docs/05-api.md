@@ -60,3 +60,13 @@ Contrato del Worker:
 
 **Abierto:** dominio propio (necesario para App Links/Universal Links de share). Un dominio barato es el único gasto probable del proyecto (~$10/año) — alternativa: `*.workers.dev` + deep link por scheme, peor UX.
 **Abierto:** rate limiting anónimo para la preview pública de share links.
+
+## Subida de fotos
+
+El Worker sirve `/images/:userId/:key` desde el principio y el espejo lleva `remote_key` desde la primera migración, pero **nada en el móvil escribía nunca una clave**: toda visita compartida llegaba a quien la recibía como un marcador de posición. No era un problema de permisos — las fotos no estaban en la nube.
+
+`services/sync/photos.ts` las sube al final de cada pasada de sync, y **a propósito fuera de `SyncEngine`**: las filas son pequeñas, ordenadas y casi transaccionales; las fotos no son ninguna de esas cosas. Una pesa megabytes, cualquiera puede fallar por su cuenta sin que eso diga nada de las demás, y un diario importado de la v1 tiene miles esperando. Mezclarlas haría que una subida fallida pareciese un sync fallido.
+
+- **15 por pasada.** Mandarlas todas de golpe mantendría el sync abierto lo que dure la conexión, y sin guardar nada si se corta. Cada pasada deja progreso que sobrevive, y el sync corre bastante a menudo (login, primer plano, tras cada escritura) para vaciar la cola sin que nadie espere.
+- **La clave es el uuid de la foto**, así que es la misma en todos los dispositivos.
+- **Nunca lanza.** Una foto que no sube —borrada de la galería, ilegible— se queda sin clave y se reintenta; lo que no puede es tumbar el sync del diario.
