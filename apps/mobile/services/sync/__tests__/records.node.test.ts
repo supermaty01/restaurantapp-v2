@@ -77,6 +77,46 @@ describe('toRemoteRecord', () => {
     expect(warn).not.toHaveBeenCalled();
   });
 
+  it('fills a missing value from its fallback instead of failing', async () => {
+    // Visibility was added long after the first diaries were written, so rows
+    // that predate it have none — and the mirror requires one.
+    const withFallback = {
+      ...config,
+      scalars: [
+        { local: 'visibility', remote: 'visibility', required: true, fallback: () => 'friends' },
+      ],
+    } satisfies SyncTableConfig;
+
+    const record = await toRemoteRecord(
+      db,
+      withFallback,
+      localRow({ visibility: null }),
+      'account-uuid',
+    );
+
+    expect(record['visibility']).toBe('friends');
+    // Filled in, so nothing is wrong and nothing needs reporting.
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('uses the row own value in preference to the fallback', async () => {
+    const withFallback = {
+      ...config,
+      scalars: [
+        { local: 'visibility', remote: 'visibility', required: true, fallback: () => 'friends' },
+      ],
+    } satisfies SyncTableConfig;
+
+    const record = await toRemoteRecord(
+      db,
+      withFallback,
+      localRow({ visibility: 'private' }),
+      'account-uuid',
+    );
+
+    expect(record['visibility']).toBe('private');
+  });
+
   it('still builds the record, so one bad row does not hide the rest', async () => {
     // The push will fail on this row either way; refusing to build it would
     // just move the failure somewhere with less context.

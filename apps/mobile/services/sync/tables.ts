@@ -1,3 +1,4 @@
+import { getDefaultVisibility } from '@/features/privacy/defaultsStore';
 import * as schema from '@/services/db/schema';
 
 import type { SQLiteColumn, SQLiteTable } from 'drizzle-orm/sqlite-core';
@@ -26,6 +27,15 @@ export interface ScalarColumn {
    * push with a message that does not say which row.
    */
   required?: boolean;
+  /**
+   * Supplies a value when the row has none.
+   *
+   * For columns the mirror requires but older rows predate — visibility was
+   * added long after the first diaries were written. Falling back beats both
+   * alternatives: refusing the row hides it from the cloud, and rewriting the
+   * local database during a sync edits data the user did not ask to change.
+   */
+  fallback?: () => unknown;
 }
 
 export interface ForeignKey {
@@ -60,7 +70,12 @@ export const SYNC_TABLES: SyncTableConfig[] = [
       { local: 'longitude', remote: 'longitude' },
       { local: 'comments', remote: 'comments' },
       { local: 'rating', remote: 'rating' },
-      { local: 'visibility', remote: 'visibility' },
+      {
+        local: 'visibility',
+        remote: 'visibility',
+        required: true,
+        fallback: () => getDefaultVisibility('restaurant'),
+      },
     ],
     foreignKeys: [],
   },
@@ -81,7 +96,12 @@ export const SYNC_TABLES: SyncTableConfig[] = [
       { local: 'price', remote: 'price' },
       { local: 'rating', remote: 'rating' },
       { local: 'comments', remote: 'comments' },
-      { local: 'visibility', remote: 'visibility' },
+      {
+        local: 'visibility',
+        remote: 'visibility',
+        required: true,
+        fallback: () => getDefaultVisibility('dish'),
+      },
     ],
     foreignKeys: [{ local: 'restaurantId', remote: 'restaurant_uuid', references: 'restaurants' }],
   },
@@ -91,7 +111,12 @@ export const SYNC_TABLES: SyncTableConfig[] = [
     scalars: [
       { local: 'visitedAt', remote: 'visited_at' },
       { local: 'comments', remote: 'comments' },
-      { local: 'visibility', remote: 'visibility' },
+      {
+        local: 'visibility',
+        remote: 'visibility',
+        required: true,
+        fallback: () => getDefaultVisibility('visit'),
+      },
     ],
     foreignKeys: [{ local: 'restaurantId', remote: 'restaurant_uuid', references: 'restaurants' }],
   },

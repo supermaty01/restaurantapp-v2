@@ -6,55 +6,19 @@ import * as schema from '@/services/db/schema';
 import { getSetting, setSetting } from '@/services/db/settings-repository';
 
 import {
-  FALLBACK_VISIBILITY,
+  getDefaults,
+  isLoaded,
+  markLoaded,
+  setDefaults,
+  subscribeToDefaults,
+  unmarkLoaded,
+} from './defaultsStore';
+import {
   defaultVisibilityKey,
   isVisibility,
   type ShareableEntity,
   type Visibility,
 } from './visibility';
-
-/**
- * One copy of the preferences, shared by everything that reads them.
- *
- * Module level rather than per-hook `useState`, because the same preference is
- * on screen in more than one place at once — the settings row and the sheet
- * that edits it. With separate state, changing it in the sheet left the row
- * showing the old value, which reads as "the setting did not save". Same shape
- * as `syncStore`, and the same reason.
- */
-type Defaults = Record<ShareableEntity, Visibility>;
-
-function blank(): Defaults {
-  return {
-    restaurant: FALLBACK_VISIBILITY,
-    dish: FALLBACK_VISIBILITY,
-    visit: FALLBACK_VISIBILITY,
-  };
-}
-
-let defaults: Defaults = blank();
-const listeners = new Set<() => void>();
-
-/** Entities already read from disk, so each is loaded once per launch. */
-const loaded = new Set<ShareableEntity>();
-
-function emit(next: Defaults): void {
-  defaults = next;
-  for (const listener of listeners) listener();
-}
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
-/** Test-only: forgets everything between cases. */
-export function resetDefaultVisibility(): void {
-  loaded.clear();
-  emit(blank());
-}
 
 /**
  * The visibility a new entry starts with, per kind.
@@ -65,7 +29,8 @@ export function resetDefaultVisibility(): void {
  * control into a chore, so the form starts from this and lets you override it.
  *
  * Stored in `app_settings`: local to the device and included in a backup, which
- * is right for a preference nobody else needs to know.
+ * is right for a preference nobody else needs to know. The in-memory copy lives
+ * in `defaultsStore`, which the sync push also reads.
  */
 export function useDefaultVisibility(entity: ShareableEntity) {
   // settings-repository takes the drizzle handle, not the app-wide AppDatabase
@@ -73,23 +38,23 @@ export function useDefaultVisibility(entity: ShareableEntity) {
   const sqlite = useSQLiteContext();
   const db = useMemo(() => drizzle(sqlite, { schema }), [sqlite]);
 
-  const all = useSyncExternalStore(subscribe, () => defaults);
+  const all = useSyncExternalStore(subscribeToDefaults, getDefaults);
 
   useEffect(() => {
-    if (loaded.has(entity)) return;
-    loaded.add(entity);
+    if (isLoaded(entity)) return;
+    markLoaded(entity);
 
     let cancelled = false;
     void (async () => {
       try {
         const stored = await getSetting(db, defaultVisibilityKey(entity));
         if (!cancelled && stored && isVisibility(stored)) {
-          emit({ ...defaults, [entity]: stored });
+          setDefaults({ ...getDefaults(), [entity]: stored });
         }
       } catch {
         // A missing preference must never keep a form from opening; allow a
         // later mount to try again.
-        loaded.delete(entity);
+        unmarkLoaded(entity);
       }
     })();
 
@@ -101,7 +66,7 @@ export function useDefaultVisibility(entity: ShareableEntity) {
   const update = useCallback(
     async (next: Visibility) => {
       // Applied optimistically: a toggle should not wait on a disk write.
-      emit({ ...defaults, [entity]: next });
+      setDefaults({ ...getDefaults(), [entity]: next });
       try {
         await setSetting(db, defaultVisibilityKey(entity), next);
       } catch (error) {
@@ -111,5 +76,5 @@ export function useDefaultVisibility(entity: ShareableEntity) {
     [db, entity],
   );
 
-  return { value: all[entity], loaded: loaded.has(entity), update };
+  return { value: all[entity], loaded: isLoaded(entity), update };
 }

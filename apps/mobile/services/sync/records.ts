@@ -63,7 +63,14 @@ export async function toRemoteRecord(
   };
 
   for (const scalar of cfg.scalars) {
-    const value = local[scalar.local] ?? null;
+    let value = local[scalar.local] ?? null;
+
+    // Rows written before a column existed have no value for it. A fallback
+    // fills them in at push time rather than rewriting the local database
+    // during a sync, which would edit data the user never asked to change.
+    if (value === null && scalar.fallback) {
+      value = scalar.fallback() ?? null;
+    }
 
     if (value === null && scalar.required) {
       // Name the row. PostgREST reports the constraint, never which record
