@@ -6,11 +6,15 @@ import { Avatar } from '@/components/ui/Avatar';
 import { DetailField } from '@/components/ui/DetailScaffold';
 import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
+import { VisibilityControl } from '@/features/privacy/VisibilityControl';
+import { setVisibility } from '@/features/privacy/visibilityRepository';
 import type { VisitDetailsDTO } from '@/features/visits/types/visit-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 /** The "Detalles" panel of a visit: where it was, and what you wrote about it. */
 export default function VisitDetails({ visit }: { visit: VisitDetailsDTO }) {
+  const db = useDatabase();
   const { colors } = useTheme();
 
   return (
@@ -68,6 +72,17 @@ export default function VisitDetails({ visit }: { visit: VisitDetailsDTO }) {
           </View>
         </DetailField>
       ) : null}
+
+      {/* Where sharing is decided. On the detail screen rather than only in
+          the form, because you find out a meal was worth sharing by having
+          eaten it — after the entry already exists. */}
+      <DetailField label="Quién lo ve">
+        <VisibilityControl
+          value={visit.visibility}
+          entity="visit"
+          onChange={(next) => setVisibility(db, 'visit', visit.id, next)}
+        />
+      </DetailField>
 
       <DetailField label="Comentarios" value={visit.comments} empty="Sin comentarios" />
     </ScrollView>

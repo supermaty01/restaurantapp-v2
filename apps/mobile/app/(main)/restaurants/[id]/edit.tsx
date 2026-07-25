@@ -11,6 +11,8 @@ import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
+import { VisibilityControl } from '@/features/privacy/VisibilityControl';
+import { setVisibility } from '@/features/privacy/visibilityRepository';
 import { useRestaurantById } from '@/features/restaurants/hooks/useRestaurantById';
 import { updateRestaurant } from '@/features/restaurants/repositories/restaurantRepository';
 import type { RestaurantFormData } from '@/features/restaurants/schemas/restaurant-schema';
@@ -141,6 +143,20 @@ export default function RestaurantEditScreen() {
 
       <FormSection title="Etiquetas" hint="Para agruparlo y filtrarlo luego">
         <TagField selected={selectedTags} onChange={setSelectedTags} />
+      </FormSection>
+
+      <FormSection title="Quién lo ve">
+        {/* The same control as the detail screen, applied on the spot rather
+            than on Save: it is one decision with nothing to validate, and
+            making it wait for the form's Save would be the only field here
+            that behaves differently from the badge you just tapped. */}
+        {restaurant ? (
+          <VisibilityControl
+            value={restaurant.visibility}
+            entity="restaurant"
+            onChange={(next) => setVisibility(drizzleDb, 'restaurant', restaurant.id, next)}
+          />
+        ) : null}
       </FormSection>
 
       <FormSection title="Fotos" hint="Opcional">

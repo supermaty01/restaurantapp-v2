@@ -13,12 +13,11 @@ import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
 import type { PersonTag } from '@/features/people/repositories/peopleRepository';
+import { VisibilityControl } from '@/features/privacy/VisibilityControl';
+import { setVisibility } from '@/features/privacy/visibilityRepository';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
 import { useVisitById } from '@/features/visits/hooks/useVisitById';
-import {
-  getVisitParticipants,
-  updateVisit,
-} from '@/features/visits/repositories/visitRepository';
+import { getVisitParticipants, updateVisit } from '@/features/visits/repositories/visitRepository';
 import type { VisitFormData } from '@/features/visits/schemas/visit-schema';
 import { visitSchema } from '@/features/visits/schemas/visit-schema';
 import { getTodayLocalDateString } from '@/lib/helpers/date';
@@ -162,6 +161,20 @@ export default function VisitEditScreen() {
           multiline
           numberOfLines={4}
         />
+      </FormSection>
+
+      <FormSection title="Quién lo ve">
+        {/* The same control as the detail screen, applied on the spot rather
+            than on Save: it is one decision with nothing to validate, and
+            making it wait for the form's Save would be the only field here
+            that behaves differently from the badge you just tapped. */}
+        {visit ? (
+          <VisibilityControl
+            value={visit.visibility}
+            entity="visit"
+            onChange={(next) => setVisibility(drizzleDb, 'visit', visit.id, next)}
+          />
+        ) : null}
       </FormSection>
 
       <FormSection title="Fotos" hint="Opcional">

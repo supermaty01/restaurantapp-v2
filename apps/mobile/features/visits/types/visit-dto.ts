@@ -1,5 +1,6 @@
 import type { ImageDTO } from '@/features/images/types/image-dto';
 import type { PersonTag } from '@/features/people/repositories/peopleRepository';
+import type { Visibility } from '@/features/privacy/visibility';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 
 export interface DishBasicDTO {
@@ -9,6 +10,9 @@ export interface DishBasicDTO {
 }
 
 export interface VisitDetailsDTO {
+  /** Who can see it. Changed from the detail screen, not only the form. */
+  visibility: Visibility;
+
   id: number;
   /** Absent in visits imported from v1 (docs/09). */
   visited_at: string | null;

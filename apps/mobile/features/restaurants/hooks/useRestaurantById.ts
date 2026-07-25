@@ -15,6 +15,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
 
   const query = drizzleDb
     .select({
+      restaurantVisibility: schema.restaurants.visibility,
       restaurantId: schema.restaurants.id,
       restaurantName: schema.restaurants.name,
       restaurantComments: schema.restaurants.comments,
@@ -61,6 +62,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
           latitude: row.restaurantLatitude,
           longitude: row.restaurantLongitude,
           deleted: row.restaurantDeleted,
+          visibility: row.restaurantVisibility,
           tags: [],
           images: [],
         };

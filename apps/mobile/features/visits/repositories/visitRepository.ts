@@ -16,10 +16,7 @@ export interface VisitWriteInput {
 }
 
 /** The people tagged on a visit, for the detail screen and the edit form. */
-export async function getVisitParticipants(
-  db: AppDatabase,
-  visitId: number,
-): Promise<PersonTag[]> {
+export async function getVisitParticipants(db: AppDatabase, visitId: number): Promise<PersonTag[]> {
   return db
     .select({
       name: schema.people.name,

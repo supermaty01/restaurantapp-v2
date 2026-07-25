@@ -15,6 +15,8 @@ import {
   softDeleteDish,
 } from '@/features/dishes/repositories/dishRepository';
 import { ImageDisplay } from '@/features/images/components/ImageDisplay';
+import { VisibilityControl } from '@/features/privacy/VisibilityControl';
+import { setVisibility } from '@/features/privacy/visibilityRepository';
 import Tag from '@/features/tags/components/Tag';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
@@ -156,6 +158,17 @@ export default function DishDetailScreen() {
             </Txt>
           </DetailField>
         ) : null}
+
+        {/* Where sharing is decided. On the detail screen rather than only in
+            the form, because you find out a meal was worth sharing by having
+            eaten it — after the entry already exists. */}
+        <DetailField label="Quién lo ve">
+          <VisibilityControl
+            value={dish.visibility}
+            entity="dish"
+            onChange={(next) => setVisibility(drizzleDb, 'dish', dish.id, next)}
+          />
+        </DetailField>
 
         <DetailField label="Comentarios" value={dish.comments} empty="Sin comentarios" />
       </ScrollView>

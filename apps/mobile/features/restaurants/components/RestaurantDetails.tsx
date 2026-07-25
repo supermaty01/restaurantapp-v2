@@ -3,7 +3,10 @@ import { ScrollView, View } from 'react-native';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import { DetailField } from '@/components/ui/DetailScaffold';
 import { Txt } from '@/components/ui/Txt';
+import { VisibilityControl } from '@/features/privacy/VisibilityControl';
+import { setVisibility } from '@/features/privacy/visibilityRepository';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 /**
  * The "Detalles" panel of a restaurant.
@@ -13,6 +16,7 @@ import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaura
  * this panel can show.
  */
 export default function RestaurantDetails({ restaurant }: { restaurant: RestaurantDetailsDTO }) {
+  const db = useDatabase();
   const hasLocation = Boolean(restaurant.latitude && restaurant.longitude);
 
   return (
@@ -22,6 +26,17 @@ export default function RestaurantDetails({ restaurant }: { restaurant: Restaura
       nestedScrollEnabled
       showsVerticalScrollIndicator={false}
     >
+      {/* Where sharing is decided. On the detail screen rather than only in
+          the form, because you find out a meal was worth sharing by having
+          eaten it — after the entry already exists. */}
+      <DetailField label="Quién lo ve">
+        <VisibilityControl
+          value={restaurant.visibility}
+          entity="restaurant"
+          onChange={(next) => setVisibility(db, 'restaurant', restaurant.id, next)}
+        />
+      </DetailField>
+
       <DetailField label="Comentarios" value={restaurant.comments} empty="Sin comentarios" />
 
       <DetailField label="Ubicación">
