@@ -77,7 +77,12 @@ values
    '2026-07-02', 'Secreto', 'private', now(), now());
 
 set test.uid = :mateo;
-select expect_eq((select count(*)::int from feed_page()), 2, 'friend sees shared entries');
+-- One card, not two. Irene shared the restaurant *and* a visit to it, and since
+-- 0012 the visit stands for both: the restaurant is where the meal happened,
+-- not a separate thing that also happened.
+select expect_eq((select count(*)::int from feed_page()), 1, 'friend sees the shared meal');
+select expect_eq(
+  (select kind from feed_page()), 'visit', 'and it is the visit that represents it');
 select expect_eq(
   (select count(*)::int from feed_page() where comments = 'Secreto'), 0,
   'private entries never reach the feed');

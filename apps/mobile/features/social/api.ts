@@ -51,6 +51,9 @@ export interface FeedEntry {
   rating: number | null;
   comments: string | null;
   imageKey: string | null;
+  /** What was eaten, for a visit. Empty for the other kinds. */
+  dishNames: string[];
+  companionCount: number;
 }
 
 /** Rows come back snake_case from PostgREST; the app speaks camelCase. */
@@ -187,6 +190,8 @@ function toFeedEntry(row: Record<string, unknown>): FeedEntry {
     rating: (row['rating'] as number | null) ?? null,
     comments: (row['comments'] as string | null) ?? null,
     imageKey: (row['image_key'] as string | null) ?? null,
+    dishNames: (row['dish_names'] as string[] | null) ?? [],
+    companionCount: Number(row['companion_count'] ?? 0),
   };
 }
 
@@ -234,4 +239,169 @@ export async function fetchUserEntries(userId: string, before?: string): Promise
     page_size: 20,
   });
   return (rows ?? []).map(toFeedEntry);
+}
+
+// ── Una visita compartida ────────────────────────────────────────────────────
+
+export interface SharedDish {
+  uuid: string;
+  name: string;
+  price: number | null;
+  rating: number | null;
+  comments: string | null;
+  imageKey: string | null;
+}
+
+export interface SharedPerson {
+  name: string;
+  accountUuid: string | null;
+  username: string | null;
+}
+
+export interface SharedVisit {
+  uuid: string;
+  visitedAt: string | null;
+  comments: string | null;
+  visibility: string;
+  createdAt: string;
+  author: {
+    userId: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
+  restaurant: {
+    uuid: string;
+    name: string;
+    latitude: number | null;
+    longitude: number | null;
+    rating: number | null;
+    comments: string | null;
+  } | null;
+  dishes: SharedDish[];
+  /** Photo keys, resolved through the Worker by `remoteImageUri`. */
+  images: string[];
+  people: SharedPerson[];
+}
+
+/** Shape returned by `visit_detail`, before it is renamed to camelCase. */
+interface SharedVisitRow {
+  uuid: string;
+  visited_at: string | null;
+  comments: string | null;
+  visibility: string;
+  created_at: string;
+  author: {
+    user_id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+  restaurant: {
+    uuid: string;
+    name: string;
+    latitude: number | null;
+    longitude: number | null;
+    rating: number | null;
+    comments: string | null;
+  } | null;
+  dishes: {
+    uuid: string;
+    name: string;
+    price: string | number | null;
+    rating: number | null;
+    comments: string | null;
+    image_key: string | null;
+  }[];
+  images: string[];
+  people: { name: string; account_uuid: string | null; username: string | null }[];
+}
+
+/**
+ * One shared visit, whole.
+ *
+ * The server decides whether the caller may see it and returns null otherwise —
+ * deliberately not distinguishing "does not exist" from "not for you", because
+ * a diary that answers the difference tells strangers what you have written.
+ *
+ * The restaurant and the dishes come back even when their own visibility is
+ * private: sharing a meal without saying where it was or what was eaten shares
+ * nothing (0011).
+ */
+export async function fetchSharedVisit(visitUuid: string): Promise<SharedVisit | null> {
+  const row = await callRpc<SharedVisitRow | null>('visit_detail', { target: visitUuid });
+  if (!row) return null;
+
+  return {
+    uuid: row.uuid,
+    visitedAt: row.visited_at,
+    comments: row.comments,
+    visibility: row.visibility,
+    createdAt: row.created_at,
+    author: {
+      userId: row.author.user_id,
+      username: row.author.username,
+      displayName: row.author.display_name,
+      avatarUrl: row.author.avatar_url,
+    },
+    restaurant: row.restaurant,
+    dishes: (row.dishes ?? []).map((dish) => ({
+      uuid: dish.uuid,
+      name: dish.name,
+      // numeric comes back as a string from PostgREST; the UI wants a number.
+      price: dish.price === null || dish.price === undefined ? null : Number(dish.price),
+      rating: dish.rating,
+      comments: dish.comments,
+      imageKey: dish.image_key,
+    })),
+    images: row.images ?? [],
+    people: (row.people ?? []).map((person) => ({
+      name: person.name,
+      accountUuid: person.account_uuid,
+      username: person.username,
+    })),
+  };
+}
+
+export interface TaggedVisit {
+  entityUuid: string;
+  authorId: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  occurredAt: string;
+  visitedAt: string | null;
+  title: string;
+  comments: string | null;
+  imageKey: string | null;
+  companionCount: number;
+}
+
+/**
+ * Visits other people tagged you in.
+ *
+ * A tray of its own, never merged into the diary. Someone else's visit is about
+ * their restaurants and their dishes; folding it into yours would fill your
+ * lists with rows you cannot edit and your statistics with meals you did not
+ * record.
+ */
+export async function fetchTaggedVisits(before?: string): Promise<TaggedVisit[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('tagged_visits', {
+    before: before ?? null,
+    page_size: 20,
+  });
+
+  return (rows ?? []).map((row) => ({
+    entityUuid: row['entity_uuid'] as string,
+    authorId: row['author_id'] as string,
+    username: row['username'] as string,
+    displayName: (row['display_name'] as string | null) ?? null,
+    avatarUrl: (row['avatar_url'] as string | null) ?? null,
+    occurredAt: row['occurred_at'] as string,
+    visitedAt: (row['visited_at'] as string | null) ?? null,
+    title: row['title'] as string,
+    comments: (row['comments'] as string | null) ?? null,
+    imageKey: (row['image_key'] as string | null) ?? null,
+    companionCount: Number(row['companion_count'] ?? 0),
+  }));
 }

@@ -34,6 +34,7 @@ export function PressableScale({
   style,
   accessibilityLabel,
   accessibilityRole = 'button',
+  accessibilityState,
 }: {
   children: ReactNode;
   onPress?: (() => void) | undefined;
@@ -44,6 +45,13 @@ export function PressableScale({
   style?: ViewStyle | ViewStyle[];
   accessibilityLabel?: string;
   accessibilityRole?: 'button' | 'link' | 'none';
+  /**
+   * For a control that is one of a set, like a segmented tab.
+   *
+   * Without `selected`, a screen reader reads every option in a segmented
+   * control identically and the person has no way to tell which one is on.
+   */
+  accessibilityState?: { selected?: boolean; disabled?: boolean } | undefined;
 }) {
   const pressed = useSharedValue(0);
 
@@ -55,6 +63,7 @@ export function PressableScale({
     <AnimatedPressable
       accessibilityRole={accessibilityRole}
       {...(accessibilityLabel ? { accessibilityLabel } : {})}
+      {...(accessibilityState ? { accessibilityState } : {})}
       disabled={disabled || !onPress}
       onPress={onPress}
       {...(onLongPress ? { onLongPress } : {})}
