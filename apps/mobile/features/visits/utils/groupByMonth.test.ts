@@ -95,3 +95,23 @@ describe('groupByMonth', () => {
     expect(group([])).toEqual([]);
   });
 });
+
+describe('groupByMonth order', () => {
+  const entries = [
+    { id: 1, date: '2026-05-02' },
+    { id: 2, date: '2026-07-14' },
+    { id: 3, date: 'sin idea' },
+  ];
+
+  it('runs oldest first when asked to', () => {
+    const sections = groupByMonth(entries, (e) => e.date, 3, NOW, 'asc');
+    expect(sections.map((s) => s.key)).toEqual(['2026-05', '2026-07', 'sin-fecha']);
+  });
+
+  it('keeps undated entries last in both directions', () => {
+    for (const order of ['asc', 'desc'] as const) {
+      const sections = groupByMonth(entries, (e) => e.date, 3, NOW, order);
+      expect(sections[sections.length - 1]?.key).toBe('sin-fecha');
+    }
+  });
+});

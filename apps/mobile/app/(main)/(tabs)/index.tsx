@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
@@ -19,6 +20,10 @@ import { imagePathToUri } from '@/lib/helpers/image-paths';
 import type { ComponentProps } from 'react';
 
 type IconName = ComponentProps<typeof Ionicons>['name'];
+
+// tsc cannot resolve image modules through the path alias. expo-image takes
+// the packager's numeric asset id directly, which is what require yields.
+const appIcon = require('@/assets/burger-logo.png') as number;
 
 /** The greeting follows the device clock. */
 function greeting(hour: number): string {
@@ -52,9 +57,12 @@ export default function HomeScreen() {
       <FadeInUp index={0}>
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center rounded-pill bg-primary/12">
-              <Ionicons name="restaurant" size={16} color={colors.primary} />
-            </View>
+            <Image
+              source={appIcon}
+              style={{ width: 32, height: 32 }}
+              contentFit="contain"
+              accessibilityIgnoresInvertColors
+            />
             <Txt variant="heading" weight="semi">
               RestaurantApp
             </Txt>

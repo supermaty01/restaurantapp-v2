@@ -173,7 +173,11 @@ export function VisitList() {
       />
       <View className="h-4" />
       {isGridView ? (
-        <VisitTimeline visits={filteredAndSortedVisits} onPressVisit={navigateToVisit} />
+        <VisitTimeline
+          visits={filteredAndSortedVisits}
+          onPressVisit={navigateToVisit}
+          order={filterOptions.sortOrder}
+        />
       ) : (
         <FlatList
           data={filteredAndSortedVisits}

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   TouchableOpacity,
@@ -17,6 +17,7 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useRestaurantMapList } from '@/features/restaurants/hooks/useRestaurantMapList';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
 import { getPlaceDetails } from '@/services/places';
 
 import type { PoiClickEvent } from 'react-native-maps';
@@ -53,6 +54,8 @@ export default function MapScreen() {
   const drawerAnim = useRef(new Animated.Value(DRAWER_HEIGHT)).current;
   const panDrawerStart = useRef(0);
 
+  const currentRegion = useCurrentRegion();
+
   const initialRegion = useMemo(() => {
     if (restaurants.length > 0) {
       const lats = restaurants.map((r) => r.latitude);
@@ -68,13 +71,17 @@ export default function MapScreen() {
         longitudeDelta: Math.max(maxLng - minLng, 0.01) * 1.5,
       };
     }
-    return {
-      latitude: 6.2442,
-      longitude: -75.5812,
-      latitudeDelta: 0.05,
-      longitudeDelta: 0.05,
-    };
-  }, [restaurants]);
+    // No places yet: open where the user is, not where v1 was written.
+    return currentRegion ?? FALLBACK_REGION;
+  }, [restaurants, currentRegion]);
+
+  // initialRegion is only read on mount, so a fix that arrives later has to be
+  // applied by hand — otherwise the map sits on the fallback for good.
+  useEffect(() => {
+    if (restaurants.length === 0 && currentRegion) {
+      mapRef.current?.animateToRegion(currentRegion, 600);
+    }
+  }, [currentRegion, restaurants.length]);
 
   const showDrawer = useCallback(() => {
     Animated.spring(drawerAnim, {

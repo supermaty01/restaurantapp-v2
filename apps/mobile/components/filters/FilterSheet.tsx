@@ -195,7 +195,12 @@ export function FilterSheet({
           </Pressable>
         </Section>
 
-        {tags.length > 0 ? (
+        {/*
+          Visits carry no tags, so offering the section there would be another
+          filter that silently does nothing — same trap as the restaurant filter
+          on dishes.
+        */}
+        {entityType !== 'visit' && tags.length > 0 ? (
           <Section
             title="Etiquetas"
             hint={draft.selectedTags.length > 0 ? `${draft.selectedTags.length} elegidas` : 'Todas'}

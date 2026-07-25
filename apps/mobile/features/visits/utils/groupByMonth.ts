@@ -51,6 +51,8 @@ export function groupByMonth<T>(
   getDate: (item: T) => string,
   columns: number,
   now: Date = new Date(),
+  /** Which way the months run. The timeline has to honour the chosen order. */
+  order: 'asc' | 'desc' = 'desc',
 ): MonthSection<T>[] {
   const buckets = new Map<string, T[]>();
 
@@ -71,11 +73,11 @@ export function groupByMonth<T>(
     data: chunk(entries, columns),
   }));
 
-  // Newest month first; undated entries sink to the bottom.
+  // Undated entries always sink to the bottom, whichever way the rest runs.
   return sections.sort((a, b) => {
     if (a.key === 'sin-fecha') return 1;
     if (b.key === 'sin-fecha') return -1;
-    return b.key.localeCompare(a.key);
+    return order === 'desc' ? b.key.localeCompare(a.key) : a.key.localeCompare(b.key);
   });
 }
 

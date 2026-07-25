@@ -27,14 +27,14 @@ interface RatingStarsProps<
 
 interface RatingStarsDisplayProps {
   ratingValue: number;
-  onChange: (value: number) => void;
+  onChange: (value: number | null) => void;
   value?: number | null | undefined;
   readOnly: boolean;
   size: number;
   gap: number;
 }
 
-const NOOP = () => {};
+const NOOP = (_value: number | null) => {};
 
 const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
   ({ ratingValue, onChange, value, readOnly, size, gap }) => {
@@ -42,10 +42,15 @@ const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
 
     const handlePress = (starIndex: number) => {
       if (readOnly) return;
-      onChange(starIndex);
+      // Tapping the current value clears it: without this there is no way back
+      // to "no rating" once you have given one.
+      onChange(ratingValue === starIndex ? null : starIndex);
     };
 
-    return value === null ? (
+    // Only *reading* an absent rating shows words. Editing one has to show
+    // stars you can press — this is the v1 bug where anything created without a
+    // rating could never be given one, because the control rendered as text.
+    return value == null && readOnly ? (
       <Text className="text-[14px] italic text-ink-subtle">Sin calificación</Text>
     ) : (
       <View className="flex-row items-center" style={{ gap }}>

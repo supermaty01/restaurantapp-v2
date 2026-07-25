@@ -45,11 +45,12 @@ const DishItem = React.memo<DishItemProps>(
               </Text>
             ) : null}
 
-            {rating ? (
-              <View className="mt-1.5">
-                <RatingStars value={rating} size={14} gap={1} readOnly />
-              </View>
-            ) : null}
+            {/* Always rendered, so a row with a rating and one without are the
+                same height — a list that jitters as you scroll is worse than a
+                row of dim stars. */}
+            <View className="mt-1.5">
+              <RatingStars value={rating ?? 0} size={14} gap={1} readOnly />
+            </View>
           </View>
         </View>
 

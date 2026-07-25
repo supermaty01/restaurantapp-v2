@@ -68,9 +68,10 @@ export function ImageLightbox({ images, initialIndex, visible, onClose }: ImageL
     onClose();
   }, [onClose, translateY]);
 
-  // Vertical-only pan: activeOffsetY lets the horizontal FlatList win side swipes.
+  // Vertical-only pan: activeOffsetY lets the horizontal FlatList win side
+  // swipes. Works up *and* down — either direction means "get me out of here".
   const dismissGesture = Gesture.Pan()
-    .activeOffsetY([-20, 20])
+    .activeOffsetY([-14, 14])
     .failOffsetX([-20, 20])
     // One finger only: a two-finger pinch must reach the image underneath.
     .maxPointers(1)
@@ -79,16 +80,27 @@ export function ImageLightbox({ images, initialIndex, visible, onClose }: ImageL
       translateY.value = event.translationY;
     })
     .onEnd((event) => {
-      if (Math.abs(event.translationY) > DISMISS_THRESHOLD) {
+      // A quick flick should dismiss even if it barely moved: waiting for the
+      // full distance makes the gesture feel like it is resisting you.
+      const flung = Math.abs(event.velocityY) > 800 && Math.abs(event.translationY) > 20;
+      if (flung || Math.abs(event.translationY) > DISMISS_THRESHOLD) {
         runOnJS(handleClose)();
       } else {
         translateY.value = withTiming(0);
       }
     });
 
-  const containerStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: translateY.value }],
-  }));
+  // The image shrinks as it is dragged away, so the drag reads as "letting go"
+  // rather than as the photo sliding off an edge.
+  const containerStyle = useAnimatedStyle(() => {
+    const distance = Math.abs(translateY.value);
+    return {
+      transform: [
+        { translateY: translateY.value },
+        { scale: interpolate(distance, [0, DISMISS_THRESHOLD * 2], [1, 0.86], 'clamp') },
+      ],
+    };
+  });
 
   // Backdrop fades out as the image is dragged away, so the gesture feels physical.
   const backdropStyle = useAnimatedStyle(() => ({

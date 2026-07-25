@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { SectionList, useWindowDimensions, View } from 'react-native';
 
@@ -6,7 +5,7 @@ import { PressableScale } from '@/components/ui/Motion';
 import { EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
-import { useTheme } from '@/lib/context/ThemeContext';
+import { formatDate } from '@/lib/helpers/date';
 
 import { groupByMonth } from '../utils/groupByMonth';
 
@@ -14,9 +13,9 @@ import type { VisitListDTO } from '../types/visit-dto';
 
 /** Screen gutter, matching the rest of the app. */
 const GUTTER = 20;
-/** Tight, like a photo library: the pictures should read as one surface. */
-const GAP = 3;
-const COLUMNS = 3;
+const GAP = 10;
+/** Two columns, not three: a photo plus a name and a date needs the width. */
+const COLUMNS = 2;
 
 /**
  * Visits as a photo timeline, grouped by month.
@@ -26,24 +25,25 @@ const COLUMNS = 3;
  * headers turn the same data into something you can navigate by memory, which
  * is how you actually look for a meal ("that place we went to last autumn").
  *
- * Tiles are square and near-flush, so the photos carry the screen. Visits with
- * no photo fall back to the warm placeholder rather than leaving holes.
+ * Each tile keeps its restaurant and date: a wall of bare photographs is
+ * pretty and unsearchable, and half of what you are scanning for is the name.
  */
 export function VisitTimeline({
   visits,
   onPressVisit,
+  order = 'desc',
 }: {
   visits: VisitListDTO[];
   onPressVisit: (id: number) => void;
+  /** Follows the list's sort order, so the filter sheet actually does something. */
+  order?: 'asc' | 'desc';
 }) {
-  const { colors } = useTheme();
   const { width } = useWindowDimensions();
-
   const tileSize = Math.floor((width - GUTTER * 2 - GAP * (COLUMNS - 1)) / COLUMNS);
 
   const sections = useMemo(
-    () => groupByMonth(visits, (visit) => visit.visited_at, COLUMNS),
-    [visits],
+    () => groupByMonth(visits, (visit) => visit.visited_at, COLUMNS, new Date(), order),
+    [visits, order],
   );
 
   if (visits.length === 0) {
@@ -62,20 +62,32 @@ export function VisitTimeline({
       keyExtractor={(row, index) => `${row[0]?.id ?? 'row'}-${index}`}
       stickySectionHeadersEnabled
       showsVerticalScrollIndicator={false}
-      contentContainerStyle={{ paddingHorizontal: GUTTER, paddingBottom: 112 }}
+      contentContainerStyle={{ paddingBottom: 112 }}
       initialNumToRender={6}
       maxToRenderPerBatch={6}
       windowSize={7}
       renderSectionHeader={({ section }) => (
-        <View className="flex-row items-baseline justify-between bg-canvas pb-2.5 pt-4">
-          <Txt variant="title">{section.title}</Txt>
-          <Txt variant="caption" tone="subtle">
-            {section.count} {section.count === 1 ? 'visita' : 'visitas'}
-          </Txt>
+        // Full-bleed and opaque: the padding used to live on the content
+        // container, which inset the pinned header and let photos scroll
+        // visibly through the gutters on either side of it.
+        <View className="border-b border-line bg-canvas px-5 pb-2.5 pt-4">
+          <View className="flex-row items-baseline justify-between">
+            <Txt variant="title">{section.title}</Txt>
+            <Txt variant="caption" tone="subtle">
+              {section.count} {section.count === 1 ? 'visita' : 'visitas'}
+            </Txt>
+          </View>
         </View>
       )}
       renderItem={({ item: row }) => (
-        <View style={{ flexDirection: 'row', gap: GAP, marginBottom: GAP }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            gap: GAP,
+            paddingHorizontal: GUTTER,
+            paddingTop: GAP,
+          }}
+        >
           {row.map((visit) => (
             <VisitTile
               key={visit.id}
@@ -93,9 +105,8 @@ export function VisitTimeline({
         </View>
       )}
       ListFooterComponent={
-        <View className="items-center py-6">
-          <Ionicons name="restaurant-outline" size={16} color={colors.inkSubtle} />
-          <Txt variant="caption" tone="subtle" className="mt-1.5">
+        <View className="items-center py-8">
+          <Txt variant="caption" tone="subtle">
             {visits.length} {visits.length === 1 ? 'visita' : 'visitas'} en total
           </Txt>
         </View>
@@ -118,28 +129,21 @@ function VisitTile({
 
   return (
     <PressableScale
-      accessibilityLabel={name}
+      accessibilityLabel={`${name}, ${formatDate(visit.visited_at)}`}
       onPress={onPress}
-      scaleTo={0.95}
-      style={{ width: size, height: size }}
+      scaleTo={0.96}
+      style={{ width: size }}
     >
-      <Thumbnail name={name} uri={uri} size={size} radius={4} icon="restaurant" />
-
-      {/* The name only shows over a placeholder; over a photo it would fight
-          with it, and the tile is tappable either way. */}
-      {uri ? null : (
-        <View className="absolute inset-x-0 bottom-0 p-1.5">
-          <Txt
-            variant="overline"
-            serif={false}
-            weight="bold"
-            numberOfLines={2}
-            style={{ color: '#FFFFFF', letterSpacing: 0 }}
-          >
-            {name}
-          </Txt>
-        </View>
-      )}
+      <Thumbnail name={name} uri={uri} size={size} radius={12} icon="restaurant" />
+      <View className="pt-1.5">
+        <Txt variant="callout" weight="bold" serif={false} numberOfLines={1}>
+          {name}
+        </Txt>
+        <Txt variant="caption" tone="subtle" numberOfLines={1}>
+          {formatDate(visit.visited_at)}
+          {visit.comments ? ` · ${visit.comments}` : ''}
+        </Txt>
+      </View>
     </PressableScale>
   );
 }

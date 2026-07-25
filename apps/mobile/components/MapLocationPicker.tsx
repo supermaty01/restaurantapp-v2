@@ -13,6 +13,7 @@ import {
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { useTheme } from '@/lib/context/ThemeContext';
+import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
 import { getAutocomplete, getPlaceDetails } from '@/services/places';
 
 import type { MapPressEvent, Region } from 'react-native-maps';
@@ -37,12 +38,9 @@ const openAppSettings = () => {
   });
 };
 
-const DEFAULT_REGION: Region = {
-  latitude: 6.2442,
-  longitude: -75.5812,
-  latitudeDelta: 0.01,
-  longitudeDelta: 0.01,
-};
+// Only reached when the app has no location permission and the entity has no
+// coordinates yet. See lib/hooks/useCurrentRegion.
+const DEFAULT_REGION: Region = FALLBACK_REGION;
 
 const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   location,
@@ -58,6 +56,17 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
     latitudeDelta: DEFAULT_REGION.latitudeDelta,
     longitudeDelta: DEFAULT_REGION.longitudeDelta,
   });
+
+  // Only when the entity has no coordinates of its own: an existing place must
+  // never drift towards wherever you happen to be standing.
+  const currentRegion = useCurrentRegion(!location);
+
+  useEffect(() => {
+    if (!location && currentRegion) {
+      setMapRegion(currentRegion);
+      mapRef.current?.animateToRegion(currentRegion, 600);
+    }
+  }, [currentRegion, location]);
 
   const [selectedLocation, setSelectedLocation] = useState(location);
   const [address, setAddress] = useState<string | null>(null);
