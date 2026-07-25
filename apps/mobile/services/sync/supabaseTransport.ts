@@ -4,10 +4,23 @@ import type { LinkRow, RemoteRecord, SyncTransport } from '@/services/sync/trans
 /**
  * Real SyncTransport over supabase-js (docs/03). push upserts (the server's
  * reject_older_update trigger enforces LWW); pull reads rows changed after the
- * cursor, RLS scoping them to the account. Untested here — it needs a live
- * Supabase (verify per docs/13); the engine's logic is covered against the fake.
+ * cursor. Untested here — it needs a live Supabase (verify per docs/13); the
+ * engine's logic is covered against the fake.
+ *
+ * Takes the account uuid because **RLS is not a filter**. It says what you are
+ * allowed to read, and you are allowed to read a friend's shared visit — so an
+ * unfiltered `select *` pulled other people's rows straight into the local
+ * diary. Two things went wrong at once: the diary stopped being only what you
+ * wrote, and the next push stamped those rows with *your* uuid and upserted
+ * them onto their owner's, which the owner policy rejected and which killed the
+ * entire push with
+ *
+ *     new row violates row-level security policy (USING expression)
+ *
+ * Other people's data reaches the app through the social RPCs, which return it
+ * as something to look at. It never enters the tables the diary is made of.
  */
-export function createSupabaseTransport(): SyncTransport {
+export function createSupabaseTransport(accountUuid: string): SyncTransport {
   return {
     async push(table, records) {
       if (records.length === 0) return;
@@ -19,6 +32,7 @@ export function createSupabaseTransport(): SyncTransport {
       let query = requireSupabase()
         .from(table)
         .select('*')
+        .eq('user_id', accountUuid)
         .order('updated_at', { ascending: true });
 
       if (since) query = query.gt('updated_at', since);
@@ -37,6 +51,7 @@ export function createSupabaseTransport(): SyncTransport {
       const { error: deleteError } = await requireSupabase()
         .from(table)
         .delete()
+        .eq('user_id', accountUuid)
         .in(parentColumn, parentUuids);
       if (deleteError) throw new Error(`replaceLinks ${table}: ${deleteError.message}`);
 
@@ -51,6 +66,7 @@ export function createSupabaseTransport(): SyncTransport {
       const { data, error } = await requireSupabase()
         .from(table)
         .select('*')
+        .eq('user_id', accountUuid)
         .in(parentColumn, parentUuids);
       if (error) throw new Error(`pullLinks ${table}: ${error.message}`);
       return (data ?? []) as LinkRow[];

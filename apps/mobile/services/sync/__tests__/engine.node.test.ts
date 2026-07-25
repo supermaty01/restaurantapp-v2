@@ -236,6 +236,91 @@ describe('SyncEngine', () => {
     expect(stillPending.map((c) => c.rowUuid)).toEqual(['queued-mid-push']);
   });
 
+  it('does not let one row it may not own stop the whole push', async () => {
+    // RLS is not a filter: it says what you may *read*, and you may read a
+    // friend's shared visit. An unfiltered pull therefore wrote other people's
+    // rows into the local diary, and the next push stamped them with this
+    // account and upserted them onto their owner's — which the owner policy
+    // rejects, killing the entire push. The transport now filters by owner, so
+    // this cannot recur; a device already holding such a row still has to be
+    // able to sync everything else.
+    const server = new FakeServer();
+    const { db } = makeTestDb();
+
+    const mine = await createRestaurant(db, {
+      name: 'Guadalupe',
+      comments: null,
+      rating: 5,
+      latitude: null,
+      longitude: null,
+    });
+    const theirs = await createRestaurant(db, {
+      name: 'De otra persona',
+      comments: null,
+      rating: null,
+      latitude: null,
+      longitude: null,
+    });
+
+    const [foreign] = await db
+      .select({ uuid: schema.restaurants.uuid })
+      .from(schema.restaurants)
+      .where(eq(schema.restaurants.id, theirs));
+
+    const guarded = {
+      ...server.transport(),
+      push: async (table: string, records: RemoteRecord[]) => {
+        if (records.some((r) => r.uuid === foreign!.uuid)) {
+          throw new Error(
+            'push restaurants: new row violates row-level security policy ' +
+              '(USING expression) for table "restaurants"',
+          );
+        }
+        server.upsert(table, records);
+      },
+    };
+
+    await new SyncEngine(db, guarded, ACCOUNT).push();
+
+    // The row that was ours got through.
+    expect(server.count('restaurants')).toBe(1);
+    expect(server.since('restaurants', null)[0]?.['name']).toBe('Guadalupe');
+
+    // And nothing is left blocking the outbox for next time.
+    const stuck = await db
+      .select()
+      .from(schema.changeLog)
+      .where(eq(schema.changeLog.synced, false));
+    expect(stuck).toHaveLength(0);
+
+    // The row itself is still there: recovering from a sync bug by deleting
+    // rows is how a backup becomes a smaller backup.
+    const survivors = await db.select().from(schema.restaurants);
+    expect(survivors).toHaveLength(2);
+    expect(mine).toBeDefined();
+  });
+
+  it('still fails loudly on an error that is not about ownership', async () => {
+    const server = new FakeServer();
+    const { db } = makeTestDb();
+    await createRestaurant(db, {
+      name: 'Guadalupe',
+      comments: null,
+      rating: 5,
+      latitude: null,
+      longitude: null,
+    });
+
+    const broken = {
+      ...server.transport(),
+      push: async () => {
+        throw new Error('push restaurants: null value in column "name" violates not-null');
+      },
+    };
+
+    await expect(new SyncEngine(db, broken, ACCOUNT).push()).rejects.toThrow('not-null');
+  });
+
   it('does not push back a row it has just pulled', async () => {
     // linkLocalData enqueues every row with no change_log entry, which is how a
     // first login uploads a diary older than the account. A pulled row looks

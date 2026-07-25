@@ -13,7 +13,7 @@ export interface SyncOutcome {
  * the app (docs/03); it reports the outcome so the UI can show it.
  */
 export async function runSync(db: AppDatabase, accountUuid: string): Promise<SyncOutcome> {
-  const engine = new SyncEngine(db, createSupabaseTransport(), accountUuid);
+  const engine = new SyncEngine(db, createSupabaseTransport(accountUuid), accountUuid);
   try {
     await engine.sync();
     return { ok: true, error: null, at: new Date().toISOString() };

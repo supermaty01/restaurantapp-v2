@@ -38,6 +38,18 @@ function chunk<T>(items: T[], size: number): T[][] {
   return batches;
 }
 
+/**
+ * The server saying "this row is not yours".
+ *
+ * Postgres phrases an ON CONFLICT DO UPDATE that fails the owner policy as a
+ * *new row* violating the USING expression, which reads like the incoming row
+ * is malformed when the actual problem is the row already sitting there.
+ */
+function isOwnershipError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('row-level security policy');
+}
+
 export class SyncEngine {
   constructor(
     private readonly db: AppDatabase,
@@ -106,8 +118,21 @@ export class SyncEngine {
 
       // In batches: a first sync of an imported diary pushes thousands of rows,
       // and one request carrying all of them is a body no free tier enjoys.
+      const disowned = new Set<string>();
       for (const batch of chunk(records, PUSH_BATCH)) {
-        await this.transport.push(cfg.name, batch);
+        for (const uuid of await this.pushBatch(cfg.name, batch)) disowned.add(uuid);
+      }
+
+      // A row the server says is not ours never becomes ours by trying again,
+      // so its outbox entry is retired along with the rest. It stays in the
+      // local database: deleting rows to recover from a sync bug is how a
+      // backup turns into a smaller backup.
+      if (disowned.size > 0) {
+        console.warn(
+          `[sync] ${disowned.size} fila(s) de ${cfg.name} pertenecen a otra cuenta y no se ` +
+            `enviarán: ${[...disowned].join(', ')}. Llegaron a este dispositivo por un pull sin ` +
+            `filtrar (corregido); si aparecen en tu diario, no son tuyas.`,
+        );
       }
       // Mark exactly the entries that were just sent. A blanket
       // `where(synced = false)` would also swallow changes enqueued *during*
@@ -129,6 +154,38 @@ export class SyncEngine {
         .update(schema.changeLog)
         .set({ synced: true })
         .where(inArray(schema.changeLog.id, batch));
+    }
+  }
+
+  /**
+   * Sends one batch, and works out what to do when the server refuses it.
+   *
+   * Returns the uuids the server says belong to someone else. A single
+   * unpushable row used to fail the whole batch and, with it, every later
+   * table — so one leaked row could stop a diary syncing forever. Splitting the
+   * batch on failure isolates the bad rows and lets the rest through.
+   *
+   * Only ownership rejections are absorbed. Anything else is rethrown: a
+   * not-null violation or a dead connection is a real failure, and swallowing
+   * those is how a sync reports success while silently dropping data.
+   */
+  private async pushBatch(table: string, batch: RemoteRecord[]): Promise<string[]> {
+    try {
+      await this.transport.push(table, batch);
+      return [];
+    } catch (error) {
+      if (!isOwnershipError(error) || batch.length === 0) throw error;
+
+      const disowned: string[] = [];
+      for (const record of batch) {
+        try {
+          await this.transport.push(table, [record]);
+        } catch (single) {
+          if (!isOwnershipError(single)) throw single;
+          disowned.push(record.uuid);
+        }
+      }
+      return disowned;
     }
   }
 

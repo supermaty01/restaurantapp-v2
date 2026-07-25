@@ -33,6 +33,10 @@ Esto mantiene el código de la app en enteros y confina toda la complejidad de u
 
 1. Cursor local `last_pulled_at` por tabla (en `app_settings`).
 2. `select * where user_id = me and updated_at > cursor` por tabla, aplicar en SQLite con la misma regla last-write-wins, avanzar cursor.
+
+   **El `where user_id = me` es obligatorio y no lo cubre RLS.** RLS dice qué te está *permitido leer*, y te está permitido leer la visita compartida de un amigo. Un `select *` sin filtrar se traía las filas de otras personas al diario local: el diario dejaba de ser solo lo que escribiste tú, y el push siguiente las estampaba con tu cuenta y las mandaba encima de las de su dueño, cosa que la policy de propiedad rechaza matando el push entero con `new row violates row-level security policy (USING expression)`.
+
+   Lo ajeno llega a la app por las RPC sociales, que lo devuelven como algo que mirar. No entra en las tablas de las que está hecho el diario.
 3. Primera sesión en un dispositivo nuevo = pull completo (bootstrap).
 4. Una fila que llega por pull nace con su entrada de `change_log` ya marcada `synced`. Sin eso, el auto-reparador (`linkLocalData`, que encola toda fila sin entrada — así es como un primer login sube un diario anterior a la cuenta) no puede distinguirla de una fila local nueva, y el dispositivo le devuelve al servidor sus propias filas. Para los escalares es inofensivo; para las uniones resucita enlaces que otro dispositivo acababa de borrar.
 
