@@ -3,13 +3,13 @@ import { ScrollView, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
 import { useDialog } from '@/components/ui/Dialog';
-import { PressableScale } from '@/components/ui/Motion';
 import { Sheet } from '@/components/ui/Sheet';
 import { FieldLabel } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
+import { ColorField } from '@/features/tags/components/ColorField';
 import Tag from '@/features/tags/components/Tag';
 import { useTheme } from '@/lib/context/ThemeContext';
-import { onColor } from '@/lib/design/colour';
+import { TAG_HUES, shadesOf } from '@/lib/design/colour';
 
 /**
  * The palette a tag can take.
@@ -22,20 +22,8 @@ import { onColor } from '@/lib/design/colour';
  * These are drawn from the Clay palette (docs/14), so a tag looks like it
  * belongs to the app rather than to a colour picker.
  */
-const COLORS = [
-  '#C0623D',
-  '#E0A83B',
-  '#8A9A6B',
-  '#B04A3A',
-  '#8A3F26',
-  '#D9A066',
-  '#6E7F52',
-  '#B07C63',
-  '#4A6FA5',
-  '#7D5BA6',
-  '#2A211C',
-  '#9A8F7D',
-];
+/** Where a new tag starts: the app's own terracotta, mid depth. */
+const DEFAULT_COLOR = shadesOf(TAG_HUES[1] as number)[2] as string;
 
 interface CreateTagModalProps {
   visible: boolean;
@@ -65,13 +53,13 @@ export default function CreateTagModal({
   const { ask } = useDialog();
 
   const [name, setName] = useState('');
-  const [color, setColor] = useState<string>(COLORS[0] as string);
+  const [color, setColor] = useState<string>(DEFAULT_COLOR);
   const [touched, setTouched] = useState(false);
 
   useEffect(() => {
     if (!visible) return;
     setName(editTag?.name ?? '');
-    setColor(editTag?.color ?? (COLORS[0] as string));
+    setColor(editTag?.color ?? DEFAULT_COLOR);
     setTouched(false);
   }, [visible, editTag]);
 
@@ -162,29 +150,7 @@ export default function CreateTagModal({
 
         <View className="gap-2.5">
           <FieldLabel>Color</FieldLabel>
-          <View className="flex-row flex-wrap gap-2.5">
-            {COLORS.map((swatch) => {
-              const active = swatch === color;
-              return (
-                <PressableScale
-                  key={swatch}
-                  accessibilityLabel={`Color ${swatch}`}
-                  onPress={() => setColor(swatch)}
-                  scaleTo={0.88}
-                  style={{ backgroundColor: swatch }}
-                  className={`h-11 w-11 items-center justify-center rounded-pill ${
-                    active ? 'border-2 border-ink' : ''
-                  }`}
-                >
-                  {active ? (
-                    <Txt variant="caption" weight="bold" style={{ color: onColor(swatch) }}>
-                      ✓
-                    </Txt>
-                  ) : null}
-                </PressableScale>
-              );
-            })}
-          </View>
+          <ColorField value={color} onChange={setColor} />
         </View>
       </ScrollView>
     </Sheet>

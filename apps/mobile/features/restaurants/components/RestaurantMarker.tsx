@@ -1,7 +1,6 @@
-import { View } from 'react-native';
 import { Marker } from 'react-native-maps';
 
-import { BurgerGlyph } from '@/components/ui/BurgerGlyph';
+import { MapPin } from '@/components/ui/MapPin';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 /**
@@ -33,8 +32,6 @@ export function RestaurantMarker({
   onPress: () => void;
 }) {
   const { colors } = useTheme();
-  const fill = selected ? colors.ink : colors.primary;
-  const size = selected ? 40 : 34;
 
   return (
     <Marker
@@ -47,30 +44,12 @@ export function RestaurantMarker({
       anchor={{ x: 0.5, y: 1 }}
       accessibilityLabel={name}
     >
-      <View style={{ alignItems: 'center' }}>
-        <View
-          style={{
-            width: size,
-            height: size,
-            backgroundColor: fill,
-            alignItems: 'center',
-            justifyContent: 'center',
-            // Three round corners and one square: rotated 45°, that is a
-            // teardrop. The glyph inside is counter-rotated so it stays level.
-            borderTopLeftRadius: size / 2,
-            borderTopRightRadius: size / 2,
-            borderBottomLeftRadius: size / 2,
-            borderBottomRightRadius: 2,
-            transform: [{ rotate: '45deg' }],
-            borderWidth: 2,
-            borderColor: colors.onPrimary,
-          }}
-        >
-          <View style={{ transform: [{ rotate: '-45deg' }] }}>
-            <BurgerGlyph size={size * 0.52} color={colors.onPrimary} />
-          </View>
-        </View>
-      </View>
+      <MapPin
+        size={selected ? 40 : 34}
+        color={selected ? colors.ink : colors.primary}
+        glyphColor={colors.onPrimary}
+        borderColor={colors.onPrimary}
+      />
     </Marker>
   );
 }

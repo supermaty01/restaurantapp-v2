@@ -191,3 +191,45 @@ export function onColor(background: string): string {
 
   return contrastRatio(ink, rgb) >= contrastRatio(white, rgb) ? '#2A211C' : '#FFFFFF';
 }
+
+/** Builds a hex colour from HSL, with h in degrees and s/l as percentages. */
+export function hsl(h: number, s: number, l: number): string {
+  return toHex(toRgb({ h: (((h % 360) + 360) % 360) / 360, s: s / 100, l: l / 100 }));
+}
+
+/**
+ * The hues a tag can take, evenly spaced around the wheel plus a neutral.
+ *
+ * Fourteen steps is roughly the point where two neighbours stop being
+ * confusable at the size a tag is actually read — a finer wheel would offer
+ * colours nobody can tell apart in a list, which defeats the purpose of
+ * colouring them.
+ */
+export const TAG_HUES: readonly number[] = [
+  8, 24, 40, 52, 74, 110, 150, 175, 198, 218, 250, 280, 316, 340,
+];
+
+/** Saturation and lightness for each step of the shade row, light to dark. */
+const SHADES: readonly { s: number; l: number }[] = [
+  { s: 62, l: 72 },
+  { s: 66, l: 60 },
+  { s: 62, l: 48 },
+  { s: 58, l: 37 },
+  { s: 46, l: 26 },
+];
+
+/**
+ * Five usable shades of one hue.
+ *
+ * Every step stays inside a saturation and lightness band that keeps a tag
+ * legible on both the light and the dark surface, which is what a free colour
+ * wheel cannot promise: it happily offers `#FEFEFE` and `#050505`.
+ */
+export function shadesOf(hue: number): string[] {
+  return SHADES.map(({ s, l }) => hsl(hue, s, l));
+}
+
+/** The neutral column: greys that still read as deliberate next to a hue. */
+export function neutralShades(): string[] {
+  return SHADES.map(({ l }) => hsl(30, 10, l));
+}

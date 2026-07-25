@@ -1,4 +1,13 @@
-import { contrastRatio, onColor, parseHex, readableInk, withAlpha } from './colour';
+import {
+  TAG_HUES,
+  contrastRatio,
+  neutralShades,
+  onColor,
+  parseHex,
+  readableInk,
+  shadesOf,
+  withAlpha,
+} from './colour';
 import { darkColors, lightColors } from './tokens';
 
 function contrast(a: string, b: string): number {
@@ -98,5 +107,43 @@ describe('onColor', () => {
 
   it('falls back to white for an unparseable colour', () => {
     expect(onColor('rebeccapurple')).toBe('#FFFFFF');
+  });
+});
+
+describe('tag palette', () => {
+  it('offers a usable number of colours', () => {
+    const all = TAG_HUES.flatMap((hue) => shadesOf(hue));
+    expect(all).toHaveLength(TAG_HUES.length * 5);
+    // No duplicates: two swatches that produce the same colour are one swatch
+    // and one dead tap.
+    expect(new Set(all).size).toBe(all.length);
+  });
+
+  it.each(TAG_HUES)('every shade of hue %s is legible on both surfaces', (hue) => {
+    for (const shade of shadesOf(hue)) {
+      expect(
+        contrast(readableInk(shade, lightColors.surface), lightColors.surface),
+      ).toBeGreaterThan(4.5);
+      expect(contrast(readableInk(shade, darkColors.surface), darkColors.surface)).toBeGreaterThan(
+        4.5,
+      );
+    }
+  });
+
+  it('keeps a filled chip legible at every shade', () => {
+    for (const hue of TAG_HUES) {
+      for (const shade of shadesOf(hue)) {
+        expect(contrast(onColor(shade), shade)).toBeGreaterThan(4);
+      }
+    }
+  });
+
+  it('produces neutrals that are actually neutral', () => {
+    for (const grey of neutralShades()) {
+      const rgb = parseHex(grey);
+      expect(rgb).not.toBeNull();
+      // Warm, but only just: the spread between channels stays small.
+      expect(Math.max(rgb!.r, rgb!.g, rgb!.b) - Math.min(rgb!.r, rgb!.g, rgb!.b)).toBeLessThan(40);
+    }
   });
 });

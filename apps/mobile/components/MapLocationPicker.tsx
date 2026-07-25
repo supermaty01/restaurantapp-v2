@@ -12,8 +12,8 @@ import {
 } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
-import { BurgerGlyph } from '@/components/ui/BurgerGlyph';
 import { Button } from '@/components/ui/Button';
+import { MapPin } from '@/components/ui/MapPin';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
@@ -456,13 +456,13 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
           zoomEnabled={editable}
         >
           {selectedLocation ? (
-            <Marker coordinate={selectedLocation} anchor={{ x: 0.5, y: 0.5 }}>
-              <View
-                style={{ backgroundColor: colors.primary }}
-                className="h-8 w-8 items-center justify-center rounded-pill"
-              >
-                <BurgerGlyph size={16} color={colors.onPrimary} />
-              </View>
+            <Marker coordinate={selectedLocation} anchor={{ x: 0.5, y: 1 }}>
+              <MapPin
+                size={32}
+                color={colors.primary}
+                glyphColor={colors.onPrimary}
+                borderColor={colors.onPrimary}
+              />
             </Marker>
           ) : null}
         </MapView>
