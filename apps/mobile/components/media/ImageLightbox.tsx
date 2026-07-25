@@ -13,7 +13,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   interpolate,
   runOnJS,
@@ -46,6 +46,13 @@ interface ImageLightboxProps {
  * Paging uses a plain FlatList (native, reliable) instead of a pager library;
  * zoom and dismiss are our own gestures. See docs/11-dependencias.md for why
  * this is hand-written.
+ *
+ * **The GestureHandlerRootView below is load-bearing.** A React Native `Modal`
+ * renders into its own native view hierarchy, outside the root view that
+ * gesture-handler attaches to, so every gesture inside it is silently dead —
+ * pinch, double-tap and drag-to-dismiss all did nothing on device, while the
+ * close button and the FlatList kept working because those are a plain
+ * Pressable and a native scroll view.
  */
 export function ImageLightbox({ images, initialIndex, visible, onClose }: ImageLightboxProps) {
   const { width, height } = useWindowDimensions();
@@ -65,6 +72,8 @@ export function ImageLightbox({ images, initialIndex, visible, onClose }: ImageL
   const dismissGesture = Gesture.Pan()
     .activeOffsetY([-20, 20])
     .failOffsetX([-20, 20])
+    // One finger only: a two-finger pinch must reach the image underneath.
+    .maxPointers(1)
     .enabled(!isZoomed)
     .onUpdate((event) => {
       translateY.value = event.translationY;
@@ -122,49 +131,54 @@ export function ImageLightbox({ images, initialIndex, visible, onClose }: ImageL
       onRequestClose={handleClose}
       statusBarTranslucent
     >
-      <StatusBar hidden />
-      <Animated.View style={[styles.backdrop, backdropStyle]} />
-      <GestureDetector gesture={dismissGesture}>
-        <Animated.View style={[styles.container, containerStyle]}>
-          <FlatList
-            ref={listRef}
-            data={images}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            getItemLayout={getItemLayout}
-            initialScrollIndex={initialIndex}
-            horizontal
-            pagingEnabled
-            scrollEnabled={!isZoomed}
-            showsHorizontalScrollIndicator={false}
-            onMomentumScrollEnd={onMomentumEnd}
-            windowSize={3}
-          />
-        </Animated.View>
-      </GestureDetector>
+      <GestureHandlerRootView style={styles.root}>
+        <StatusBar hidden />
+        <Animated.View style={[styles.backdrop, backdropStyle]} />
+        <GestureDetector gesture={dismissGesture}>
+          <Animated.View style={[styles.container, containerStyle]}>
+            <FlatList
+              ref={listRef}
+              data={images}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              getItemLayout={getItemLayout}
+              initialScrollIndex={initialIndex}
+              horizontal
+              pagingEnabled
+              scrollEnabled={!isZoomed}
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={onMomentumEnd}
+              windowSize={3}
+            />
+          </Animated.View>
+        </GestureDetector>
 
-      <Pressable
-        onPress={handleClose}
-        style={styles.closeButton}
-        hitSlop={12}
-        accessibilityRole="button"
-        accessibilityLabel="Cerrar imagen"
-      >
-        <Ionicons name="close" size={28} color="#FFFFFF" />
-      </Pressable>
+        <Pressable
+          onPress={handleClose}
+          style={styles.closeButton}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel="Cerrar imagen"
+        >
+          <Ionicons name="close" size={28} color="#FFFFFF" />
+        </Pressable>
 
-      {images.length > 1 && (
-        <View style={styles.counter} pointerEvents="none">
-          <Text style={styles.counterText}>
-            {index + 1} / {images.length}
-          </Text>
-        </View>
-      )}
+        {images.length > 1 && (
+          <View style={styles.counter} pointerEvents="none">
+            <Text style={styles.counterText}>
+              {index + 1} / {images.length}
+            </Text>
+          </View>
+        )}
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   backdrop: {
     ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0, 0, 0, 0.95)',
