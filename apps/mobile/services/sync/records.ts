@@ -63,7 +63,19 @@ export async function toRemoteRecord(
   };
 
   for (const scalar of cfg.scalars) {
-    record[scalar.remote] = local[scalar.local] ?? null;
+    const value = local[scalar.local] ?? null;
+
+    if (value === null && scalar.required) {
+      // Name the row. PostgREST reports the constraint, never which record
+      // broke it, so a single bad legacy row failed the push with no way to
+      // find it short of exporting the database.
+      console.warn(
+        `[sync] ${cfg.name} #${String(local.id)} (uuid ${String(local.uuid)}) no tiene ` +
+          `"${scalar.local}"; el espejo lo exige. Ábrelo en la app y complétalo.`,
+      );
+    }
+
+    record[scalar.remote] = value;
   }
 
   for (const fk of cfg.foreignKeys) {

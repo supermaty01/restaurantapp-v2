@@ -16,6 +16,16 @@ export interface ScalarColumn {
   local: string;
   /** column name in the remote record (snake_case). */
   remote: string;
+  /**
+   * The mirror rejects a null here.
+   *
+   * Worth declaring because importing a v1 backup replaces the SQLite file
+   * wholesale, so the rows on the device are whatever v1 wrote — drizzle's
+   * `notNull()` describes new writes, not data that arrived with the import.
+   * A row that violates this is named in the log instead of failing the whole
+   * push with a message that does not say which row.
+   */
+  required?: boolean;
 }
 
 export interface ForeignKey {
@@ -45,7 +55,7 @@ export const SYNC_TABLES: SyncTableConfig[] = [
     name: 'restaurants',
     table: schema.restaurants,
     scalars: [
-      { local: 'name', remote: 'name' },
+      { local: 'name', remote: 'name', required: true },
       { local: 'latitude', remote: 'latitude' },
       { local: 'longitude', remote: 'longitude' },
       { local: 'comments', remote: 'comments' },
@@ -58,8 +68,8 @@ export const SYNC_TABLES: SyncTableConfig[] = [
     name: 'tags',
     table: schema.tags,
     scalars: [
-      { local: 'name', remote: 'name' },
-      { local: 'color', remote: 'color' },
+      { local: 'name', remote: 'name', required: true },
+      { local: 'color', remote: 'color', required: true },
     ],
     foreignKeys: [],
   },
@@ -67,7 +77,7 @@ export const SYNC_TABLES: SyncTableConfig[] = [
     name: 'dishes',
     table: schema.dishes,
     scalars: [
-      { local: 'name', remote: 'name' },
+      { local: 'name', remote: 'name', required: true },
       { local: 'price', remote: 'price' },
       { local: 'rating', remote: 'rating' },
       { local: 'comments', remote: 'comments' },
@@ -88,7 +98,7 @@ export const SYNC_TABLES: SyncTableConfig[] = [
   {
     name: 'people',
     table: schema.people,
-    scalars: [{ local: 'name', remote: 'name' }],
+    scalars: [{ local: 'name', remote: 'name', required: true }],
     foreignKeys: [],
   },
   {

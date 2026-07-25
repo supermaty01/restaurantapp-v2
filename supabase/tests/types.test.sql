@@ -48,5 +48,17 @@ exception when others then
   raise notice 'ok: an unknown visibility is rejected (%)', sqlerrm;
 end $$;
 
+-- ── A visit can have no date ─────────────────────────────────────────────────
+-- Imported v1 diaries contain them, and rejecting them would leave those
+-- visits stranded on the device with nothing saying why.
+insert into visits (uuid, user_id, restaurant_uuid, visited_at, created_at, updated_at) values
+  ('ffffffff-0000-0000-0000-000000000001', :someone, 'dddddddd-0000-0000-0000-000000000001',
+   null, now(), now());
+
+select expect_eq(
+  (select count(*)::int from visits where uuid = 'ffffffff-0000-0000-0000-000000000001'),
+  1,
+  'a visit with no date is accepted');
+
 \echo ''
 \echo 'All type checks passed.'

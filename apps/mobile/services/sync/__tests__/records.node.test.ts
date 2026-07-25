@@ -1,0 +1,87 @@
+import type { AppDatabase } from '@/services/db/types';
+
+import { toRemoteRecord } from '../records';
+
+import type { SyncTableConfig } from '../tables';
+
+/**
+ * The push turns a local row into a record the mirror will accept. What is
+ * worth pinning here is the reporting: importing a v1 backup replaces the
+ * SQLite file wholesale, so rows can arrive missing fields the mirror requires,
+ * and PostgREST names the constraint but never the row that broke it.
+ */
+const config = {
+  name: 'restaurants',
+  table: {} as SyncTableConfig['table'],
+  scalars: [
+    { local: 'name', remote: 'name', required: true },
+    { local: 'comments', remote: 'comments' },
+  ],
+  foreignKeys: [],
+} satisfies SyncTableConfig;
+
+const db = {} as AppDatabase;
+
+function localRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 42,
+    uuid: 'row-uuid',
+    createdAt: '2026-07-01T00:00:00.000Z',
+    updatedAt: '2026-07-01T00:00:00.000Z',
+    deleted: false,
+    name: 'Trattoria Bella',
+    comments: null,
+    ...overrides,
+  };
+}
+
+describe('toRemoteRecord', () => {
+  let warn: jest.SpyInstance;
+
+  beforeEach(() => {
+    warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    warn.mockRestore();
+  });
+
+  it('maps local keys to the mirror column names', async () => {
+    const record = await toRemoteRecord(db, config, localRow(), 'account-uuid');
+
+    expect(record).toMatchObject({
+      uuid: 'row-uuid',
+      user_id: 'account-uuid',
+      name: 'Trattoria Bella',
+      deleted: false,
+    });
+  });
+
+  it('sends an absent optional value as null', async () => {
+    const record = await toRemoteRecord(db, config, localRow(), 'account-uuid');
+    expect(record['comments']).toBeNull();
+  });
+
+  it('names the row when a required value is missing', async () => {
+    await toRemoteRecord(db, config, localRow({ name: null }), 'account-uuid');
+
+    const message = String(warn.mock.calls[0]?.[0] ?? '');
+    // The id and uuid are the whole point: they are how you find the row.
+    expect(message).toContain('#42');
+    expect(message).toContain('row-uuid');
+    expect(message).toContain('name');
+  });
+
+  it('says nothing when nothing is missing', async () => {
+    await toRemoteRecord(db, config, localRow(), 'account-uuid');
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it('still builds the record, so one bad row does not hide the rest', async () => {
+    // The push will fail on this row either way; refusing to build it would
+    // just move the failure somewhere with less context.
+    const record = await toRemoteRecord(db, config, localRow({ name: null }), 'account-uuid');
+    expect(record['name']).toBeNull();
+    expect(record['uuid']).toBe('row-uuid');
+  });
+});
