@@ -48,11 +48,14 @@ const RatingStarsDisplay = React.memo<RatingStarsDisplayProps>(
     return value === null ? (
       <Text className="text-[14px] italic text-ink-subtle">Sin calificación</Text>
     ) : (
-      <View className="flex flex-row" style={{ gap }}>
+      <View className="flex-row items-center" style={{ gap }}>
         {[1, 2, 3, 4, 5].map((star) => (
           <TouchableOpacity key={star} onPress={() => handlePress(star)} disabled={readOnly}>
             <Ionicons
-              name={star <= ratingValue ? 'star' : 'star-outline'}
+              // Solid in both states, tinted rather than outlined: mixing a
+              // filled star with a hairline one makes the empty half read as a
+              // different shape instead of the same one turned off.
+              name="star"
               size={size}
               color={star <= ratingValue ? colors.accent : colors.lineStrong}
             />

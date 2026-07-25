@@ -3,7 +3,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { SortField, SortOrder } from '@/components/FilterSortModal';
+import type { SortField, SortOrder } from '@/components/filters/FilterSheet';
 import * as schema from '@/services/db/schema';
 
 interface ListPreferences {

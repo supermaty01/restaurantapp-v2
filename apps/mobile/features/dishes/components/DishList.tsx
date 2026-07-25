@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FlatList, View, Text, useWindowDimensions } from 'react-native';
 
-import type { FilterSortOptions } from '@/components/FilterSortModal';
-import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
+import type { FilterSortOptions } from '@/components/filters/FilterSheet';
+import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/FilterSheet';
 import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
 import { ListHeader } from '@/components/ui/ListHeader';
@@ -64,27 +64,36 @@ export function DishList() {
     filterOptions.sortField !== 'name' ||
     filterOptions.sortOrder !== 'asc';
 
+  // Extracted so the filter sheet can count what a draft would leave without
+  // applying it, which is what puts a number on the apply button.
+  const applyFilters = useCallback(
+    (options: FilterSortOptions) => {
+      let result = [...dishes];
+
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+        result = result.filter((d) => d.name.toLowerCase().includes(query));
+      }
+
+      if (options.selectedTags.length > 0) {
+        result = result.filter((dish) =>
+          options.selectedTags.some((filterTag) =>
+            dish.tags?.some((tag) => tag.id === filterTag.id),
+          ),
+        );
+      }
+
+      if (options.minRating !== null) {
+        result = result.filter((dish) => dish.rating !== null && dish.rating >= options.minRating!);
+      }
+
+      return result;
+    },
+    [dishes, searchQuery],
+  );
+
   const filteredAndSortedDishes = useMemo(() => {
-    let result = [...dishes];
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      result = result.filter((d) => d.name.toLowerCase().includes(query));
-    }
-
-    if (filterOptions.selectedTags.length > 0) {
-      result = result.filter((dish) =>
-        filterOptions.selectedTags.some((filterTag) =>
-          dish.tags?.some((tag) => tag.id === filterTag.id),
-        ),
-      );
-    }
-
-    if (filterOptions.minRating !== null) {
-      result = result.filter(
-        (dish) => dish.rating !== null && dish.rating >= filterOptions.minRating!,
-      );
-    }
+    const result = applyFilters(filterOptions);
 
     result.sort((a, b) => {
       let comparison = 0;
@@ -101,7 +110,7 @@ export function DishList() {
     });
 
     return result;
-  }, [dishes, filterOptions, searchQuery]);
+  }, [applyFilters, filterOptions]);
 
   const navigateToDish = useCallback(
     (id: number) => {
@@ -215,7 +224,7 @@ export function DishList() {
         windowSize={5}
       />
 
-      <FilterSortModal
+      <FilterSheet
         visible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         options={filterOptions}
@@ -225,6 +234,7 @@ export function DishList() {
           prefs.setSortOrder(opts.sortOrder);
         }}
         entityType="dish"
+        countFor={(opts) => applyFilters(opts).length}
       />
     </View>
   );

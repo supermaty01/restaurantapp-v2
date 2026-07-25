@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FlatList, View, Text, useWindowDimensions } from 'react-native';
 
-import type { FilterSortOptions } from '@/components/FilterSortModal';
-import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
+import type { FilterSortOptions } from '@/components/filters/FilterSheet';
+import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/FilterSheet';
 import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
 import { ListHeader } from '@/components/ui/ListHeader';
@@ -64,27 +64,38 @@ export function RestaurantList() {
     filterOptions.sortField !== 'name' ||
     filterOptions.sortOrder !== 'asc';
 
+  // Extracted so the filter sheet can count what a draft would leave without
+  // applying it — the whole point of showing "Ver 12" on the button.
+  const applyFilters = useCallback(
+    (options: FilterSortOptions) => {
+      let result = [...restaurants];
+
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+        result = result.filter((r) => r.name.toLowerCase().includes(query));
+      }
+
+      if (options.selectedTags.length > 0) {
+        result = result.filter((restaurant) =>
+          options.selectedTags.some((filterTag) =>
+            restaurant.tags?.some((tag) => tag.id === filterTag.id),
+          ),
+        );
+      }
+
+      if (options.minRating !== null) {
+        result = result.filter(
+          (restaurant) => restaurant.rating !== null && restaurant.rating >= options.minRating!,
+        );
+      }
+
+      return result;
+    },
+    [restaurants, searchQuery],
+  );
+
   const filteredAndSortedRestaurants = useMemo(() => {
-    let result = [...restaurants];
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      result = result.filter((r) => r.name.toLowerCase().includes(query));
-    }
-
-    if (filterOptions.selectedTags.length > 0) {
-      result = result.filter((restaurant) =>
-        filterOptions.selectedTags.some((filterTag) =>
-          restaurant.tags?.some((tag) => tag.id === filterTag.id),
-        ),
-      );
-    }
-
-    if (filterOptions.minRating !== null) {
-      result = result.filter(
-        (restaurant) => restaurant.rating !== null && restaurant.rating >= filterOptions.minRating!,
-      );
-    }
+    const result = applyFilters(filterOptions);
 
     result.sort((a, b) => {
       let comparison = 0;
@@ -101,7 +112,7 @@ export function RestaurantList() {
     });
 
     return result;
-  }, [restaurants, filterOptions, searchQuery]);
+  }, [applyFilters, filterOptions]);
 
   const navigateToRestaurant = useCallback(
     (id: number) => {
@@ -217,7 +228,7 @@ export function RestaurantList() {
         windowSize={5}
       />
 
-      <FilterSortModal
+      <FilterSheet
         visible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         options={filterOptions}
@@ -227,6 +238,7 @@ export function RestaurantList() {
           prefs.setSortOrder(opts.sortOrder);
         }}
         entityType="restaurant"
+        countFor={(opts) => applyFilters(opts).length}
       />
     </View>
   );

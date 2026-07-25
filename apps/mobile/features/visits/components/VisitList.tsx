@@ -3,8 +3,8 @@ import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FlatList, Text, View, useWindowDimensions } from 'react-native';
 
-import type { FilterSortOptions } from '@/components/FilterSortModal';
-import FilterSortModal, { defaultFilterSortOptions } from '@/components/FilterSortModal';
+import type { FilterSortOptions } from '@/components/filters/FilterSheet';
+import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/FilterSheet';
 import GridPeekItem from '@/components/GridPeekItem';
 import { ListHeader } from '@/components/ui/ListHeader';
 import VisitItem from '@/features/visits/components/VisitItem';
@@ -75,17 +75,28 @@ export function VisitList() {
     filterOptions.sortField !== 'date' ||
     filterOptions.sortOrder !== 'desc';
 
+  // Extracted so the filter sheet can count what a draft would leave without
+  // applying it, which is what puts a number on the apply button.
+  const applyFilters = useCallback(
+    (options: FilterSortOptions) => {
+      let result = [...visits];
+
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+        result = result.filter((v) => v.restaurant.name.toLowerCase().includes(query));
+      }
+
+      if (options.selectedRestaurantId !== null) {
+        result = result.filter((visit) => visit.restaurant.id === options.selectedRestaurantId);
+      }
+
+      return result;
+    },
+    [visits, searchQuery],
+  );
+
   const filteredAndSortedVisits = useMemo(() => {
-    let result = [...visits];
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.trim().toLowerCase();
-      result = result.filter((v) => v.restaurant.name.toLowerCase().includes(query));
-    }
-
-    if (filterOptions.selectedRestaurantId !== null) {
-      result = result.filter((visit) => visit.restaurant.id === filterOptions.selectedRestaurantId);
-    }
+    const result = applyFilters(filterOptions);
 
     result.sort((a, b) => {
       let comparison = 0;
@@ -98,7 +109,7 @@ export function VisitList() {
     });
 
     return result;
-  }, [visits, filterOptions, searchQuery]);
+  }, [applyFilters, filterOptions]);
 
   const navigateToVisit = useCallback(
     (id: number) => {
@@ -213,7 +224,7 @@ export function VisitList() {
         windowSize={5}
       />
 
-      <FilterSortModal
+      <FilterSheet
         visible={filterModalVisible}
         onClose={() => setFilterModalVisible(false)}
         options={filterOptions}
@@ -223,6 +234,7 @@ export function VisitList() {
           prefs.setSortOrder(opts.sortOrder);
         }}
         entityType="visit"
+        countFor={(opts) => applyFilters(opts).length}
         restaurants={restaurantOptions}
       />
     </View>
