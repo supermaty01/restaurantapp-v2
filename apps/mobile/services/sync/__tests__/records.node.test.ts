@@ -117,6 +117,32 @@ describe('toRemoteRecord', () => {
     expect(record['visibility']).toBe('private');
   });
 
+  it('treats a missing deleted flag as not deleted', async () => {
+    // Imported v1 rows predate the column, and Postgres rejects a null there —
+    // which failed the push for every image at once.
+    const record = await toRemoteRecord(db, config, localRow({ deleted: null }), 'account-uuid');
+    expect(record['deleted']).toBe(false);
+  });
+
+  it('never sends a null timestamp', async () => {
+    const record = await toRemoteRecord(
+      db,
+      config,
+      localRow({ createdAt: null, updatedAt: null }),
+      'account-uuid',
+    );
+
+    expect(typeof record['created_at']).toBe('string');
+    expect(typeof record['updated_at']).toBe('string');
+  });
+
+  it('keeps real bookkeeping values untouched', async () => {
+    const record = await toRemoteRecord(db, config, localRow({ deleted: true }), 'account-uuid');
+
+    expect(record['deleted']).toBe(true);
+    expect(record['created_at']).toBe('2026-07-01T00:00:00.000Z');
+  });
+
   it('still builds the record, so one bad row does not hide the rest', async () => {
     // The push will fail on this row either way; refusing to build it would
     // just move the failure somewhere with less context.

@@ -54,12 +54,20 @@ export async function toRemoteRecord(
   local: LocalRowShape,
   accountUuid: string,
 ): Promise<RemoteRecord> {
+  // The bookkeeping columns are as absent from imported v1 rows as any other:
+  // they were added by later migrations, and importing a backup replaces the
+  // SQLite file wholesale. Postgres rejects a null in each of them, and a null
+  // here failed the whole push — so each gets the only answer that can be
+  // right. A row with no deleted flag is not deleted; a row with no timestamps
+  // is as old as the moment we noticed.
+  const now = new Date().toISOString();
+
   const record: RemoteRecord = {
     uuid: local.uuid,
     user_id: accountUuid,
-    created_at: local.createdAt,
-    updated_at: local.updatedAt,
-    deleted: local.deleted,
+    created_at: local.createdAt ?? now,
+    updated_at: local.updatedAt ?? now,
+    deleted: local.deleted ?? false,
   };
 
   for (const scalar of cfg.scalars) {
