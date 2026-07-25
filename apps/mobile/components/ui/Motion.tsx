@@ -38,7 +38,7 @@ export function PressableScale({
   children: ReactNode;
   onPress?: (() => void) | undefined;
   onLongPress?: (() => void) | undefined;
-  disabled?: boolean;
+  disabled?: boolean | undefined;
   scaleTo?: number;
   className?: string;
   style?: ViewStyle | ViewStyle[];
