@@ -59,13 +59,24 @@ export function VisitTimeline({
   return (
     <SectionList
       sections={sections}
-      keyExtractor={(row, index) => `${row[0]?.id ?? 'row'}-${index}`}
+      // La clave es la fila, no su posición: `${id}-${index}` cambiaba cada vez
+      // que una fila se movía, y en las filas vacías degeneraba a "row-0", que
+      // se repite en todos los meses. Las claves duplicadas hacen que React
+      // reutilice celdas equivocadas.
+      keyExtractor={(row) => row.map((visit) => visit.id).join('-')}
       stickySectionHeadersEnabled
       showsVerticalScrollIndicator={false}
       contentContainerStyle={{ paddingBottom: 112 }}
-      initialNumToRender={6}
-      maxToRenderPerBatch={6}
-      windowSize={7}
+      initialNumToRender={9}
+      maxToRenderPerBatch={9}
+      windowSize={11}
+      // En Android esto viene activado por defecto en VirtualizedList, y es la
+      // causa clásica de que el contenido se vacíe a mitad de scroll dejando
+      // solo la cabecera pegada: las celdas se desmontan al salir del área
+      // recortada y la de reemplazo aún no se ha montado. Con retículas de
+      // fotos, que ya son caras de montar, se nota como un parpadeo en un punto
+      // fijo del recorrido.
+      removeClippedSubviews={false}
       renderSectionHeader={({ section }) => (
         // Full-bleed and opaque: the padding used to live on the content
         // container, which inset the pinned header and let photos scroll
