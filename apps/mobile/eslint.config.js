@@ -51,18 +51,23 @@ module.exports = tseslint.config(
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
 
       // --- React Compiler readiness rules (eslint-plugin-react-hooks v6).
-      // React Compiler is NOT enabled in this build (see app.config.js — only
-      // typedRoutes is on), so these compiler-specific findings don't affect
-      // runtime. They flag real compiler-readiness debt (refs read in render,
-      // captured-value mutation, setState-in-effect cascades) worth fixing as a
-      // dedicated workstream *with* device verification, not blind en masse.
-      // Kept as 'warn' for visibility; the classic hooks rules below stay error.
-      // Re-raise to 'error' when adopting React Compiler. Tracked in docs/ESTADO.
-      'react-hooks/refs': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/incompatible-library': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
+      //
+      // Off here, and on in `npm run lint:compiler`. React Compiler is NOT
+      // enabled in this build, so these findings say nothing about how the app
+      // behaves today: they describe work needed *before* adopting it.
+      //
+      // They were 'warn', which sounds like the careful choice and was the
+      // worst of the three. `npm run lint` carries `--max-warnings=0`, so 83
+      // advisory findings made the standard fail and CI red — and a red gate
+      // that everyone knows to ignore stops being a gate. Either a rule blocks
+      // the build or it is a separate question you ask on purpose. This is the
+      // second kind.
+      'react-hooks/refs': 'off',
+      'react-hooks/immutability': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+      'react-hooks/incompatible-library': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
+      // The classic two stay errors: these are about correctness today.
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'error',
 

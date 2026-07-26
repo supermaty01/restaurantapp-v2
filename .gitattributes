@@ -1,0 +1,15 @@
+# Finales de línea normalizados en el repositorio.
+#
+# Sin esto, editar desde Windows convierte ficheros LF en CRLF y el diff pasa a
+# ser el fichero entero: imposible de revisar, y esconde el cambio real dentro
+# de miles de líneas que no cambiaron. Ya pasó.
+* text=auto eol=lf
+
+# Binarios: que git no toque nada.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ttf binary
+*.otf binary
+*.zip binary
+*.restoshare binary

@@ -29,8 +29,11 @@ export async function runSync(db: AppDatabase, accountUuid: string): Promise<Syn
     // to the server should not wait behind a slow upload. Never throws — a
     // photo that will not go up must not turn a successful sync into a failure.
     const photos = await uploadPendingPhotos(db);
-    if (photos.uploaded > 0 || photos.pending > 0 || photos.failed > 0) {
-      console.log(
+    // Solo cuando queda algo por hacer o algo salió mal. Una tanda que sube
+    // entera no necesita anunciarse: la tarjeta de perfil ya dice "Al día", y
+    // un log que aparece siempre es un log que se deja de leer.
+    if (photos.pending > 0 || photos.failed > 0) {
+      console.warn(
         `[sync] fotos: ${photos.uploaded} subidas, ${photos.pending} en cola, ` +
           `${photos.failed} sin poder subir`,
       );

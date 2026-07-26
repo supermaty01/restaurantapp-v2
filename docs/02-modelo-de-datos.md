@@ -37,7 +37,11 @@ Los soft-deletes son permanentes hasta una purga explícita (los necesita el syn
 
 ### 3. Change-log local
 
-Tabla `change_log(id, table_name, row_id, operation, changed_at, synced)` alimentada por la capa de repositorios (no triggers de SQLite, para mantener la lógica en TS y testeable). Es la cola de salida del sync. Detalle en [03](03-sync.md).
+Tabla `change_log(id, table_name, row_id, row_uuid, operation, changed_at, synced)` alimentada por la capa de repositorios (no triggers de SQLite, para mantener la lógica en TS y testeable). Es la cola de salida del sync. Detalle en [03](03-sync.md).
+
+`row_uuid` está desnormalizado a propósito: cuando la fila se borra de verdad, su id local deja de resolver a nada y la entrada tiene que seguir sabiendo qué identidad global hay que dar por muerta.
+
+Las **tablas de unión no pasan por aquí**: no tienen uuid ni identidad propia, así que viajan con su fila padre. Ver [03](03-sync.md).
 
 ## Entidades nuevas
 
@@ -47,26 +51,34 @@ Motivación: (a) etiquetar con quién fuiste a una visita (estilo BeReal), (b) h
 
 ```
 people
-  id          integer PK          ← entero local (como el resto)
-  uuid        text unique         ← identidad de sync
-  name        text                ← "Caro"
-  linked_user_id integer null     ← si esa persona es un amigo con cuenta, se vincula
+  id                   integer PK    ← entero local (como el resto)
+  uuid                 text unique   ← identidad de sync
+  name                 text          ← "Caro"
+  linked_account_uuid  text null     ← el uuid de auth, si la etiqueta apunta a una cuenta
+  username             text null     ← el @handle al etiquetar, copiado a propósito
   user_id, created_at, updated_at, deleted
 
-visit_participants (N:M)
+visit_participant (N:M)
   visit_id    integer → visits
   person_id   integer → people
-  tag_status  text: 'local' | 'pending' | 'accepted' | 'rejected'
+  tag_status  text: 'local' | 'pending'
   PK (visit_id, person_id)
 ```
 
-- En modo local, etiquetar a "Caro" solo crea/reutiliza una `person` local. `tag_status = 'local'`.
-- Si la persona está vinculada a un usuario real, el etiquetado se convierte en una **solicitud** (`pending`): el otro usuario la acepta y la visita puede aparecer en su perfil (ver [06](06-social.md)).
-- Si más adelante "Caro" se une a la app, su `person` local puede vincularse a su cuenta sin perder el historial de visitas compartidas.
+- `linked_account_uuid` es el uuid remoto de `auth.users`, no un id local: quien te acompaña vive en el móvil de otra persona, y su fila aquí es una etiqueta con un puntero. En el espejo de Postgres la columna se llama `linked_user_id`.
+- El `username` se **copia** en vez de consultarse. Una etiqueta tiene que dibujarse sin conexión y años después; un handle que desde entonces cambió es un problema menor que un chip que no sabe pintarse.
+- `tag_status` distingue si la etiqueta *puede* viajar (`pending`, hay cuenta a la que llegar) de si es solo un nombre anotado (`local`). **No es un flujo de aprobación**: a nadie se le pide permiso para etiquetarlo. El consentimiento es posterior y vive en `tag_rejections`, una tabla solo de servidor. Ver [06](06-social.md).
+- Identidad: la cuenta cuando la hay, el nombre cuando no. Dos amigas pueden llamarse Ana, pero una cuenta es una persona.
 
 ### Visibilidad por entidad
 
-`restaurants`, `dishes` y `visits` ganan `visibility: 'private' | 'friends' | 'public'`, default `private`. Controla qué ven los amigos en perfil y feed, y qué expone un share link. Los tags y las personas son siempre privados (solo el nombre de la persona etiquetada se muestra a quien ya puede ver la visita).
+`restaurants`, `dishes` y `visits` ganan `visibility: 'default' | 'private' | 'friends' | 'public'`, default **`default`**.
+
+`default` no es un hueco: es un valor guardado que significa «lo que digan mis ajustes generales, ahora y más adelante», y se resuelve al leer. La primera versión copiaba el ajuste en la fila al crearla, lo cual convertía el ajuste en una sugerencia de una sola vez y dejaba todo lo importado de la v1 clavado en privado. El razonamiento completo y sus consecuencias en [06](06-social.md).
+
+Los ajustes generales por tipo viven en `app_settings` (local) y en `visibility_defaults` (Postgres): el servidor también tiene que poder resolverlos, porque es quien decide si tu amigo puede leer una fila.
+
+Los tags y las personas son siempre privados (solo el nombre de la persona etiquetada se muestra a quien ya puede ver la visita).
 
 ## Esquema cloud (Supabase)
 
@@ -77,13 +89,15 @@ Dos grupos:
    - `profiles(user_id, username unique, display_name, avatar_url, bio)`
    - `friendships(user_a, user_b, status: pending|accepted, requested_by)`
    - `share_links(id corto, entity_type, entity_id, owner_id, expires_at, revoked)`
-   - `embeddings(entity_type, entity_id, user_id, vector)` con pgvector
-   - `ai_usage(user_id, period, tokens_used)` para cuotas
+   - `visibility_defaults(user_id, restaurant, dish, visit)` — los ajustes generales, para resolver `visibility = 'default'`
+   - `tag_rejections(user_id, visit_uuid)` — quitarse de una etiqueta ajena. Fila **tuya** a propósito: `visit_participant` pertenece a quien etiquetó, y su móvil reenvía el conjunto completo en cada sync
+   - `embeddings(entity_type, entity_id, user_id, vector)` con pgvector 🚧
+   - `ai_usage(user_id, period, tokens_used)` para cuotas 🚧
 
 ## Imágenes
 
 - Local: archivo en filesystem + fila `images` con `path` (igual que v1) y ahora `uuid` + `remote_key` (clave en R2, null si no subida).
-- Cloud: solo metadatos en Postgres; el binario vive en R2 (`{user_id}/{image_id}.jpg`, comprimidas al subir).
+- Cloud: solo metadatos en Postgres; el binario vive en R2 con clave `{user_id}/{image_uuid}` (sin extensión; el content-type va en los metadatos del objeto). Las sube el sync de 15 en 15, ver [05](05-api.md).
 
 ## Diagrama (simplificado)
 
@@ -93,10 +107,10 @@ users/profiles ──< friendships
       ├──< restaurants ──< dishes ──< dish_tag >── tags
       │        │              └──< dish_visit >──┐
       │        └──< visits ──────────────────────┘
-      │              ├──< visit_participants >── people (linked_user_id → users)
+      │              ├──< visit_participant >── people (linked_account_uuid → auth.users)
       │              └──< images (también en restaurants y dishes)
       └──< share_links / embeddings / ai_usage
 ```
 
-**Abierto:** ¿precio del plato como entero (centavos) o texto libre con moneda? La v1 usa entero sin moneda; **se pospone** — no bloquea el esquema de sync y tocarlo ahora añadiría churn a los formularios ya migrados. Se retoma con el rediseño de UI (fase 6).
+**Resuelto:** el precio del plato admite decimales. SQLite no obliga el tipo de columna y guardaba `3.5` en una INTEGER sin protestar; Postgres rechazaba la fila entera al sincronizar con `invalid input syntax for type integer: "3.5"`. De las dos formas de reconciliarlo se eligió la que no pierde datos: `numeric(12,2)` en el espejo (migración 0008). La moneda sigue sin modelarse.
 **Abierto:** purga de soft-deletes y de imágenes huérfanas en R2 (job periódico del Worker con cron trigger, fase 4+).

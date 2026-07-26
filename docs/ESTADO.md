@@ -8,19 +8,31 @@ Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está
 
 Leyenda: 🟢 código completo y testeado · 🟡 código escrito, necesita servicio/dispositivo para verificarse · ⬜ pendiente.
 
-| Fase                    | Estado                                                               |
-| ----------------------- | -------------------------------------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–13)                                             |
-| 0 — Puesta a punto      | 🟢 Cerrada salvo verificación en dispositivo                         |
-| 1 — Esquema local       | 🟢 Cerrada salvo verificación en dispositivo                         |
-| 2 — Supabase + Auth     | 🟡 Cliente, AuthContext, pantalla; OAuth necesita tus credenciales   |
-| 3 — Sync                | 🟢 Motor testeado (28 tests) · 🟡 transporte Supabase sin servicio   |
-| 4 — Worker / Share      | 🟡 Worker completo, 15 tests; bindings R2/AI/Supabase sin desplegar  |
-| 5 — Social              | 🟡 Esquema + RLS + feed escritos; UI de amigos/feed pendiente        |
-| 6 — UI                  | ⬜ Necesita import de Claude Design + dispositivo                    |
-| 7 — Asistente IA        | 🟢 Tools de consulta testeadas (16 tests) · 🟡 agente/voz/embeddings |
+| Fase                    | Estado                                                                     |
+| ----------------------- | -------------------------------------------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–14)                                                    |
+| 0 — Puesta a punto      | ✅                                                                          |
+| 1 — Esquema local       | ✅ Migraciones 0007–0010 verificadas contra una base v1 poblada             |
+| 2 — Supabase + Auth     | ✅ Google OAuth funcionando en dispositivo                                  |
+| 3 — Sync                | ✅ Filas, uniones y fotos, verificado en dispositivo                        |
+| 4 — Worker / Share      | ✅ Desplegado; R2 sirviendo fotos                                           |
+| 5 — Social              | ✅ Amigos, feed, perfiles, etiquetado y bandeja «Contigo»                   |
+| 6 — UI                  | ✅ Rediseño completo                                                        |
+| 7 — Asistente IA        | 🟡 Tools de consulta testeadas · agente/voz/embeddings pendientes · **apagado en la 2.0.0** (`lib/features.ts`) |
 
-**Verificación transversal en cada commit:** TypeScript en 0, **101 tests** (25 app-mobile + 52 node-mobile + 24 worker), lint sin errores, bundle Android, expo-doctor 20/20.
+**Verificación transversal en cada commit:** TypeScript en 0, **283 tests** (59 app-mobile + 200 node-mobile + 24 worker) más ~75 aserciones SQL (`npm run db:test`), `npm run lint` sin errores ni warnings, bundle Android.
+
+## Primer despliegue — v2.0.0
+
+Para instalar **encima de la v1.3** en un móvil. La IA queda fuera de esta versión. Procedimiento y checklist en [13](13-despliegue.md).
+
+- `versionCode` 2 (la v1.3 salió con 1; sin subirlo, Android rechaza el APK).
+- Mismo paquete, slug, proyecto EAS y nombre de base de datos → actualización en sitio, conserva diario y fotos.
+- El APK debe ir firmado con la misma clave que la v1.3: `eas credentials -p android`.
+- `EXPO_PUBLIC_*` declaradas en EAS; `app.config.js` rompe la build si faltan.
+- Migraciones de Supabase hasta la **0014** aplicadas.
+
+**Pendiente antes de considerarlo cerrado:** no existe copia de seguridad automática antes de migrar (ver [09](09-migracion-datos.md)). La copia previa es manual y está en el checklist.
 
 ## Auditoría (julio 2026) — 7 bugs reales corregidos
 

@@ -89,3 +89,23 @@ el _layout_ del archivo, que es el contrato de compatibilidad con v1.
 
 - Actualizar SDK **cada release** (saltarse SDKs es lo que convierte el upgrade en un proyecto).
 - Antes de añadir una dependencia nativa: ¿está en el ecosistema Expo? ¿tiene commits recientes? ¿qué pasa si muere? Si la respuesta a la última es "reescribirla es un fin de semana" → escribirla ya.
+
+
+## Los binarios de lightningcss en el lock
+
+`package.json` de la raíz declara en `optionalDependencies`:
+
+```json
+"lightningcss-linux-x64-gnu": "1.27.0",
+"lightningcss-darwin-arm64": "1.27.0"
+```
+
+**No los usa nadie directamente y no se pueden borrar.** NativeWind compila el CSS con lightningcss, que es un módulo nativo: publica un binario por plataforma como `optionalDependencies` y npm **solo apunta en el lock el de la plataforma donde se instaló**. Con el lock generado en Windows, `npm ci` en un builder de Linux nunca instala el binario de Linux, y la build muere con:
+
+```
+Cannot find module '../lightningcss.linux-x64-gnu.node'
+```
+
+Declararlos explícitamente obliga a npm a registrarlos en el lock en cualquier plataforma. `npm install --os=linux --cpu=x64` no vale: elige la plataforma objetivo en vez de acumular.
+
+Hay dos copias de lightningcss en el árbol —1.32.0 desde `@expo/metro-config`, 1.27.0 desde `react-native-css-interop`— y el lock acaba con el binario correcto para cada una. Se dejaron sin unificar a propósito: colapsarlas obliga a subir o bajar de versión un parser de CSS, y ninguna de las dos cosas hacía falta para arreglar esto.
