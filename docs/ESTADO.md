@@ -1,10 +1,10 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-26
+**Última actualización:** 2026-07-26 (tarde)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
-## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026
+## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (tarde)
 
 La v2.0.0 **está instalada y en uso en el móvil del autor**, con datos reales y
 cuenta iniciada. Ya no estamos construyendo: estamos corrigiendo lo que aparece
@@ -12,19 +12,90 @@ al usarla.
 
 ### 👉 Lo siguiente, en orden
 
-1. **Fusionar `fix/sync-como-copia-y-notificaciones`.** Seis commits; `main` no
-   los tiene. Todo verde: TS en 0, 298 tests (274 de app + 24 del worker), 117
-   aserciones SQL, lint limpio.
-2. **Probar el sync con dos dispositivos y sesión iniciada.** Es lo único que
-   valida de verdad el trabajo de esta sesión, y el caso que fallaba en
-   silencio. Empezar por Ajustes → «¿Está todo en la nube?»: si algo no cuadra,
-   esa pantalla dice qué falta y en qué dirección.
-3. **Arreglar `IntentHandler` con el dev client** (abajo, en cómo probar). Sin
-   eso, la app no arranca contra Metro y no se puede verificar nada en pantalla.
-4. **Confirmar que la clave FCM está subida a EAS** y seguir con el push
-   ([docs/15](15-notificaciones-push.md) §2).
+1. **Generar un APK nuevo y probarlo.** `expo-notifications` es un módulo
+   nativo: el APK instalado no sirve, y sin uno nuevo no se puede verificar
+   nada de esta tanda en pantalla. `eas build -p android --profile preview`.
+2. **Desplegar el Worker** (`cd apps/api && npx wrangler deploy`). El envío de
+   push vive en un cron, y un cron sin desplegar no se dispara. Comprobar que
+   el panel de Cloudflare lista **dos** triggers.
+3. **Confirmar que la clave FCM está subida a EAS** (`eas credentials`). Es lo
+   único bloqueado por terceros, y lo único que queda de
+   [docs/15](15-notificaciones-push.md) §1.
+4. **Probar el sync con dos dispositivos y sesión iniciada.** Sigue sin
+   verificarse contra servicios reales. Empezar por Ajustes → «¿Está todo en la
+   nube?»: si algo no cuadra, esa pantalla dice qué falta y en qué dirección.
+5. **Arreglar `IntentHandler` con el dev client** (abajo, en cómo probar). Sin
+   eso, la app no arranca contra Metro.
+6. **Fusionar `claude/sync-multiple-fixes-vzwo8h`.** `main` no tiene nada de
+   las dos últimas sesiones.
 
-Nada de esto está bloqueado por terceros salvo el punto 4.
+### 🟢 Lo cerrado en esta tanda (feedback en dispositivo, ronda 3)
+
+Verde: TypeScript en 0, **295 tests** de app + **36 del worker**, lint sin
+avisos. Las aserciones SQL no se pudieron correr —el entorno no tiene Docker—
+pero **no se tocó ningún fichero SQL**: el push usa la 0016 tal cual.
+
+**El sync de fotos paraba cada quince.** Un tope por pasada hacía que un móvil
+recién estrenado se diera por sincronizado con novecientas fotos aún en el
+servidor, y no volviera solo: había que salir y entrar de la app, una vez por
+tanda. El argumento del tope —que sobreviva lo hecho si se corta la conexión—
+nunca dependió de él: cada foto se confirma en su propia escritura. Ahora sigue
+hasta el final.
+
+**Y decía «Subiendo fotos» mientras las bajaba.** Subida y bajada compartían el
+reporte de progreso y la palabra la escribía la tarjeta de perfil. La dirección
+va ahora en el dato (`PhotoProgress.phase`).
+
+**Las fotos, más rápidas.** Iban de una en una, y una transferencia es casi toda
+espera: el tiempo total era la suma de las latencias. Con seis en vuelo lo marca
+el ancho de banda. Y la bajada hacía un `getInfoAsync` por fila **antes de bajar
+nada** —mil saltos al hilo nativo en cada sync, se pagaran o no—; ahora un solo
+listado del directorio responde por todas.
+
+**Los paneles: el parpadeo era tener tres animaciones.** `SlideInDown` al
+montar, `SlideOutDown` al desmontar y un valor aparte para el arrastre, sin
+hablarse. Al soltar, el gesto devolvía la hoja arriba y _después_ empezaba la
+salida: un salto entero antes de caer. Ahora hay un solo `translateY` y el
+desmontaje espera a que la animación termine. Ver
+[la sección de abajo](#-el-bug-de-los-paneles-era-el-pie-no-pressablescale) para
+el bug anterior, que era otro.
+
+**Y salen desde abajo.** Faltaba `navigationBarTranslucent` junto a
+`statusBarTranslucent`: sin las dos, Android mete la ventana del modal dentro de
+los insets y la hoja no puede tocar el borde. Eso es lo que dejó el panel
+flotando con márgenes y cuatro esquinas redondeadas.
+
+**Textos explicativos que no cabían.** «Sigue tu configuración general, también
+si la c…» cortaba antes de la mitad que aporta algo. Ya no se recortan las
+descripciones del panel de visibilidad, las de «Registrar» ni los ejemplos del
+buscador; «te etiquetó en X» pasa a dos líneas, como ya estaba el feed.
+
+**Tocar a alguien abre su perfil.** No es que no pasara nada: el toque lo
+recogía la tarjeta entera y llevaba a la comida. Nueva `AuthorHeader`, usada en
+el feed, en «Contigo» y en Novedades.
+
+**El push, entero.** Ver [docs/15](15-notificaciones-push.md). Dos cosas que
+habrían fallado en silencio: el `[triggers]` de `wrangler.toml` se disparaba
+contra un Worker sin `scheduled` —`export default app` exporta solo `fetch`—, y
+el nombre de quien etiqueta no se puede embeber desde `notifications` porque no
+hay clave ajena directa a `profiles`.
+
+**`expo-env.d.ts` pasa a `.gitignore`.** Lo genera Expo y no estaba: un clon
+recién hecho no compilaba, lo que enmascaraba el estado real de `tsc` y de
+`lint` (salían errores en ficheros que nadie había tocado).
+
+### Sigue sin verificarse en un dispositivo
+
+Nada de esta tanda se ha visto en pantalla: el entorno no tiene emulador. En
+concreto, lo que hay que mirar primero con el APK nuevo:
+
+- **El gesto de los paneles**, que ahora vive en la cabecera entera y no en la
+  muesca. La X tiene que seguir cerrando con un toque.
+- **Que la hoja toque el borde de abajo** y el contenido no se meta bajo la
+  barra de navegación.
+- **Tocar el nombre en una tarjeta del feed**: `Pressable` dentro de
+  `PressableScale` depende de que el más profundo se quede con el gesto.
+- **El sync de fotos completo** en un móvil limpio, con el recuento avanzando.
 
 ### ✅ El bug de los paneles: era el pie, no `PressableScale`
 

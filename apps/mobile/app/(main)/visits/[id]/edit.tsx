@@ -25,6 +25,7 @@ import { getTodayLocalDateString } from '@/lib/helpers/date';
 import { reportError } from '@/lib/helpers/report-error';
 import { deleteImages, uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
+import { usePushPrompt } from '@/services/push/usePushPrompt';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -52,6 +53,7 @@ export default function VisitEditScreen() {
   const [participants, setParticipants] = useState<PersonTag[]>([]);
 
   const drizzleDb = useDatabase();
+  const askAboutPush = usePushPrompt();
   const visit = useVisitById(Number(id));
 
   const restaurantId = watch('restaurantId');
@@ -115,6 +117,12 @@ export default function VisitEditScreen() {
       await deleteImages(drizzleDb, removedImages);
 
       notify('Cambios guardados');
+
+      // Igual que al crear: etiquetar es lo que da sentido a la pregunta.
+      // Editar cuenta porque hay quien añade a la gente después, cuando ya
+      // se acuerda de quién estaba.
+      await askAboutPush(participants);
+
       router.replace({
         pathname: '/visits/[id]/view',
         params: { id },

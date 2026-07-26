@@ -133,6 +133,16 @@ export default {
         cameraPermission: 'RestaurantApp usa la cámara para fotografiar tus platos.',
       },
     ],
+    // Módulo nativo: el APK instalado no vale, hay que generar uno nuevo. No es
+    // una recarga de JavaScript. El icono y el color son los del sistema si no
+    // se dicen, y el del sistema es un cuadrado blanco.
+    [
+      'expo-notifications',
+      {
+        icon: './assets/burger-logo.png',
+        color: '#C2603C',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

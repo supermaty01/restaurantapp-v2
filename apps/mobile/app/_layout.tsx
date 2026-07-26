@@ -17,6 +17,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { IntentHandler } from '@/components/IntentHandler';
+import { PushRunner } from '@/components/PushRunner';
 import { SyncRunner } from '@/components/SyncRunner';
 import { CrashScreen } from '@/components/ui/CrashScreen';
 import { DialogProvider } from '@/components/ui/Dialog';
@@ -139,6 +140,7 @@ export default function RootLayout() {
                           <NewDishProvider>
                             <IntentHandler />
                             <SyncRunner />
+                            <PushRunner />
                             <Slot />
                           </NewDishProvider>
                         </NewRestaurantProvider>

@@ -29,6 +29,15 @@ const ENTITIES: ShareableEntity[] = ['visit', 'restaurant', 'dish'];
 export function PrivacyCard() {
   const sharing = useSharingAvailable();
   const [editing, setEditing] = useState<ShareableEntity | null>(null);
+  /*
+   * Qué panel enseñar mientras se va.
+   *
+   * `editing` se pone a null al cerrar, y si el panel dependiera solo de eso
+   * desaparecería de golpe: desmontado no hay nada que animar. Recordando la
+   * última entidad, la hoja sigue teniendo qué pintar durante las dos décimas
+   * que tarda en bajar.
+   */
+  const [shown, setShown] = useState<ShareableEntity>('visit');
 
   // Después de los hooks: React los exige en el mismo orden en cada render.
   // Se defiende sola además de que Ajustes esconda la sección, para que un
@@ -40,11 +49,17 @@ export function PrivacyCard() {
       {ENTITIES.map((entity, index) => (
         <View key={entity}>
           {index > 0 ? <Divider /> : null}
-          <EntityRow entity={entity} onPress={() => setEditing(entity)} />
+          <EntityRow
+            entity={entity}
+            onPress={() => {
+              setShown(entity);
+              setEditing(entity);
+            }}
+          />
         </View>
       ))}
 
-      {editing ? <EntitySheet entity={editing} onClose={() => setEditing(null)} /> : null}
+      <EntitySheet entity={shown} visible={editing !== null} onClose={() => setEditing(null)} />
     </View>
   );
 }
@@ -75,12 +90,20 @@ function EntityRow({ entity, onPress }: { entity: ShareableEntity; onPress: () =
   );
 }
 
-function EntitySheet({ entity, onClose }: { entity: ShareableEntity; onClose: () => void }) {
+function EntitySheet({
+  entity,
+  visible,
+  onClose,
+}: {
+  entity: ShareableEntity;
+  visible: boolean;
+  onClose: () => void;
+}) {
   const { value, update } = useDefaultVisibility(entity);
 
   return (
     <Sheet
-      visible
+      visible={visible}
       onClose={onClose}
       title={ENTITY_LABEL[entity]}
       subtitle="Quién los ve, salvo que digas otra cosa en uno concreto"

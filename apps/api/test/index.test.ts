@@ -1,7 +1,7 @@
 import { sign } from 'hono/jwt';
 import { describe, expect, it } from 'vitest';
 
-import app from '../src/index';
+import { app } from '../src/index';
 
 import type { Env } from '../src/types';
 
