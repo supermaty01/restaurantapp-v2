@@ -14,6 +14,7 @@ import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
 import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
+import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VisibilityControl } from '@/features/privacy/VisibilityControl';
 import { setVisibility } from '@/features/privacy/visibilityRepository';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
@@ -27,6 +28,8 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishEditScreen() {
+  // Sin cuenta no hay a quién mostrárselo: la sección entera sobra.
+  const sharing = useSharingAvailable();
   const { notify } = useToast();
   const { id } = useGlobalSearchParams<{ id: string }>();
   const { colors } = useTheme();
@@ -157,19 +160,21 @@ export default function DishEditScreen() {
         <TagField selected={selectedTags} onChange={setSelectedTags} />
       </FormSection>
 
-      <FormSection title="Quién lo ve">
-        {/* The same control as the detail screen, applied on the spot rather
-            than on Save: it is one decision with nothing to validate, and
-            making it wait for the form's Save would be the only field here
-            that behaves differently from the badge you just tapped. */}
-        {dish ? (
-          <VisibilityControl
-            value={dish.visibility}
-            entity="dish"
-            onChange={(next) => setVisibility(drizzleDb, 'dish', dish.id, next)}
-          />
-        ) : null}
-      </FormSection>
+      {sharing ? (
+        <FormSection title="Quién lo ve">
+          {/* The same control as the detail screen, applied on the spot rather
+              than on Save: it is one decision with nothing to validate, and
+              making it wait for the form's Save would be the only field here
+              that behaves differently from the badge you just tapped. */}
+          {dish ? (
+            <VisibilityControl
+              value={dish.visibility}
+              entity="dish"
+              onChange={(next) => setVisibility(drizzleDb, 'dish', dish.id, next)}
+            />
+          ) : null}
+        </FormSection>
+      ) : null}
 
       <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader

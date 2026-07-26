@@ -9,6 +9,7 @@ import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 import { useDefaultVisibility } from './useDefaultVisibility';
+import { useSharingAvailable } from './useSharingAvailable';
 import { ENTITY_LABEL, VISIBILITY_META, type ShareableEntity } from './visibility';
 import { VisibilityField } from './VisibilityField';
 
@@ -26,7 +27,13 @@ const ENTITIES: ShareableEntity[] = ['visit', 'restaurant', 'dish'];
  * afterwards.
  */
 export function PrivacyCard() {
+  const sharing = useSharingAvailable();
   const [editing, setEditing] = useState<ShareableEntity | null>(null);
+
+  // Después de los hooks: React los exige en el mismo orden en cada render.
+  // Se defiende sola además de que Ajustes esconda la sección, para que un
+  // sitio de uso nuevo no pueda saltarse la regla.
+  if (!sharing) return null;
 
   return (
     <View className="rounded-xl border border-line bg-surface">

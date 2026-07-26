@@ -135,9 +135,7 @@ export default function SearchScreen() {
         )}
         contentContainerClassName="px-5 pt-4 pb-8 gap-2.5"
         keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          term.length < 2 ? <SearchIntro /> : <NoResults term={query.trim()} />
-        }
+        ListEmptyComponent={term.length < 2 ? <SearchIntro /> : <NoResults term={query.trim()} />}
       />
     </Screen>
   );

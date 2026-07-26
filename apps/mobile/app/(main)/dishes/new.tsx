@@ -14,6 +14,7 @@ import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
 import { dishSchema } from '@/features/dishes/schemas/dish-schema';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
+import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { NEW_ENTRY_VISIBILITY, type Visibility } from '@/features/privacy/visibility';
 import { VisibilityField } from '@/features/privacy/VisibilityField';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
@@ -26,6 +27,8 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function DishCreateScreen() {
+  // Sin cuenta no hay a quién mostrárselo: la sección entera sobra.
+  const sharing = useSharingAvailable();
   // La entrada nace difiriendo al ajuste, no copiándolo: si el ajuste
   // cambia mañana, esta entrada cambia con él. Solo tocar el control aquí
   // la fija.
@@ -143,13 +146,15 @@ export default function DishCreateScreen() {
         <TagField selected={selectedTags} onChange={setSelectedTags} />
       </FormSection>
 
-      <FormSection title="Quién ve este plato">
-        <VisibilityField
-          value={visibility}
-          onChange={setVisibility}
-          resolvesTo={defaultVisibility}
-        />
-      </FormSection>
+      {sharing ? (
+        <FormSection title="Quién ve este plato">
+          <VisibilityField
+            value={visibility}
+            onChange={setVisibility}
+            resolvesTo={defaultVisibility}
+          />
+        </FormSection>
+      ) : null}
 
       <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />

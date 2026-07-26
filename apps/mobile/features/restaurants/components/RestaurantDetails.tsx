@@ -3,6 +3,7 @@ import { ScrollView, View } from 'react-native';
 import MapLocationPicker from '@/components/MapLocationPicker';
 import { DetailField } from '@/components/ui/DetailScaffold';
 import { Txt } from '@/components/ui/Txt';
+import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VisibilityControl } from '@/features/privacy/VisibilityControl';
 import { setVisibility } from '@/features/privacy/visibilityRepository';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
@@ -16,6 +17,7 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
  * this panel can show.
  */
 export default function RestaurantDetails({ restaurant }: { restaurant: RestaurantDetailsDTO }) {
+  const sharing = useSharingAvailable();
   const db = useDatabase();
   const hasLocation = Boolean(restaurant.latitude && restaurant.longitude);
 
@@ -29,13 +31,15 @@ export default function RestaurantDetails({ restaurant }: { restaurant: Restaura
       {/* Where sharing is decided. On the detail screen rather than only in
           the form, because you find out a meal was worth sharing by having
           eaten it — after the entry already exists. */}
-      <DetailField label="Quién lo ve">
-        <VisibilityControl
-          value={restaurant.visibility}
-          entity="restaurant"
-          onChange={(next) => setVisibility(db, 'restaurant', restaurant.id, next)}
-        />
-      </DetailField>
+      {sharing ? (
+        <DetailField label="Quién lo ve">
+          <VisibilityControl
+            value={restaurant.visibility}
+            entity="restaurant"
+            onChange={(next) => setVisibility(db, 'restaurant', restaurant.id, next)}
+          />
+        </DetailField>
+      ) : null}
 
       <DetailField label="Comentarios" value={restaurant.comments} empty="Sin comentarios" />
 

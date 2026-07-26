@@ -6,6 +6,7 @@ import { DBVersionContext } from '@/app/_layout';
 import { FormSection } from '@/components/ui/FormScaffold';
 import { Screen } from '@/components/ui/Screen';
 import { PrivacyCard } from '@/features/privacy/PrivacyCard';
+import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
@@ -15,6 +16,8 @@ import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
 import { reportError } from '@/lib/helpers/report-error';
 
 export default function SettingsScreen() {
+  // Sin cuenta todo es privado y no hay nada que ajustar.
+  const sharing = useSharingAvailable();
   const bumpDb = useContext(DBVersionContext);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const {
@@ -148,12 +151,14 @@ export default function SettingsScreen() {
         />
       </FormSection>
 
-      <FormSection
-        title="Privacidad"
-        hint="El punto de partida de cada entrada; siempre puedes cambiarla una a una"
-      >
-        <PrivacyCard />
-      </FormSection>
+      {sharing ? (
+        <FormSection
+          title="Privacidad"
+          hint="El punto de partida de cada entrada; siempre puedes cambiarla una a una"
+        >
+          <PrivacyCard />
+        </FormSection>
+      ) : null}
 
       <FormSection title="Apariencia">
         <ThemeCard onPress={handleThemePress} />

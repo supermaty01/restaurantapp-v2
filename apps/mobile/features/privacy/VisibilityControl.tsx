@@ -5,6 +5,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
 
 import { useDefaultVisibility } from './useDefaultVisibility';
+import { useSharingAvailable } from './useSharingAvailable';
 import { ENTITY_LABEL, type ShareableEntity, type Visibility } from './visibility';
 import { VisibilityBadge, VisibilityField } from './VisibilityField';
 
@@ -33,6 +34,11 @@ export function VisibilityControl({
 }) {
   const [open, setOpen] = useState(false);
   const { value: fallsBackTo } = useDefaultVisibility(entity);
+  const sharing = useSharingAvailable();
+
+  // Se defiende solo además de que las pantallas lo escondan: así un sitio de
+  // uso nuevo no puede olvidarse de la regla.
+  if (!sharing) return null;
 
   return (
     <>

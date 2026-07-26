@@ -13,6 +13,7 @@ import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { PeopleTagInput } from '@/features/people/components/PeopleTagInput';
 import type { PersonTag } from '@/features/people/repositories/peopleRepository';
 import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
+import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { NEW_ENTRY_VISIBILITY, type Visibility } from '@/features/privacy/visibility';
 import { VisibilityField } from '@/features/privacy/VisibilityField';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
@@ -27,6 +28,8 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import type { SubmitHandler } from 'react-hook-form';
 
 export default function VisitCreateScreen() {
+  // Sin cuenta no hay a quién mostrárselo: la sección entera sobra.
+  const sharing = useSharingAvailable();
   // La entrada nace difiriendo al ajuste, no copiándolo: si el ajuste
   // cambia mañana, esta entrada cambia con él. Solo tocar el control aquí
   // la fija.
@@ -134,13 +137,15 @@ export default function VisitCreateScreen() {
         />
       </FormSection>
 
-      <FormSection title="Quién ve esta visita">
-        <VisibilityField
-          value={visibility}
-          onChange={setVisibility}
-          resolvesTo={defaultVisibility}
-        />
-      </FormSection>
+      {sharing ? (
+        <FormSection title="Quién ve esta visita">
+          <VisibilityField
+            value={visibility}
+            onChange={setVisibility}
+            resolvesTo={defaultVisibility}
+          />
+        </FormSection>
+      ) : null}
 
       <FormSection title="Fotos" hint="Opcional">
         <ImagesUploader images={selectedImages} onChangeImages={setSelectedImages} />
