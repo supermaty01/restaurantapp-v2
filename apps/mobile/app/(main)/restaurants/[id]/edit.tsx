@@ -172,15 +172,6 @@ export default function RestaurantEditScreen() {
           onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
         />
       </FormSection>
-
-      <FormSection title="Fotos" hint="Opcional">
-        <ImagesUploader
-          isEdit
-          images={selectedImages}
-          onChangeImages={setSelectedImages}
-          onRemoveExistingImage={(imageId) => setRemovedImages((prev) => [...prev, imageId])}
-        />
-      </FormSection>
     </FormScaffold>
   );
 }

@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   FadeIn,
@@ -53,6 +54,31 @@ export function Sheet({
 }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
+
+  /*
+   * Quién cede espacio cuando no cabe todo.
+   *
+   * Antes el tope vivía en la tarjeta y el cuerpo llevaba `flexShrink: 1`, con
+   * la idea de que encogiera él. No lo hacía: el cuerpo suele ser un
+   * `ScrollView`, cuya altura la fija su contenido, así que quien acababa
+   * cediendo era el pie. Medido en el panel de filtros: la tarjeta cortaba en
+   * y=2211 y los botones "Limpiar"/"Aplicar" quedaban de 51px en vez de 102 —
+   * partidos por la mitad y, con menos sitio o una fuente más grande, reducidos
+   * a nada. Ese es el motivo real de que los paneles parecieran no responder.
+   *
+   * Ahora el tope lo lleva el cuerpo, que es lo único que sabe desplazarse. La
+   * cabecera y el pie se miden y se restan, así que su altura está garantizada
+   * y no hay reparto que negociar.
+   */
+  const [chromeHeight, setChromeHeight] = useState(0);
+  const [footerHeight, setFooterHeight] = useState(0);
+
+  const bodyMaxHeight = Math.max(
+    // Un suelo para que el cuerpo no desaparezca antes de la primera medida.
+    160,
+    windowHeight * maxHeightRatio - chromeHeight - footerHeight,
+  );
 
   // Cuánto se ha arrastrado la hoja hacia abajo.
   const dragY = useSharedValue(0);
@@ -117,7 +143,6 @@ export function Sheet({
             dragStyle,
             {
               backgroundColor: colors.surface,
-              maxHeight: `${maxHeightRatio * 100}%`,
               paddingBottom: 14,
               marginHorizontal: 10,
               marginBottom: Math.max(insets.bottom, 10),
@@ -129,46 +154,48 @@ export function Sheet({
           // deliberately reads better than one that almost reaches the edge.
           className="rounded-[26px]"
         >
-          {/* La muesca no es decoración: es la zona de agarre.
-              El gesto vive solo aquí, no en toda la hoja, porque dentro hay
-              listas y campos que scrollean — un pan sobre todo el panel les
-              robaría el gesto y haría imposible desplazar el contenido. */}
-          <GestureDetector gesture={dragToClose}>
-            <View className="items-center pb-1 pt-2.5" style={{ paddingHorizontal: 60 }}>
-              <View className="h-1 w-10 rounded-pill bg-line-strong" />
-            </View>
-          </GestureDetector>
-
-          {title ? (
-            <View className="flex-row items-start justify-between gap-3 px-5 pb-3 pt-2">
-              <View className="min-w-0 flex-1">
-                <Txt variant="title">{title}</Txt>
-                {subtitle ? (
-                  <Txt variant="caption" tone="subtle" className="mt-0.5">
-                    {subtitle}
-                  </Txt>
-                ) : null}
+          <View onLayout={(event) => setChromeHeight(event.nativeEvent.layout.height)}>
+            {/* La muesca no es decoración: es la zona de agarre.
+                El gesto vive solo aquí, no en toda la hoja, porque dentro hay
+                listas y campos que scrollean — un pan sobre todo el panel les
+                robaría el gesto y haría imposible desplazar el contenido. */}
+            <GestureDetector gesture={dragToClose}>
+              <View className="items-center pb-1 pt-2.5" style={{ paddingHorizontal: 60 }}>
+                <View className="h-1 w-10 rounded-pill bg-line-strong" />
               </View>
-              <Pressable
-                onPress={onClose}
-                accessibilityRole="button"
-                accessibilityLabel="Cerrar"
-                hitSlop={10}
-                className="h-8 w-8 items-center justify-center rounded-pill bg-sunken"
-              >
-                <Ionicons name="close" size={17} color={colors.inkMuted} />
-              </Pressable>
-            </View>
-          ) : null}
+            </GestureDetector>
 
-          {/* flexShrink: el cuerpo cede espacio antes que el pie. Sin esto, un
-              contenido más alto que `maxHeightRatio` empujaba los botones fuera
-              del panel: en el de filtros, "Limpiar" y "Aplicar" quedaban
-              literalmente por debajo del borde. */}
-          <View style={{ flexShrink: 1 }}>{children}</View>
+            {title ? (
+              <View className="flex-row items-start justify-between gap-3 px-5 pb-3 pt-2">
+                <View className="min-w-0 flex-1">
+                  <Txt variant="title">{title}</Txt>
+                  {subtitle ? (
+                    <Txt variant="caption" tone="subtle" className="mt-0.5">
+                      {subtitle}
+                    </Txt>
+                  ) : null}
+                </View>
+                <Pressable
+                  onPress={onClose}
+                  accessibilityRole="button"
+                  accessibilityLabel="Cerrar"
+                  hitSlop={10}
+                  className="h-8 w-8 items-center justify-center rounded-pill bg-sunken"
+                >
+                  <Ionicons name="close" size={17} color={colors.inkMuted} />
+                </Pressable>
+              </View>
+            ) : null}
+          </View>
+
+          {/* El único que cede: lleva el tope y sabe desplazarse. */}
+          <View style={{ maxHeight: bodyMaxHeight }}>{children}</View>
 
           {footer ? (
-            <View className="border-t border-line px-5 pt-3" style={{ flexShrink: 0 }}>
+            <View
+              className="border-t border-line px-5 pt-3"
+              onLayout={(event) => setFooterHeight(event.nativeEvent.layout.height)}
+            >
               {footer}
             </View>
           ) : null}

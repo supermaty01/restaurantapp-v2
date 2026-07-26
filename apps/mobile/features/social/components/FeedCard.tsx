@@ -60,7 +60,11 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
       <View className="flex-row items-center gap-2.5">
         <Avatar name={author} uri={entry.avatarUrl} size={34} />
         <View className="flex-1">
-          <Text className="text-[13px] text-ink-muted" numberOfLines={1}>
+          {/* Dos líneas: es la frase que dice de qué va la tarjeta, y en una
+              sola se cortaba en cuanto el nombre y el sitio pasaban de cortos
+              — "Mateo Álvarez estuvo en L'Atelier Artisan Crê…" deja fuera
+              justo el dato que se venía a leer. */}
+          <Text className="text-[13px] leading-[18px] text-ink-muted" numberOfLines={2}>
             <Text className="font-bold text-ink">{author}</Text> {verb[entry.kind]}{' '}
             <Text className="font-semi text-ink">{entry.title}</Text>
           </Text>

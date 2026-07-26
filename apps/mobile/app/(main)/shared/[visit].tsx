@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useGlobalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, View } from 'react-native';
 
+import { ImageLightbox, type LightboxImage } from '@/components/media/ImageLightbox';
 import RatingStars from '@/components/RatingStars';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
@@ -37,6 +39,7 @@ export default function SharedVisitScreen() {
   const { colors } = useTheme();
   const router = useRouter();
   const { ask, tell } = useDialog();
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const { data, loading, error } = useAsyncResource<SharedVisit | null>(
     () => fetchSharedVisit(String(visitUuid)),
@@ -72,6 +75,35 @@ export default function SharedVisitScreen() {
   const author = data.author.displayName ?? data.author.username;
   const cover = remoteImageUri(data.author.userId, data.images[0] ?? null);
   const taggedMe = data.people.some((person) => person.accountUuid === session?.user.id);
+
+  /*
+   * Un solo carrete para toda la pantalla: primero las fotos de la visita y
+   * después las de los platos.
+   *
+   * Estar compartida no cambia lo que es una foto. Aquí se veían recortadas a
+   * 4:3 o a un cuadrado de 150 y no había forma de verlas enteras, mientras que
+   * en tu propio diario sí — la misma foto se comportaba distinto según quién la
+   * hubiera hecho. Al ir todas en la misma lista se puede además deslizar entre
+   * ellas en vez de salir y volver a entrar.
+   */
+  const photos: LightboxImage[] = [
+    ...data.images.map((key) => ({ key, uri: remoteImageUri(data.author.userId, key) })),
+    ...data.dishes.map((dish) => ({
+      key: `${dish.uuid}-photo`,
+      uri: remoteImageUri(data.author.userId, dish.imageKey),
+    })),
+  ]
+    .filter((photo): photo is { key: string; uri: string } => Boolean(photo.uri))
+    .map((photo) => ({ id: photo.key, uri: photo.uri }));
+
+  /** Dónde cae una foto en el carrete, por su clave. */
+  const photoIndex = (key: string | null) =>
+    key === null ? -1 : photos.findIndex((photo) => photo.id === key);
+
+  const openPhoto = (key: string | null) => {
+    const index = photoIndex(key);
+    if (index >= 0) setLightboxIndex(index);
+  };
 
   async function removeMe() {
     const confirmed = await ask({
@@ -118,13 +150,19 @@ export default function SharedVisitScreen() {
         </View>
 
         {cover ? (
-          <Image
-            source={cover}
-            style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={150}
-          />
+          <Pressable
+            accessibilityRole="imagebutton"
+            accessibilityLabel="Ver la foto completa"
+            onPress={() => openPhoto(data.images[0] ?? null)}
+          >
+            <Image
+              source={cover}
+              style={{ width: '100%', aspectRatio: 4 / 3, borderRadius: 16 }}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+              transition={150}
+            />
+          </Pressable>
         ) : (
           <Thumbnail
             name={data.restaurant?.name ?? 'Una visita'}
@@ -220,7 +258,23 @@ export default function SharedVisitScreen() {
                   key={dish.uuid}
                   className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5"
                 >
-                  <Thumbnail name={dish.name} uri={photo} size={44} radius={10} icon="fast-food" />
+                  {photo ? (
+                    <Pressable
+                      accessibilityRole="imagebutton"
+                      accessibilityLabel={`Ver la foto de ${dish.name}`}
+                      onPress={() => openPhoto(`${dish.uuid}-photo`)}
+                    >
+                      <Thumbnail
+                        name={dish.name}
+                        uri={photo}
+                        size={44}
+                        radius={10}
+                        icon="fast-food"
+                      />
+                    </Pressable>
+                  ) : (
+                    <Thumbnail name={dish.name} size={44} radius={10} icon="fast-food" />
+                  )}
                   <View className="flex-1 gap-0.5">
                     <Txt variant="body" weight="semi" serif={false} numberOfLines={1}>
                       {dish.name}
@@ -248,17 +302,30 @@ export default function SharedVisitScreen() {
             contentContainerStyle={{ gap: 8, paddingRight: 8 }}
           >
             {data.images.slice(1).map((key) => (
-              <Image
+              <Pressable
                 key={key}
-                source={remoteImageUri(data.author.userId, key) ?? null}
-                style={{ width: 150, height: 150, borderRadius: 12 }}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-              />
+                accessibilityRole="imagebutton"
+                accessibilityLabel="Ver la foto completa"
+                onPress={() => openPhoto(key)}
+              >
+                <Image
+                  source={remoteImageUri(data.author.userId, key) ?? null}
+                  style={{ width: 150, height: 150, borderRadius: 12 }}
+                  contentFit="cover"
+                  cachePolicy="memory-disk"
+                />
+              </Pressable>
             ))}
           </ScrollView>
         ) : null}
       </ScrollView>
+
+      <ImageLightbox
+        images={photos}
+        initialIndex={lightboxIndex ?? 0}
+        visible={lightboxIndex !== null}
+        onClose={() => setLightboxIndex(null)}
+      />
     </Screen>
   );
 }
