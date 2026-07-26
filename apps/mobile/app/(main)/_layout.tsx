@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { PeekProvider } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { ASSISTANT_ENABLED } from '@/lib/features';
 
 /**
  * Routing is fully file-based: from SDK 56 expo-router no longer allows
@@ -73,7 +74,11 @@ export default function MainLayout() {
           <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
           <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />
           <Stack.Screen name="map" options={{ title: 'Mapa' }} />
-          <Stack.Screen name="assistant" options={{ title: 'Asistente' }} />
+          {/* Sin pantalla registrada no hay a dónde navegar: una función
+              apagada no debe dejar una puerta a la que llegue un enlace viejo. */}
+          {ASSISTANT_ENABLED ? (
+            <Stack.Screen name="assistant" options={{ title: 'Asistente' }} />
+          ) : null}
 
           <Stack.Screen name="restaurants/new" options={{ title: 'Nuevo restaurante' }} />
           <Stack.Screen name="restaurants/[id]/view" options={{ title: 'Restaurante' }} />

@@ -139,3 +139,76 @@ describe('migration 0007 — sync columns', () => {
     expect(names).toEqual(expect.arrayContaining(['people', 'visit_participant', 'change_log']));
   });
 });
+
+/**
+ * La actualización que de verdad va a ocurrir: v1.3 instalada, encima la v2.
+ *
+ * En el móvil, drizzle encuentra 0000–0006 ya aplicadas (mismo journal, mismos
+ * ficheros byte a byte) y corre solo 0007–0010. Esa es la única secuencia que
+ * importa, y hasta aquí no estaba cubierta como tal: 0008 reconstruye la tabla
+ * de visitas entera y 0010 reescribe una columna de todas las filas. Las dos
+ * cosas que más fácil pierden datos.
+ */
+describe('actualización v1.3 → v2', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+    seedV1(db);
+  });
+
+  afterEach(() => db.close());
+
+  /** Lo que hará el móvil: saltarse lo ya aplicado y correr el resto. */
+  const upgrade = () => applyMigrations(db, { from: 7 });
+
+  it('aplica 0007–0010 sin errores sobre una base v1 poblada', () => {
+    expect(upgrade).not.toThrow();
+  });
+
+  it('no pierde ni una fila al reconstruir la tabla de visitas (0008)', () => {
+    const before = db.prepare('SELECT id, visited_at, restaurant_id FROM visits ORDER BY id').all();
+    upgrade();
+    const after = db.prepare('SELECT id, visited_at, restaurant_id FROM visits ORDER BY id').all();
+    expect(after).toEqual(before);
+  });
+
+  it('conserva las uniones, que no las protege ninguna clave', () => {
+    // Una reconstrucción de tabla con foreign_keys=ON puede llevarse por
+    // delante las filas que apuntaban a la tabla vieja.
+    upgrade();
+    expect(db.prepare('SELECT count(*) n FROM dish_visit').get()).toEqual({ n: 2 });
+    expect(db.prepare('SELECT count(*) n FROM restaurant_tag').get()).toEqual({ n: 1 });
+    expect(db.prepare('SELECT count(*) n FROM dish_tag').get()).toEqual({ n: 1 });
+  });
+
+  it('deja todo el diario de la v1 siguiendo al ajuste general (0010)', () => {
+    upgrade();
+    // Lo que el usuario reportó: un diario entero invisible para sus amigos
+    // porque en la v1 no existía el campo y quedó clavado en privado.
+    for (const table of ['restaurants', 'dishes', 'visits']) {
+      const rows = db
+        .prepare(`SELECT visibility, count(*) n FROM ${table} GROUP BY visibility`)
+        .all() as { visibility: string; n: number }[];
+      expect(rows).toEqual([{ visibility: 'default', n: expect.any(Number) }]);
+    }
+  });
+
+  it('da a las personas las columnas de cuenta, vacías (0009)', () => {
+    upgrade();
+    const cols = (db.prepare('PRAGMA table_info(people)').all() as { name: string }[]).map(
+      (c) => c.name,
+    );
+    expect(cols).toEqual(expect.arrayContaining(['linked_account_uuid', 'username']));
+  });
+
+  it('es idempotente: correrla dos veces no rompe nada', () => {
+    // Un arranque interrumpido a mitad de migración deja el registro sin
+    // escribir, y la siguiente apertura vuelve a intentarlo.
+    upgrade();
+    const rows = db.prepare('SELECT count(*) n FROM restaurants').get();
+    expect(() => applyMigrations(db, { from: 10 })).not.toThrow();
+    expect(db.prepare('SELECT count(*) n FROM restaurants').get()).toEqual(rows);
+  });
+});

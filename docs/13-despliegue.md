@@ -218,20 +218,84 @@ No hay API keys de terceros que gestionar: el binding `AI` autentica solo. Esta 
 ## 6. Builds de la app
 
 ```bash
-eas build -p android --profile preview      # APK de prueba
-eas build -p android --profile production
+eas build -p android --profile preview      # APK, se instala directo en el móvil
+eas build -p android --profile production   # AAB, para la Play Store
 eas submit -p android --profile production
 ```
 
-Los secrets de build se gestionan con `eas secret:push` (no `.env` en el repo). Deep links: `app.config.js` declara el scheme y los App Links/Universal Links del dominio de share (fase 4).
+`eas.json` fija `appVersionSource: "local"`: el `versionCode` sale de `app.config.js` y no lo gestiona EAS. Es a propósito — de ese número depende que una actualización se instale, y quiero verlo en el diff, no en un panel.
 
-## 7. Checklist de despliegue completo
+### Variables de entorno
 
-- [ ] App arranca en modo local sin ninguna variable configurada
-- [ ] Migraciones Supabase aplicadas y **RLS activo en todas las tablas**
-- [ ] Providers de auth configurados con sus redirects
-- [ ] Worker desplegado; secrets cargados; `GET /health` responde
-- [ ] Bucket R2 creado; subida y lectura de imagen verificadas
-- [ ] AI Gateway creado, con rate limiting y caché
-- [ ] Build de la app apuntando a las URLs de producción
-- [ ] Prueba end-to-end: crear cuenta → sync entre dos dispositivos → compartir link → abrir link → asistente responde una pregunta
+Las `EXPO_PUBLIC_*` **se incrustan en el bundle al compilar**, no se leen al arrancar. Y `.env` está en `.gitignore`, así que en EAS no existe salvo que se declaren aparte:
+
+```bash
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_URL      --value "https://…"
+eas env:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "sb_publishable_…"
+eas env:create --scope project --name EXPO_PUBLIC_API_URL           --value "https://…workers.dev"
+eas env:create --scope project --name EXPO_PUBLIC_GOOGLE_PLACES_API_KEY --value "…"
+eas env:create --scope project --name GOOGLE_MAPS_API_KEY           --value "…"
+```
+
+Si falta alguna de las tres obligatorias, `app.config.js` **rompe la build** en vez de producir un APK que se instala y no llega a ningún sitio. En local solo avisa, porque el modo puramente local es válido.
+
+Deep links: `app.config.js` declara el scheme y los App Links del dominio de share.
+
+## 6.b Actualizar desde la v1.3 en un móvil
+
+Esto es una **actualización en sitio**, no una instalación nueva. La v2 mantiene a propósito:
+
+| | v1.3 | v2.0 |
+|---|---|---|
+| `package` / `bundleIdentifier` | `com.supermaty01.restaurantapp` | igual |
+| `slug` y proyecto EAS | `restaurantapp` / `acb4a328…` | igual |
+| Base de datos | `restaurantapp` | igual |
+| `versionCode` | 1 | **2** |
+
+Las tres primeras hacen que Android trate el APK como la misma app y **conserve la base de datos y las fotos**. La cuarta es la que permite instalarlo: con un `versionCode` igual o menor, Android rechaza el APK con un «App not installed» que no explica el motivo.
+
+**Firma.** El APK tiene que ir firmado con la misma clave que la v1.3, o Android lo rechaza aunque el `versionCode` suba. Al usar el mismo proyecto EAS, `eas build` reutiliza las credenciales guardadas; compruébalo con `eas credentials -p android` antes de compilar.
+
+**Qué pasa al abrir por primera vez.** Drizzle encuentra las migraciones `0000–0006` ya aplicadas (mismos ficheros, mismo journal) y corre solo `0007–0010`:
+
+- `0007` añade uuid, marcas de tiempo y visibilidad a todas las filas existentes.
+- `0008` **reconstruye la tabla de visitas** para hacer la fecha opcional. Es el paso que más fácil pierde datos.
+- `0009` añade a las personas las columnas de cuenta.
+- `0010` pasa todo el diario de la v1 a `visibility = 'default'`.
+
+La cadena está cubierta por tests contra una base v1 poblada (`services/db/__tests__/migrations.node.test.ts`, bloque «actualización v1.3 → v2»), incluido que no se pierda ninguna fila ni ninguna unión. Verificado rompiendo el `INSERT` de `0008` a mano: fallan cuatro tests.
+
+**Antes de instalar, haz una copia.** Ajustes → copia de seguridad, y sácala del teléfono. Los tests cubren el camino, pero es tu diario y esta es la primera vez que esas migraciones tocan datos reales fuera de un test.
+
+**La primera sincronización es larga.** Sube el diario entero y luego las fotos de 15 en 15, una tanda por pasada. Déjala en primer plano un rato; el progreso queda guardado, así que interrumpirla no pierde nada.
+
+## 7. Checklist del primer despliegue (v2.0, sin IA)
+
+Servicios:
+
+- [ ] Migraciones de Supabase `0001–0014` aplicadas; `npm run db:test` en verde
+- [ ] RLS activo en todas las tablas
+- [ ] Google OAuth configurado con su redirect
+- [ ] Worker desplegado; `GET /health` responde `{"ok":true}`
+- [ ] Secretos del Worker cargados (`SUPABASE_URL` es el que hace falta para verificar los JWT; sin él todo `PUT /images` devuelve 401)
+- [ ] Bucket R2 creado y enlazado como `IMAGES`
+
+App:
+
+- [ ] Variables `EXPO_PUBLIC_*` declaradas en EAS
+- [ ] `versionCode` mayor que el instalado (2 para actualizar desde la v1.3)
+- [ ] Credenciales de firma son las mismas que la v1.3 (`eas credentials -p android`)
+- [ ] `ASSISTANT_ENABLED = false` en `lib/features.ts`
+- [ ] `npm test` y `npm run lint` en verde; `npx tsc --noEmit` sin errores
+
+En el móvil, tras instalar:
+
+- [ ] Copia de seguridad de la v1.3 **hecha y sacada del teléfono**
+- [ ] La app abre y el diario está completo (restaurantes, platos, visitas, fotos, etiquetas)
+- [ ] Iniciar sesión → la primera sincronización termina sin error
+- [ ] Las fotos aparecen en R2 (`[sync] fotos: N subidas`)
+- [ ] Ajustes de privacidad: cambiar el general mueve lo que está en «Como mis ajustes»
+- [ ] Un amigo ve en su feed lo que compartes
+- [ ] Etiquetar a alguien → le llega a su bandeja «Contigo»
+
+Fuera de esta versión: el asistente de IA (fase 7).

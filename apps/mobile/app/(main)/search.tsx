@@ -12,6 +12,7 @@ import { useDishList } from '@/features/dishes/hooks/useDishList';
 import { useRestaurantList } from '@/features/restaurants/hooks/useRestaurantList';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
+import { ASSISTANT_ENABLED } from '@/lib/features';
 
 import type { ComponentProps } from 'react';
 
@@ -135,7 +136,7 @@ export default function SearchScreen() {
         contentContainerClassName="px-5 pt-4 pb-8 gap-2.5"
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
-          term.length < 2 ? <AssistantTeaser /> : <NoResults term={query.trim()} />
+          term.length < 2 ? <SearchIntro /> : <NoResults term={query.trim()} />
         }
       />
     </Screen>
@@ -149,6 +150,29 @@ export default function SearchScreen() {
  * are the real target queries, and tapping does nothing yet on purpose. A
  * disabled affordance that explains itself is more honest than hiding the plan.
  */
+/**
+ * What the empty search screen says.
+ *
+ * With the assistant off, promising it here would be advertising something the
+ * build does not contain. The same space says what search *can* do instead.
+ */
+function SearchIntro() {
+  if (!ASSISTANT_ENABLED) return <SearchHint />;
+  return <AssistantTeaser />;
+}
+
+function SearchHint() {
+  const { colors } = useTheme();
+  return (
+    <View className="mt-4 items-center gap-2 px-6">
+      <Ionicons name="search-outline" size={26} color={colors.inkSubtle} />
+      <Txt variant="callout" tone="muted" className="text-center">
+        Busca por nombre entre tus restaurantes, platos y visitas.
+      </Txt>
+    </View>
+  );
+}
+
 function AssistantTeaser() {
   const { colors } = useTheme();
 

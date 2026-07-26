@@ -2,6 +2,41 @@ import 'dotenv/config';
 
 const BUNDLE_ID = 'com.supermaty01.restaurantapp';
 
+/**
+ * Android instala una actualización solo si el versionCode sube.
+ *
+ * La v1.3 salió con `versionCode: 1`, y aquí no había ninguno — Expo pone 1 por
+ * defecto, así que la build se habría negado a instalarse encima con un "App
+ * not installed" que no explica nada. Es un número aparte de `version` a
+ * propósito: el de la tienda tiene que crecer aunque la versión visible no.
+ */
+const VERSION_CODE = 2;
+
+/**
+ * Lo que la app necesita saber en tiempo de compilación.
+ *
+ * Las EXPO_PUBLIC_* se incrustan en el bundle al compilar, no se leen al
+ * arrancar. Si faltan, la build sale bien y la app queda muda: sin Supabase, sin
+ * Worker, sin poder decir por qué. Y `.env` está en .gitignore, así que en EAS
+ * no existe salvo que se declaren como variables de entorno del proyecto.
+ *
+ * Mejor romper aquí, donde el mensaje dice cuál falta.
+ */
+const REQUIRED_ENV = [
+  'EXPO_PUBLIC_SUPABASE_URL',
+  'EXPO_PUBLIC_SUPABASE_ANON_KEY',
+  'EXPO_PUBLIC_API_URL',
+];
+
+const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
+if (missing.length > 0) {
+  const message = `Faltan variables de entorno: ${missing.join(', ')}`;
+  // En una build de EAS es un fallo: instalar esto sería instalar una app rota.
+  // En local es un aviso, porque el modo puramente local sigue siendo válido.
+  if (process.env.EAS_BUILD === 'true') throw new Error(message);
+  console.warn(`[app.config] ${message} — la app funcionará solo en local.`);
+}
+
 /** @type {import('expo/config').ExpoConfig} */
 export default {
   name: 'RestaurantApp',
@@ -45,6 +80,7 @@ export default {
       backgroundColor: '#DFE2CF',
     },
     package: BUNDLE_ID,
+    versionCode: VERSION_CODE,
     // `edgeToEdgeEnabled` no longer exists: Android 16 makes edge-to-edge
     // mandatory, so the option was removed from the Expo config.
     config: {
@@ -95,6 +131,9 @@ export default {
   experiments: {
     typedRoutes: true,
   },
+  // Una build por versión de app: mientras no haya expo-updates, esto solo
+  // etiqueta la build, pero deja el campo puesto para cuando lo haya.
+  runtimeVersion: { policy: 'appVersion' },
   extra: {
     router: {},
     eas: {

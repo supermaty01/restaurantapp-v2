@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Redirect } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import {
   View,
@@ -12,6 +13,7 @@ import {
 import { runAssistant, type ChatMessage } from '@/features/assistant/agent';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { ASSISTANT_ENABLED } from '@/lib/features';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -25,6 +27,15 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
  * device + Worker verification; this screen covers the text query path.
  */
 export default function AssistantScreen() {
+  // La pantalla se defiende sola. Quitar el <Stack.Screen> del layout le quita
+  // el título, no la ruta: expo-router registra todo fichero de app/, así que
+  // un enlace guardado o un deep link seguirían llegando aquí.
+  if (!ASSISTANT_ENABLED) return <Redirect href="/(main)/(tabs)" />;
+
+  return <AssistantChat />;
+}
+
+function AssistantChat() {
   const { colors } = useTheme();
   const db = useDatabase();
   const { session } = useAuth();

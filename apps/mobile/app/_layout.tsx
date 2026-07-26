@@ -18,6 +18,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { IntentHandler } from '@/components/IntentHandler';
 import { SyncRunner } from '@/components/SyncRunner';
+import { CrashScreen } from '@/components/ui/CrashScreen';
 import { DialogProvider } from '@/components/ui/Dialog';
 import { ToastProvider } from '@/components/ui/Toast';
 import migrations from '@/drizzle/migrations';
@@ -29,6 +30,8 @@ import { ThemeProvider } from '@/lib/context/ThemeContext';
 import { lightColors } from '@/lib/design/tokens';
 import { ensureAppDirectories } from '@/lib/helpers/directory-setup';
 import { DATABASE_NAME } from '@/services/db/constants';
+
+import type { ErrorBoundaryProps } from 'expo-router';
 // Contexto para exponer la función que “bump” la versión de la BBDD
 export const DBVersionContext = createContext<() => void>(() => {});
 
@@ -75,6 +78,18 @@ function MigrationsRunner({ children }: { children: React.ReactNode }) {
   if (!success) return <Booting />;
 
   return <>{children}</>;
+}
+
+/**
+ * Expo Router renders this instead of the tree when a route throws.
+ *
+ * Exported from the root layout, so it covers every screen. Without it a render
+ * error in a release build leaves a blank rectangle and no way back — and to
+ * the person holding the phone that is indistinguishable from having lost their
+ * diary.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  return <CrashScreen error={error} retry={retry} />;
 }
 
 export default function RootLayout() {
