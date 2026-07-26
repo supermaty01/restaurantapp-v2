@@ -84,10 +84,7 @@ async function enqueueEverything(db: AppDatabase): Promise<number> {
  * del otro móvil, que sigue teniéndolas y no tiene forma de saber que fue a
  * propósito.
  */
-async function tombstoneCloudExtras(
-  db: AppDatabase,
-  transport: SyncTransport,
-): Promise<number> {
+async function tombstoneCloudExtras(db: AppDatabase, transport: SyncTransport): Promise<number> {
   let retired = 0;
 
   for (const cfg of SYNC_TABLES) {

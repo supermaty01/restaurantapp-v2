@@ -1,4 +1,5 @@
 import type { AppDatabase } from '@/services/db/types';
+import type { PhotoProgress } from '@/services/sync/photos';
 import { runSync, type SyncOutcome } from '@/services/sync/syncManager';
 
 export type SyncStatus = 'idle' | 'syncing' | 'ok' | 'error';
@@ -18,18 +19,32 @@ export const SYNC_LABEL: Record<SyncStatus, string> = {
   error: 'No se pudo sincronizar',
 };
 
+/**
+ * Cómo se lee el avance de las fotos.
+ *
+ * Aquí y no en la tarjeta de perfil por el mismo motivo que `SYNC_LABEL`: la
+ * tarjeta tenía su propia frase, escrita cuando solo se subía, y siguió diciendo
+ * "Subiendo fotos" cuando se añadió la bajada. Un móvil recién estrenado
+ * anunciaba que subía mil fotos que en realidad estaba trayéndose.
+ */
+export function photoProgressLabel(progress: PhotoProgress): string {
+  const verb = progress.phase === 'upload' ? 'Subiendo' : 'Descargando';
+  return `${verb} fotos · ${progress.done} de ${progress.total}`;
+}
+
 export interface SyncState {
   status: SyncStatus;
   lastOutcome: SyncOutcome | null;
   /**
-   * Fotos subidas y pendientes de la pasada en curso.
+   * Fotos movidas y por mover en la pasada en curso, y en qué dirección.
    *
-   * Las fotos son la parte lenta y van de quince en quince, así que cada tanda
-   * terminaba, la tarjeta decía "Al día" y un segundo después volvía a
-   * "Sincronizando" — que es exactamente lo que hace pensar que algo va mal.
-   * Con el recuento delante, la espera deja de ser un misterio.
+   * Las fotos son la parte lenta: sin recuento la tarjeta se queda en
+   * "Sincronizando" durante minutos y no hay forma de distinguirlo de estar
+   * colgado. La **dirección** viene en el dato y no la escribe la pantalla,
+   * porque cuando la escribía la pantalla decía "Subiendo fotos" mientras
+   * restauraba un móvil vacío, que es justo al revés.
    */
-  photos: { done: number; remaining: number } | null;
+  photos: PhotoProgress | null;
 }
 
 /**
@@ -54,9 +69,9 @@ export function subscribeToSync(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
-/** Lo llama el gestor de sync mientras suben las fotos. */
-export function reportPhotoProgress(done: number, remaining: number): void {
-  setState({ ...state, photos: { done, remaining } });
+/** Lo llama el gestor de sync mientras se mueven las fotos, en cualquier dirección. */
+export function reportPhotoProgress(progress: PhotoProgress): void {
+  setState({ ...state, photos: progress });
 }
 
 export function getSyncState(): SyncState {

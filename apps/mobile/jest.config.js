@@ -18,12 +18,19 @@ module.exports = {
     {
       displayName: 'node',
       testEnvironment: 'node',
+      setupFiles: ['<rootDir>/jest.setup.node.ts'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',
       },
       transform: {
-        '^.+\\.ts$': ['babel-jest', { presets: ['babel-preset-expo'] }],
+        '^.+\\.[jt]s$': ['babel-jest', { presets: ['babel-preset-expo'] }],
       },
+      // `babel-preset-expo` reescribe cada `process.env.EXPO_PUBLIC_*` como un
+      // import de `expo/virtual/env`, que es ESM. Sin esta excepción, cualquier
+      // módulo que lea una variable pública —`photos.ts` lee la URL del
+      // Worker— revienta al cargarlo con "Unexpected token 'export'", y el
+      // mensaje no menciona ni la variable ni el preset.
+      transformIgnorePatterns: ['/node_modules/(?!expo/virtual/)'],
       testMatch: ['**/*.node.test.ts'],
     },
   ],
