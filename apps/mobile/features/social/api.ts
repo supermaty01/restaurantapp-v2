@@ -131,6 +131,7 @@ export async function updateMyProfile(changes: {
   username?: string;
   displayName?: string | null;
   bio?: string | null;
+  avatarUrl?: string | null;
 }): Promise<void> {
   const supabase = client();
   const { data: auth } = await supabase.auth.getUser();
@@ -140,6 +141,7 @@ export async function updateMyProfile(changes: {
   if (changes.username !== undefined) payload['username'] = changes.username.toLowerCase();
   if (changes.displayName !== undefined) payload['display_name'] = changes.displayName;
   if (changes.bio !== undefined) payload['bio'] = changes.bio;
+  if (changes.avatarUrl !== undefined) payload['avatar_url'] = changes.avatarUrl;
 
   const { error } = (await supabase
     .from('profiles')
