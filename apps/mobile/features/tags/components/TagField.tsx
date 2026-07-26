@@ -8,9 +8,12 @@ import { EmptyState } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { onColor, readableInk, withAlpha } from '@/lib/design/colour';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
+import CreateTagModal from './CreateTagModal';
 import { useTagsList } from '../hooks/useTagsList';
 import { useTagUsage } from '../hooks/useTagUsage';
+import { createTag } from '../repositories/tagRepository';
 
 import type { TagDTO } from '../types/tag-dto';
 
@@ -39,7 +42,25 @@ export function TagField({
   const allTags = useTagsList();
   const usage = useTagUsage();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState('');
+  const db = useDatabase();
+
+  /**
+   * Crear una etiqueta sin salir del formulario.
+   *
+   * Se perdió en el rediseño y hacía falta: la etiqueta que quieres suele
+   * ocurrírsete escribiendo la entrada, y mandarte a Perfil › Etiquetas
+   * significa abandonar un formulario a medio llenar para volver a él.
+   *
+   * La nueva queda seleccionada al crearla, que es evidentemente lo que querías
+   * al crearla desde aquí.
+   */
+  const handleCreate = async (input: { name: string; color: string }) => {
+    const id = await createTag(db, input);
+    onChange([...selected, { id, name: input.name, color: input.color, deleted: false }]);
+    setCreating(false);
+  };
 
   const isSelected = (tag: TagDTO) => selected.some((t) => t.id === tag.id);
 
@@ -141,8 +162,13 @@ export function TagField({
           </View>
         </View>
 
+        {/* Con altura acotada: sin esto la rejilla crecía más allá del panel y
+            en Android lo que se dibuja fuera del padre no recibe toques — las
+            etiquetas de más abajo se veían y no se podían pulsar. Solo
+            respondían las pocas que cabían, o las que dejaba una búsqueda. */}
         <ScrollView
           className="px-5"
+          style={{ flexShrink: 1 }}
           contentContainerStyle={{ paddingBottom: 12, paddingTop: 8 }}
           keyboardShouldPersistTaps="handled"
         >
@@ -165,7 +191,27 @@ export function TagField({
             </View>
           )}
         </ScrollView>
+
+        <View className="px-5 pb-1 pt-2">
+          <PressableScale
+            accessibilityLabel="Crear una etiqueta nueva"
+            onPress={() => setCreating(true)}
+            scaleTo={0.97}
+            className="flex-row items-center justify-center gap-2 rounded-pill border border-dashed border-primary/40 bg-primary/8 px-4 py-2.5"
+          >
+            <Ionicons name="add" size={15} color={colors.primary} />
+            <Txt variant="caption" weight="bold" serif={false} tone="primary">
+              Nueva etiqueta
+            </Txt>
+          </PressableScale>
+        </View>
       </Sheet>
+
+      <CreateTagModal
+        visible={creating}
+        onClose={() => setCreating(false)}
+        onAdd={(tag) => void handleCreate(tag)}
+      />
     </View>
   );
 }
