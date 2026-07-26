@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
@@ -12,6 +13,7 @@ import type { FeedEntry, TaggedVisit } from '@/features/social/api';
 import { FeedCard } from '@/features/social/components/FeedCard';
 import { TaggedVisitCard } from '@/features/social/components/TaggedVisitCard';
 import { usePagedResource } from '@/features/social/hooks/usePagedResource';
+import { useUnreadNotifications } from '@/features/social/hooks/useUnreadNotifications';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 
@@ -50,6 +52,8 @@ export default function FeedScreen() {
     { enabled: signedIn, deps: [session?.user.id] },
   );
 
+  const { count: unread } = useUnreadNotifications(signedIn);
+
   const active = tab === 'friends' ? friends : tagged;
 
   const renderFriendItem = useCallback(
@@ -64,7 +68,7 @@ export default function FeedScreen() {
   if (!isConfigured) {
     return (
       <Screen>
-        <Header />
+        <Header unread={unread} />
         <EmptyState
           icon="cloud-offline-outline"
           title="Sin cuenta configurada"
@@ -77,7 +81,7 @@ export default function FeedScreen() {
   if (!session) {
     return (
       <Screen>
-        <Header />
+        <Header unread={unread} />
         <EmptyState
           icon="people-outline"
           title="Inicia sesión para ver a tus amigos"
@@ -113,7 +117,7 @@ export default function FeedScreen() {
   return (
     <Screen padded={false}>
       <View className="px-5">
-        <Header />
+        <Header unread={unread} />
         <Tabs value={tab} onChange={setTab} taggedCount={tagged.items.length} />
       </View>
 
@@ -234,19 +238,38 @@ function Tabs({
   );
 }
 
-function Header() {
+function Header({ unread }: { unread: number }) {
   const router = useRouter();
+  const { colors } = useTheme();
 
   return (
     <View className="flex-row items-center justify-between pb-3 pt-3.5">
       <Text className="font-display text-[26px] text-ink">Feed</Text>
-      <Button
-        label="Amigos"
-        icon="people-outline"
-        variant="secondary"
-        size="sm"
-        onPress={() => router.push('/(main)/friends')}
-      />
+
+      <View className="flex-row items-center gap-2">
+        {/* La campana con su punto. El número exacto no cabe y tampoco hace
+            falta: lo que se decide al verlo es si entrar, y para eso "hay algo"
+            dice lo mismo que "hay siete". */}
+        <PressableScale
+          accessibilityLabel={unread > 0 ? `Novedades, ${unread} sin leer` : 'Novedades'}
+          onPress={() => router.push('/(main)/notifications')}
+          scaleTo={0.9}
+          className="h-9 w-9 items-center justify-center rounded-pill border border-line-strong bg-surface"
+        >
+          <Ionicons name="notifications-outline" size={18} color={colors.ink} />
+          {unread > 0 ? (
+            <View className="absolute right-1.5 top-1.5 h-2.5 w-2.5 rounded-pill border border-surface bg-primary" />
+          ) : null}
+        </PressableScale>
+
+        <Button
+          label="Amigos"
+          icon="people-outline"
+          variant="secondary"
+          size="sm"
+          onPress={() => router.push('/(main)/friends')}
+        />
+      </View>
     </View>
   );
 }

@@ -427,6 +427,66 @@ export async function restoreTag(visitUuid: string): Promise<void> {
   await callRpc<null>('restore_tag', { visit: visitUuid });
 }
 
+export type NotificationKind = 'tagged_in_visit';
+
+export interface AppNotification {
+  id: number;
+  kind: NotificationKind;
+  createdAt: string;
+  readAt: string | null;
+  visitUuid: string | null;
+  actorId: string | null;
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  title: string;
+  imageKey: string | null;
+}
+
+/**
+ * Novedades: lo que ha pasado mientras no mirabas.
+ *
+ * El servidor ya descarta los avisos de etiquetas que rechazaste o de visitas
+ * borradas (0016), así que lo que llega aquí se puede pintar tal cual. Un aviso
+ * que abre algo que ya no existe es peor que no avisar.
+ */
+export async function fetchNotifications(before?: string): Promise<AppNotification[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('notifications_page', {
+    before: before ?? null,
+    page_size: 30,
+  });
+
+  return (rows ?? []).map((row) => ({
+    id: Number(row['id']),
+    kind: row['kind'] as NotificationKind,
+    createdAt: row['created_at'] as string,
+    readAt: (row['read_at'] as string | null) ?? null,
+    visitUuid: (row['visit_uuid'] as string | null) ?? null,
+    actorId: (row['actor_id'] as string | null) ?? null,
+    username: (row['username'] as string | null) ?? null,
+    displayName: (row['display_name'] as string | null) ?? null,
+    avatarUrl: (row['avatar_url'] as string | null) ?? null,
+    title: (row['title'] as string | null) ?? 'Una visita',
+    imageKey: (row['image_key'] as string | null) ?? null,
+  }));
+}
+
+/** Cuántas novedades sin leer. Lo que pinta el punto. */
+export async function fetchUnreadCount(): Promise<number> {
+  const count = await callRpc<number>('unread_notifications', {});
+  return Number(count ?? 0);
+}
+
+/**
+ * Marca todo como leído de una vez.
+ *
+ * De uno en uno convertiría una lista de avisos en una lista de tareas: nadie
+ * quiere descartar catorce cosas para que se apague un punto.
+ */
+export async function markNotificationsRead(): Promise<void> {
+  await callRpc<null>('mark_notifications_read', {});
+}
+
 /**
  * Publishes the account's general visibility settings.
  *
