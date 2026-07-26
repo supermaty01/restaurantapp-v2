@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { Marker } from 'react-native-maps';
 
 import { MapPin } from '@/components/ui/MapPin';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { withAlpha } from '@/lib/design/colour';
 
 /**
  * One of your places on the map.
@@ -60,12 +62,34 @@ export function RestaurantMarker({
       anchor={{ x: 0.5, y: 1 }}
       accessibilityLabel={name}
     >
-      <MapPin
-        size={selected ? 40 : 34}
-        color={selected ? colors.ink : colors.primary}
-        glyphColor={colors.onPrimary}
-        borderColor={colors.onPrimary}
-      />
+      {/* Seleccionado = el mismo sitio, mirado más de cerca.
+          Antes cambiaba a color tinta y conservaba el borde claro, y ese borde
+          sobre un relleno oscuro se leía como un aro blanco suelto alrededor
+          del icono en vez de como una selección. Ahora la señal es el tamaño y
+          un halo *detrás* de la gota, que es lo que hace el mapa cuando quiere
+          decir "este": el marcador sigue siendo reconociblemente el mismo. */}
+      <View style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+        {selected ? (
+          <View
+            style={{
+              position: 'absolute',
+              // Centrado sobre el círculo de la gota, no sobre el conjunto:
+              // la punta cuelga por debajo y desplazaría el halo.
+              bottom: 44 * 0.32,
+              width: 44 * 1.5,
+              height: 44 * 1.5,
+              borderRadius: 44,
+              backgroundColor: withAlpha(colors.primary, 0.22),
+            }}
+          />
+        ) : null}
+        <MapPin
+          size={selected ? 44 : 34}
+          color={colors.primary}
+          glyphColor={colors.onPrimary}
+          borderColor={colors.surface}
+        />
+      </View>
     </Marker>
   );
 }

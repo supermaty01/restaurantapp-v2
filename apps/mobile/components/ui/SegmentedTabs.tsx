@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
+  runOnJS,
   interpolate,
   useAnimatedStyle,
   useDerivedValue,
@@ -31,6 +33,15 @@ interface SegmentedTabsProps {
    */
   selectedKey?: string | undefined;
   onSelect?: ((key: string) => void) | undefined;
+  /**
+   * Deslizar horizontalmente para cambiar de pestaña.
+   *
+   * Opcional y apagado por defecto. Solo tiene sentido donde las pestañas son
+   * caras de una misma cosa y las recorres constantemente — el diario — y sería
+   * un estorbo donde el contenido ya se arrastra en horizontal, como las tiras
+   * de fotos o el detalle con carrusel.
+   */
+  swipeable?: boolean;
 }
 
 const SELECT_SPRING = { damping: 26, stiffness: 300, mass: 0.6 };
@@ -52,6 +63,7 @@ export function SegmentedTabs({
   initialKey,
   selectedKey,
   onSelect,
+  swipeable = false,
 }: SegmentedTabsProps) {
   const [internalKey, setInternalKey] = useState(initialKey ?? tabs[0]?.key ?? '');
 
@@ -68,6 +80,28 @@ export function SegmentedTabs({
   );
   const activeTab = tabs[activeIndex];
 
+  const go = (delta: number) => {
+    const next = tabs[activeIndex + delta];
+    if (next) setActiveKey(next.key);
+  };
+
+  /**
+   * Un desplazamiento horizontal claro cambia de pestaña.
+   *
+   * `activeOffsetX` es lo que evita robarle el gesto a las listas verticales:
+   * hasta que el dedo no lleva 20 px en horizontal, el gesto no se activa y el
+   * scroll manda. `failOffsetY` lo remata — si se va en vertical primero, esto
+   * se rinde.
+   */
+  const swipe = Gesture.Pan()
+    .enabled(swipeable)
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-14, 14])
+    .onEnd((event) => {
+      if (Math.abs(event.translationX) < 60 && Math.abs(event.velocityX) < 500) return;
+      runOnJS(go)(event.translationX < 0 ? 1 : -1);
+    });
+
   return (
     <View className="flex-1">
       <View className="mx-5 my-3 flex-row rounded-pill bg-sunken p-1">
@@ -81,7 +115,9 @@ export function SegmentedTabs({
         ))}
       </View>
 
-      <View className="flex-1">{activeTab?.render()}</View>
+      <GestureDetector gesture={swipe}>
+        <View className="flex-1">{activeTab?.render()}</View>
+      </GestureDetector>
     </View>
   );
 }

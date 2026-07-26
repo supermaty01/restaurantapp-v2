@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { SectionList, useWindowDimensions, View } from 'react-native';
 
-import { PressableScale } from '@/components/ui/Motion';
+import PeekablePressable from '@/components/PeekablePressable';
 import { EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
-import { formatDate } from '@/lib/helpers/date';
+import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 
 import { groupByMonth } from '../utils/groupByMonth';
 
@@ -139,10 +139,20 @@ function VisitTile({
   const uri = visit.images?.[0]?.uri ?? null;
 
   return (
-    <PressableScale
-      accessibilityLabel={`${name}, ${formatDate(visit.visited_at)}`}
+    // Mismo peek que la vista de lista. Faltaba aquí, y no es un detalle: una
+    // retícula de fotos es justo donde más falta hace poder mirar una entrada
+    // sin abrirla, porque la miniatura sola no dice casi nada.
+    <PeekablePressable
+      previewData={{
+        type: 'visit',
+        id: visit.id,
+        date: formatVisitDate(visit.visited_at),
+        restaurantName: name,
+        comments: visit.comments,
+        ...(uri ? { imageUrl: uri } : {}),
+      }}
       onPress={onPress}
-      scaleTo={0.96}
+      scaleValue={1.02}
       style={{ width: size }}
     >
       <Thumbnail name={name} uri={uri} size={size} radius={12} icon="restaurant" />
@@ -155,6 +165,6 @@ function VisitTile({
           {visit.comments ? ` · ${visit.comments}` : ''}
         </Txt>
       </View>
-    </PressableScale>
+    </PeekablePressable>
   );
 }

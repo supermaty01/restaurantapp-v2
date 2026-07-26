@@ -58,7 +58,8 @@ export default function JournalScreen() {
       <View className="px-5 pb-1 pt-3">
         <Txt variant="display">Diario</Txt>
       </View>
-      <SegmentedTabs tabs={tabs} selectedKey={active} onSelect={setActive} />
+      {/* Solo aquí: son tres caras del mismo diario y se recorren constantemente. */}
+      <SegmentedTabs tabs={tabs} selectedKey={active} onSelect={setActive} swipeable />
     </View>
   );
 }
