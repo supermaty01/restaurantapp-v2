@@ -30,7 +30,7 @@ Lo de la escritura faltaba: escribir una entrada y quedarse en la app la dejaba 
 
 `recordChange` emite una señal (`services/sync/pending.ts`) y `useSync` decide qué hacer con ella: los repositorios no tienen cuenta, ni red, ni por qué decidir cuándo se habla con un servidor.
 
-Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila guardada como `default` no significa nada para el servidor hasta que sabe cuál *es* el default de esa cuenta.
+Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila guardada como `default` no significa nada para el servidor hasta que sabe cuál _es_ el default de esa cuenta.
 
 ### Push
 
@@ -41,12 +41,24 @@ Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila
 
 ### Pull
 
-1. Cursor local `last_pulled_at` por tabla (en `app_settings`).
-2. `select * where user_id = me and updated_at > cursor` por tabla, aplicar en SQLite con la misma regla last-write-wins, avanzar cursor.
+1. Cursor local por tabla (en `app_settings`). Es un **número de secuencia del servidor**, no una fecha.
+2. `select * where user_id = me and sync_seq > cursor order by sync_seq limit N` por tabla, aplicar en SQLite con last-write-wins, avanzar cursor, repetir hasta agotar.
 
-   **El `where user_id = me` es obligatorio y no lo cubre RLS.** RLS dice qué te está *permitido leer*, y te está permitido leer la visita compartida de un amigo. Un `select *` sin filtrar se traía las filas de otras personas al diario local: el diario dejaba de ser solo lo que escribiste tú, y el push siguiente las estampaba con tu cuenta y las mandaba encima de las de su dueño, cosa que la policy de propiedad rechaza matando el push entero con `new row violates row-level security policy (USING expression)`.
+   **El cursor no puede ser `updated_at`, y durante un tiempo lo fue.** `updated_at` lo escribe el móvil que editó — es lo que compara el last-write-wins y por eso tiene que ser suyo. Usarlo además para paginar mezcla dos preguntas distintas:
+
+   - _¿cuál de estas dos versiones gana?_ → `updated_at`, el reloj de quien escribió.
+   - _¿qué ha cambiado desde que miré?_ → solo puede contestarlo el servidor, que es el único reloj que ven todos los dispositivos.
+
+   Con un dispositivo funcionaba por casualidad. Con dos, bastaba con que el segundo tuviera el reloj unos minutos atrasado —desfase normal entre teléfonos, un cambio de zona horaria, uno que estuvo sin red— para que sus filas llegaran con una fecha anterior al cursor que el primero ya había guardado, y **el primero no las bajaba nunca**: sin error, sin reintento, sin nada que lo delatara. Para algo que también es copia de seguridad, perder filas en silencio es el peor fallo posible.
+
+   Migración **0017**: una secuencia (`sync_seq`) sellada por trigger en cada insert _y_ en cada update. `nextval` es monótona y única por fila tocada, y no depende de ningún reloj. Una secuencia y no un `now()` del servidor porque `now()` devuelve el instante en que empezó la transacción, así que dos transacciones solapadas pueden grabar el mismo valor y una hacerse visible después de que otro dispositivo lo guardara como cursor — la fila se salta igual.
+
+   El cursor avanza **después** de aplicar cada página: si el proceso muere a la mitad se repite esa página, y aplicar dos veces la misma fila es inofensivo mientras que saltársela es permanente.
+
+   **El `where user_id = me` es obligatorio y no lo cubre RLS.** RLS dice qué te está _permitido leer_, y te está permitido leer la visita compartida de un amigo. Un `select *` sin filtrar se traía las filas de otras personas al diario local: el diario dejaba de ser solo lo que escribiste tú, y el push siguiente las estampaba con tu cuenta y las mandaba encima de las de su dueño, cosa que la policy de propiedad rechaza matando el push entero con `new row violates row-level security policy (USING expression)`.
 
    Lo ajeno llega a la app por las RPC sociales, que lo devuelven como algo que mirar. No entra en las tablas de las que está hecho el diario.
+
 3. Primera sesión en un dispositivo nuevo = pull completo (bootstrap).
 4. Una fila que llega por pull nace con su entrada de `change_log` ya marcada `synced`. Sin eso, el auto-reparador (`linkLocalData`, que encola toda fila sin entrada — así es como un primer login sube un diario anterior a la cuenta) no puede distinguirla de una fila local nueva, y el dispositivo le devuelve al servidor sus propias filas. Para los escalares es inofensivo; para las uniones resucita enlaces que otro dispositivo acababa de borrar.
 
@@ -54,7 +66,7 @@ Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila
 
 `restaurant_tag`, `dish_tag`, `dish_visit` y `visit_participant` no pasan por `change_log`.
 
-Una unión no tiene uuid, ni marcas de tiempo, ni identidad propia: *es* el par de uuids. No hay nada que apuntar en la bitácora ni nada que comparar por última-escritura-gana.
+Una unión no tiene uuid, ni marcas de tiempo, ni identidad propia: _es_ el par de uuids. No hay nada que apuntar en la bitácora ni nada que comparar por última-escritura-gana.
 
 Así que la unidad de trabajo es un padre, no un enlace: «el restaurante #4 tiene exactamente estas etiquetas». Al enviar un padre, su conjunto completo de enlaces reemplaza lo que hubiera en el servidor. Es idempotente, y un enlace borrado desaparece sin necesitar una lápida que lo explique.
 
@@ -74,7 +86,17 @@ Registro en `services/sync/tables.ts` (`LINK_TABLES`), mecánica en `services/sy
 Sync en dos niveles, siempre después de las filas:
 
 - **Subida:** imágenes con `remote_key = null` se comprimen (resize ~2048px, jpeg q80) y suben al Worker → R2. Solo en wifi por defecto (configurable).
-- **Bajada:** al hacer pull de una fila `images` sin archivo local, se descarga bajo demanda (lazy, al mostrarse) con caché en filesystem.
+- **Bajada:** `downloadMissingPhotos` trae en cada pasada las fotos que tienen `remote_key` y cuyo fichero no está en el teléfono, en tandas de 15, desde `GET /images/:userId/:key`.
+
+  Esto **no existía** hasta ahora: el diseño decía «bajo demanda» y no había una sola línea que lo hiciera. `imagePathToUri()` resuelve siempre a un `file://` local y no cae de vuelta a la clave remota, así que restaurar en un móvil nuevo devolvía el diario entero con **todas las fotos rotas** — justo el caso que una copia de seguridad existe para cubrir. Se baja todo, no bajo demanda: un diario restaurado que necesita red para verse no está restaurado.
+
+  Qué falta se deduce del disco («tiene clave y no tiene fichero»), no de una columna: así no hay estado que mantener al día ni que pueda quedarse mintiendo, y vaciar la caché del móvil se repara solo en la siguiente pasada.
+
+- **`images.path` no se sincroniza**, y por eso hace falta `localDefaults` (`services/sync/tables.ts`): es la ruta del fichero _en este teléfono_ y la de otro dispositivo no significa nada aquí, pero la columna es `not null`. Sin rellenarla, insertar una foto que llegaba del servidor reventaba con `NOT NULL constraint failed: images.path` — y como `images` es la última tabla escalar del registro, ese error se llevaba por delante el final del pull: la restauración se quedaba sin fotos **y sin uniones** (etiquetas, platos por visita, personas), porque `pullLinks` va después y no llegaba a correr. La ruta se deriva del uuid (`{uuid}.jpg`), así que se sabe dónde irá el fichero antes de bajarlo.
+
+### ¿Está todo? (`sync-status`)
+
+«Última sincronización correcta» dice que el proceso terminó sin error, no que la copia esté completa — son preguntas distintas y solo la segunda importa el día que se pierde el teléfono. `services/sync/reconcile.ts` compara los conteos de los dos lados (RPC `sync_counts`, 0017) más la bandeja de salida y las fotos que faltan, y la pantalla `sync-status` los enseña por tabla.
 
 ## Vinculación inicial (primer login)
 

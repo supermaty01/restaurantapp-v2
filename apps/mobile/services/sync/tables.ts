@@ -52,6 +52,26 @@ export interface SyncTableConfig {
   table: SQLiteTable;
   scalars: ScalarColumn[];
   foreignKeys: ForeignKey[];
+  /**
+   * Columnas que solo existen en el dispositivo, al insertar una fila que llega
+   * por pull.
+   *
+   * Hace falta porque no todo lo que una fila local necesita viaja por la red.
+   * `images.path` es la ruta del fichero *en este teléfono*: no se sincroniza a
+   * propósito —la ruta de otro dispositivo no significa nada aquí— pero la
+   * columna es `not null`, así que sin esto insertar una foto que llega del
+   * servidor reventaba con `NOT NULL constraint failed: images.path`.
+   *
+   * No es un detalle menor: `images` es la última tabla escalar del registro,
+   * así que ese error tumbaba el pull entero justo al final. Una restauración en
+   * un móvil nuevo se quedaba sin fotos **y sin uniones** —etiquetas, platos por
+   * visita, personas—, porque `pullLinks` va después y no llegaba a correr, y
+   * cada sync terminaba en error para siempre.
+   *
+   * Solo en el insert. Una fila que ya existe conserva su ruta: la suya es la
+   * buena, y pisarla en cada pull sería perder el fichero descargado.
+   */
+  localDefaults?: (record: { uuid: string }) => Record<string, unknown>;
 }
 
 /** Dynamic column access without leaking `any` (drizzle tables are column maps). */
@@ -137,6 +157,11 @@ export const SYNC_TABLES: SyncTableConfig[] = [
   {
     name: 'images',
     table: schema.images,
+    // La ruta se deriva del uuid en vez de venir del servidor. Así el sitio
+    // donde va el fichero se sabe antes de descargarlo, y "¿está bajada?" es
+    // simplemente "¿existe ese fichero?", sin ninguna columna que mantener al
+    // día ni que se pueda quedar mintiendo.
+    localDefaults: (record) => ({ path: `${record.uuid}.jpg` }),
     scalars: [
       { local: 'remoteKey', remote: 'remote_key' },
       { local: 'description', remote: 'description' },

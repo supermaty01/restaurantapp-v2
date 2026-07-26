@@ -11,6 +11,16 @@ export type RemoteRecord = Record<string, unknown> & {
   uuid: string;
   updated_at: string;
   deleted: boolean;
+  /**
+   * El orden del servidor. Lo pone un trigger (0017), nunca el cliente.
+   *
+   * Va aparte de `updated_at` porque contestan preguntas distintas:
+   * `updated_at` dice *cuál de dos versiones gana* y lo escribe el reloj de
+   * quien editó; `sync_seq` dice *qué ha cambiado desde que miré* y solo puede
+   * decirlo el único reloj que ven todos los dispositivos. Mezclarlas hacía que
+   * un móvil con el reloj atrasado escribiera filas que el otro no bajaba nunca.
+   */
+  sync_seq?: number;
 };
 
 /**
@@ -27,10 +37,17 @@ export interface SyncTransport {
   push(table: string, records: RemoteRecord[]): Promise<void>;
 
   /**
-   * Records in `table` changed strictly after `since` (an ISO cursor, or null
-   * for a full bootstrap), ordered by updated_at ascending.
+   * Una página de `table` con `sync_seq > since`, ordenada por `sync_seq`.
+   *
+   * `since` nulo es el arranque completo: una restauración en un móvil nuevo.
+   * Por eso viene paginado — un diario de años cabe en muchas filas y pedirlas
+   * todas en una sola respuesta es lo que convierte una restauración en un
+   * tiempo de espera sin fin y sin progreso.
    */
-  pull(table: string, since: string | null): Promise<RemoteRecord[]>;
+  pull(table: string, since: number | null, limit: number): Promise<RemoteRecord[]>;
+
+  /** Cuántas filas vivas tiene la cuenta en el servidor, por tabla. */
+  counts(): Promise<Record<string, number>>;
 
   /**
    * Makes `rows` the complete set of links in `table` for the given parents.

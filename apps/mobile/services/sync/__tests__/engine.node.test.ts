@@ -41,6 +41,102 @@ async function editAt(db: AppDatabase, id: number, rating: number, updatedAt: st
 }
 
 describe('SyncEngine', () => {
+  /*
+   * El fallo que hacía que dos dispositivos perdieran filas en silencio.
+   *
+   * El cursor de pull era `max(updated_at)` de lo recibido, y `updated_at` lo
+   * escribe el móvil que editó, no el servidor. Basta con que el reloj del
+   * segundo dispositivo vaya por detrás —desfase normal entre dos teléfonos, un
+   * cambio de zona horaria, uno que estuvo sin red— para que sus filas lleguen
+   * al servidor con una fecha anterior al cursor que el primero ya guardó, y
+   * entonces el primero **no las baja nunca**. Ni error, ni reintento.
+   *
+   * Desde 0017 la paginación va por `sync_seq`, que sella el servidor y es
+   * monótona, así que el reloj de quien escribe deja de decidir qué se ve.
+   * `updated_at` sigue decidiendo qué versión gana, que es otra pregunta.
+   */
+  it('baja las filas de otro dispositivo aunque su reloj vaya atrasado', async () => {
+    const server = new FakeServer();
+    const a = makeTestDb();
+    const b = makeTestDb();
+
+    // A escribe con la hora "buena" y sincroniza. Su cursor queda en esa fecha.
+    await createRestaurant(a.db, {
+      name: 'Guadalupe',
+      comments: null,
+      rating: 5,
+      latitude: null,
+      longitude: null,
+    });
+    const guadalupe = await restaurantByName(a.db, 'Guadalupe');
+    await editAt(a.db, guadalupe!.id, 5, '2026-07-26T12:00:00.000Z');
+    await engineFor(a.db, server).sync();
+
+    // B tiene el reloj una hora atrasado y registra su propia comida.
+    await createRestaurant(b.db, {
+      name: 'Ichiran',
+      comments: null,
+      rating: 4,
+      latitude: null,
+      longitude: null,
+    });
+    const ichiran = await restaurantByName(b.db, 'Ichiran');
+    await editAt(b.db, ichiran!.id, 4, '2026-07-26T11:00:00.000Z');
+    await engineFor(b.db, server).push();
+
+    // A vuelve a mirar. Con el cursor viejo, 11:00 < 12:00 y esta fila no
+    // existía para A: el restaurante se quedaba en el otro móvil para siempre.
+    await engineFor(a.db, server).pull();
+
+    expect(await restaurantByName(a.db, 'Ichiran')).toBeDefined();
+  });
+
+  /*
+   * Restaurar en un móvil nuevo se caía en la última tabla.
+   *
+   * `images.path` es la ruta del fichero en *este* teléfono, así que no se
+   * sincroniza — la ruta de otro dispositivo no significa nada aquí. Pero la
+   * columna es `not null`, y nadie rellenaba nada al insertar una fila que
+   * llegaba del servidor: `NOT NULL constraint failed: images.path`.
+   *
+   * Y `images` es la última tabla escalar del registro, así que ese error se
+   * llevaba por delante el final del pull: la restauración se quedaba sin fotos
+   * **y sin uniones** (etiquetas, platos por visita, personas), porque
+   * `pullLinks` corre después y no llegaba nunca. Cada sync terminaba en error.
+   */
+  it('restaura una foto en un móvil vacío sin romper el resto del pull', async () => {
+    const server = new FakeServer();
+    const a = makeTestDb();
+    const b = makeTestDb();
+
+    await createRestaurant(a.db, {
+      name: 'Ichiran',
+      comments: null,
+      rating: 4,
+      latitude: null,
+      longitude: null,
+    });
+    const ichiran = await restaurantByName(a.db, 'Ichiran');
+    await a.db.insert(schema.images).values({
+      path: 'foto-local-del-movil-a.jpg',
+      remoteKey: 'clave-en-r2',
+      restaurantId: ichiran!.id,
+      uuid: 'img-0000-4000-8000-000000000001',
+      createdAt: '2026-07-26T10:00:00.000Z',
+      updatedAt: '2026-07-26T10:00:00.000Z',
+    });
+    await engineFor(a.db, server).sync();
+
+    await engineFor(b.db, server).pull();
+
+    const [restored] = await b.db.select().from(schema.images);
+    expect(restored).toBeDefined();
+    expect(restored?.remoteKey).toBe('clave-en-r2');
+    // Derivada del uuid, no heredada del otro móvil: es donde la descarga la
+    // dejará, así que "¿está bajada?" es "¿existe ese fichero?".
+    expect(restored?.path).toBe('img-0000-4000-8000-000000000001.jpg');
+  });
+
   it('pushes local rows to the server stamped with the account uuid', async () => {
     const { db } = makeTestDb();
     const server = new FakeServer();
@@ -222,7 +318,9 @@ describe('SyncEngine', () => {
           });
         }
       },
-      pull: async (table: string, cursor: string | null) => server.since(table, cursor),
+      pull: async (table: string, cursor: number | null, limit: number) =>
+        server.since(table, cursor, limit),
+      counts: async () => ({}),
       replaceLinks: async () => {},
       pullLinks: async () => [],
     };

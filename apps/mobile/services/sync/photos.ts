@@ -1,6 +1,7 @@
-import { and, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, eq, isNotNull, isNull, ne } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 import * as schema from '@/services/db/schema';
 import { recordChange, touchedAt } from '@/services/db/sync-write';
@@ -157,6 +158,131 @@ export async function uploadPendingPhotos(
       // Anything the module itself refuses: an unreachable host, a URI it will
       // not read, a native method that is not there. Swallowing this is what
       // made the whole thing opaque the first time round.
+      note(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  return result;
+}
+
+export interface PhotoDownloadResult {
+  downloaded: number;
+  /** Cuántas quedan por bajar después de esta tanda. */
+  pending: number;
+  failed: number;
+  reasons: string[];
+}
+
+/**
+ * Trae de vuelta las fotos que están en R2 y no en este teléfono.
+ *
+ * La mitad que faltaba. `remote_key` viajaba desde la primera migración y el
+ * Worker sirve `/images/:key` desde siempre, pero **no había una sola línea que
+ * descargara nada**: `imagePathToUri()` resuelve siempre a un `file://` local y
+ * no cae de vuelta a la clave remota. O sea que restaurar en un móvil nuevo
+ * devolvía el diario entero con todas las fotos rotas — justo el caso que una
+ * copia de seguridad existe para cubrir.
+ *
+ * Qué falta por bajar se deduce del disco, no de una columna: una fila con
+ * `remote_key` cuyo fichero no está. Así no hay estado que mantener al día ni
+ * que pueda quedarse mintiendo, y borrar la caché del móvil se repara solo en la
+ * siguiente pasada.
+ *
+ * Nunca lanza, igual que la subida: una foto que no baja no puede convertir una
+ * sincronización correcta en un error.
+ */
+export async function downloadMissingPhotos(
+  db: AppDatabase,
+  /** El dueño de las fotos: la clave en R2 es `${cuenta}/${uuid}`. */
+  accountUuid: string,
+  onProgress?: (done: number, remaining: number) => void,
+): Promise<PhotoDownloadResult> {
+  const result: PhotoDownloadResult = { downloaded: 0, pending: 0, failed: 0, reasons: [] };
+
+  const seen = new Set<string>();
+  const note = (reason: string) => {
+    result.failed += 1;
+    if (!seen.has(reason)) {
+      seen.add(reason);
+      result.reasons.push(reason);
+    }
+  };
+
+  if (!API_URL) {
+    result.reasons.push('EXPO_PUBLIC_API_URL no está definida: no hay de dónde bajar');
+    return result;
+  }
+
+  const token = await accessToken();
+  if (!token) {
+    result.reasons.push('sin sesión de Supabase: no hay con qué autenticarse');
+    return result;
+  }
+
+  await FileSystem.makeDirectoryAsync(IMAGES_DIR, { intermediates: true }).catch(() => {
+    // Ya existía. `intermediates` no lo garantiza en todas las plataformas y
+    // fallar aquí impediría bajar nada.
+  });
+
+  const stored = await db
+    .select({ id: schema.images.id, uuid: schema.images.uuid, path: schema.images.path })
+    .from(schema.images)
+    .where(and(isNotNull(schema.images.remoteKey), ne(schema.images.remoteKey, '')));
+
+  // Qué falta se decide mirando el disco, y por eso el filtro no puede ir en la
+  // consulta. Se recorre entero pero solo se descarga un lote: comprobar si un
+  // fichero existe es barato, bajarlo no.
+  const missing: typeof stored = [];
+  for (const photo of stored) {
+    const uri = imagePathToUri(photo.path || `${photo.uuid}.jpg`);
+    const info = await FileSystem.getInfoAsync(uri);
+    if (!info.exists) missing.push(photo);
+  }
+
+  result.pending = Math.max(missing.length - BATCH, 0);
+
+  for (const photo of missing.slice(0, BATCH)) {
+    try {
+      // `GET /images/:userId/:key`, no `/images/:key`. La subida va con el
+      // dueño implícito en el token y el Worker lo antepone; la lectura es
+      // pública a propósito (el segmento del dueño *es* la capacidad, así es
+      // como funcionan las vistas previas de un enlace compartido), así que la
+      // cuenta tiene que ir en la URL. Es la misma forma que usa
+      // `remoteImageUri` para las fotos ajenas.
+      const key = keyFor(photo.uuid);
+      const source =
+        `${API_URL.replace(/\/$/, '')}/images/` +
+        `${encodeURIComponent(accountUuid)}/${encodeURIComponent(key)}`;
+      // El destino se deriva del uuid, no de lo que diga la fila: una ruta
+      // heredada de otro dispositivo, o de una instalación anterior, apunta a un
+      // sitio que aquí no existe.
+      const target = `${IMAGES_DIR}${photo.uuid}.jpg`;
+
+      const download = await FileSystem.downloadAsync(source, target, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (download.status < 200 || download.status >= 300) {
+        // `downloadAsync` escribe el cuerpo del error como si fuera la imagen:
+        // sin esto quedaría un fichero de 30 bytes que la app trata como una
+        // foto y que nunca se reintenta, porque "existe".
+        await FileSystem.deleteAsync(target, { idempotent: true }).catch(() => {});
+        note(`HTTP ${download.status} en ${source}`);
+        continue;
+      }
+
+      // La ruta es local: se actualiza sin `recordChange`, porque no significa
+      // nada en ningún otro dispositivo y mandarla solo gastaría una escritura.
+      if (photo.path !== `${photo.uuid}.jpg`) {
+        await db
+          .update(schema.images)
+          .set({ path: `${photo.uuid}.jpg` })
+          .where(eq(schema.images.id, photo.id));
+      }
+
+      result.downloaded += 1;
+      onProgress?.(result.downloaded, missing.length - result.downloaded - result.failed);
+    } catch (error) {
       note(error instanceof Error ? error.message : String(error));
     }
   }

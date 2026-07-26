@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   View,
@@ -33,6 +34,7 @@ export default function AccountScreen() {
     signOut,
   } = useAuth();
   const db = useDatabase();
+  const router = useRouter();
   const { status, lastOutcome, syncNow } = useSync();
 
   const [email, setEmail] = useState('');
@@ -99,6 +101,15 @@ export default function AccountScreen() {
           </TouchableOpacity>
           <TouchableOpacity onPress={() => void handleLink()} className="mt-3 self-start">
             <Text className="text-primary">Subir mis datos locales</Text>
+          </TouchableOpacity>
+          {/* "Última sincronización correcta" dice que el proceso no falló, no
+              que la copia esté completa. La diferencia solo se nota el día que
+              se pierde el teléfono, así que hay que poder mirarla antes. */}
+          <TouchableOpacity
+            onPress={() => router.push('/(main)/sync-status')}
+            className="mt-3 self-start"
+          >
+            <Text className="text-primary">¿Está todo en la nube?</Text>
           </TouchableOpacity>
         </View>
 

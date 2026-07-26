@@ -2,7 +2,7 @@ import { getDefaults } from '@/features/privacy/defaultsStore';
 import { pushVisibilityDefaults } from '@/features/social/api';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
-import { uploadPendingPhotos } from '@/services/sync/photos';
+import { downloadMissingPhotos, uploadPendingPhotos } from '@/services/sync/photos';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
 import { reportPhotoProgress } from '@/services/sync/syncStore';
 
@@ -39,6 +39,18 @@ export async function runSync(db: AppDatabase, accountUuid: string): Promise<Syn
           `${photos.failed} sin poder subir`,
       );
       for (const reason of photos.reasons) console.warn(`[sync] fotos — ${reason}`);
+    }
+
+    // Y de vuelta. Va después de subir porque el caso de un móvil que estrena
+    // cuenta es mandar lo suyo primero; el de un móvil que restaura no tiene
+    // nada que mandar, así que no espera por nada.
+    const incoming = await downloadMissingPhotos(db, accountUuid, reportPhotoProgress);
+    if (incoming.pending > 0 || incoming.failed > 0) {
+      console.warn(
+        `[sync] fotos: ${incoming.downloaded} bajadas, ${incoming.pending} por bajar, ` +
+          `${incoming.failed} sin poder bajar`,
+      );
+      for (const reason of incoming.reasons) console.warn(`[sync] fotos — ${reason}`);
     }
 
     return { ok: true, error: null, at: new Date().toISOString() };

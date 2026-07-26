@@ -8,63 +8,156 @@ Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está
 
 La v2.0.0 **está instalada y en uso en el móvil del autor**, con datos reales y
 cuenta iniciada. Ya no estamos construyendo: estamos corrigiendo lo que aparece
-al usarla. Todo lo de abajo sale de probarla, no de leer código.
+al usarla.
 
-### Lo primero: `PressableScale`
+### ✅ El bug de los paneles: era el pie, no `PressableScale`
 
-Es el más importante y **está diagnosticado pero sin arreglar**.
+**La sesión anterior lo diagnosticó mal y el arreglo que proponía —tocar ~50
+sitios de uso de `PressableScale`— habría sido trabajo tirado.** Queda escrito
+aquí porque la hipótesis era convincente y volverá a serlo.
 
-**Síntoma:** en casi todos los paneles (filtros, etiquetas, «Registrar»…) se ve
-la animación de pulsación pero la acción no ocurre. Incluye la X que no cierra.
+Se reprodujo en el emulador contra el APK instalado y se midió con
+`adb shell uiautomator dump`, que da los límites reales de cada vista:
 
-**Causa:** `components/ui/Motion.tsx` construye `PressableScale` sobre
-`Animated.createAnimatedComponent(Pressable)` — anima el propio `Pressable` en
-vez de una vista hija. Eso deja que `onPressIn`/`onPressOut` sigan disparando
-(de ahí la animación) mientras `onPress` se pierde. Como `PressableScale` es
-casi todo lo pulsable de la app, encaja con «pasa en casi todos los drawers».
+| nodo               | antes         | después   |
+| ------------------ | ------------- | --------- |
+| tarjeta del panel  | 278..**2211** | —         |
+| pie (`footer`)     | h=**81**      | h=**151** |
+| botón «Limpiar»    | h=**51**      | h=**121** |
+| etiqueta «Limpiar» | h=**21**      | h=**61**  |
 
-**Por qué no está hecho:** el arreglo obvio —mover la animación a una vista
-hija— desplaza `className` hacia dentro, y `className` lleva también el
-`flex-row`, el `gap` y el `flex-1` de siete sitios de uso. Meter un `Pressable`
-entre el contenedor y sus hijos los saca de su padre flex y descoloca esas
-pantallas. Se revirtió: cambiar un bug de toque por una regresión visual, sobre
-una hipótesis sin verificar en dispositivo, no compensa.
+Todo terminaba exactamente en 2211, que es el borde de la tarjeta: **el pie se
+salía del panel y Android lo recortaba**. Los botones quedaban partidos por la
+mitad; con menos sitio o una fuente más grande se recortan a nada y dejan de
+poder pulsarse. Eso es lo que se veía como «el panel no responde».
 
-**Cómo hacerlo bien:** separar en `PressableScale` lo que es *layout* (va fuera,
-en el `Pressable`) de lo que es *caja visual* (va dentro, en la `Animated.View`).
-Toca ~50 sitios de uso y hay que mirarlos pantalla a pantalla.
+**Por qué el tope estaba en el sitio equivocado.** `Sheet` ponía `maxHeight` en
+la tarjeta y `flexShrink: 1` en el cuerpo, esperando que cediera el cuerpo. No
+cedía: el cuerpo casi siempre es un `ScrollView`, cuya altura la fija su
+contenido, así que quien acababa cediendo era el pie. Ahora **el tope lo lleva el
+cuerpo**, que es lo único que sabe desplazarse, y la cabecera y el pie se miden
+con `onLayout` y se restan. Su altura deja de ser negociable.
+
+**Lo que se descartó, con evidencia:**
+
+- `PressableScale` funciona. Se pulsó «Una visita» en «Registrar» y navegó.
+- La X de los paneles funciona, y además **es un `Pressable` normal**, no un
+  `PressableScale` — por sí solo eso ya desmontaba la hipótesis.
+- `useAnimatedStyle` corre en el hilo de UI y **no provoca render**, así que no
+  podía estar reiniciando el estado de pulsación.
+
+Lección de método: `uiautomator dump` da medidas, no impresiones, y distingue
+«no llega el toque» de «la vista mide la mitad». Es lo que había que hacer antes
+de refactorizar 50 ficheros sobre una corazonada.
+
+### 🔴 El sync como copia de seguridad — dos fallos silenciosos, corregidos
+
+El motor push/pull estaba mucho más completo de lo que parecía (bandeja de
+salida, cursores, LWW, traducción uuid↔id, lápidas, uniones). Lo que fallaba no
+era el mecanismo sino dos cosas que **no daban ningún error**:
+
+1. **El pull paginaba por el reloj del cliente.** El cursor era
+   `max(updated_at)`, y `updated_at` lo escribe el móvil que editó. Con dos
+   dispositivos bastaba un desfase de minutos para que las filas del segundo
+   llegaran con una fecha anterior al cursor del primero y **el primero no las
+   bajara nunca**. Migración **0017**: secuencia `sync_seq` sellada por trigger;
+   `updated_at` se queda solo para decidir qué versión gana. El pull además
+   pagina (antes pedía la tabla entera en una respuesta).
+
+2. **Restaurar en un móvil vacío se caía, y sin fotos.** Dos fallos encadenados:
+   `images.path` es `not null` y no se sincroniza (es la ruta _de este_
+   teléfono), y nadie la rellenaba al insertar una fila que llegaba del
+   servidor → `NOT NULL constraint failed: images.path`. Como `images` es la
+   última tabla escalar, ese error tumbaba el final del pull y la restauración
+   se quedaba **también sin uniones** (etiquetas, platos por visita, personas),
+   con cada sync terminando en error. Y aunque no se hubiera caído: **no existía
+   ninguna ruta de descarga de fotos**, así que el diario volvía con todas las
+   fotos rotas.
+
+Los dos llevan test de regresión **verificado reintroduciendo el fallo**. El
+primero costó dos intentos: la primera reintroducción no era fiel (el fake y el
+motor compartían la suposición equivocada, así que el test pasaba con el bug
+puesto) — reintroducir mal es indistinguible de un test que no sirve.
+
+Nuevo `sync-status`: compara los conteos de los dos lados y dice qué falta por
+subir y por bajar. «Última sincronización correcta» dice que el proceso no
+falló, no que la copia esté completa.
+
+**Sin verificar contra servicios reales:** la descarga de fotos y la
+comparación necesitan sesión y Worker; el emulador está en `OFFLINE_MODE`. Y
+**0017 hay que aplicarla** (`supabase db push`) — hasta entonces el pull no
+encuentra `sync_seq` y no baja nada.
+
+**Falta:** elegir qué manda al iniciar sesión con datos en los dos lados
+(combinar / la nube manda / este móvil manda). Las dos últimas destruyen datos,
+así que van con confirmación y copia previa. Sin esto, la estrategia sigue
+siendo combinar siempre, en silencio.
 
 ### Bugs pendientes, del uso real
 
-De la lista del autor, en orden de valor:
-
-1. **`PressableScale`** — arriba. Desbloquea la X de los paneles y el resto.
-2. **Memoria: 1–2 GB en caché.** Diagnosticado, sin arreglar. Dos causas:
+1. **Memoria: 1–2 GB en caché.** Diagnosticado, sin arreglar. Dos causas:
    `ImagePicker` usa `quality: 0.5` pero **nunca redimensiona**, así que una foto
-   de 3000×4000 ocupa ~48 MB *decodificada* independientemente de lo que pese el
+   de 3000×4000 ocupa ~48 MB _decodificada_ independientemente de lo que pese el
    fichero; y hay 13 usos de `cachePolicy="memory-disk"` sin límite, que guardan
    una segunda copia en disco de cada imagen mostrada. El arreglo es generar
    miniaturas al guardar y no alimentar los originales a las listas.
-3. **Etiquetar a alguien muestra la foto del restaurante**, debería ser la de la
+2. **Etiquetar a alguien muestra la foto del restaurante**, debería ser la de la
    visita, y el detalle debería verse como en compartidos (foto, platos,
    personas, descripción).
-4. **«con 1 persona»** en Amigos y Contigo: poner los nombres/usuarios.
-5. **Cambiar la foto de perfil**: no existe.
-6. **Tap en nombre/foto → perfil**, en amigos y en etiquetas.
+3. **«con 1 persona»** en Amigos y Contigo: poner los nombres/usuarios.
+4. **Cambiar la foto de perfil**: no existe.
+5. **Tap en nombre/foto → perfil**, en amigos y en etiquetas.
+
+### Lo cerrado en esta sesión (26 de julio)
+
+Verde: TypeScript en 0, **265 tests** de app, lint sin avisos, y las aserciones
+SQL en verde con **un fichero nuevo** (`notifications.test.sql`, 14 aserciones).
+
+- **El pie de los paneles** — arriba. Verificado midiendo en el emulador.
+- **La sección de fotos duplicada al editar.** Era literal: `ImagesUploader`
+  aparecía dos veces. Pasaba **también en editar restaurante**; visitas estaba
+  bien.
+- **Fotos de compartidos con el visor.** La portada, las del carrete y las de
+  cada plato abren el `ImageLightbox`, todas en la misma lista para poder
+  deslizar entre ellas. Antes se veían recortadas a 4:3 o a un cuadrado de 150 y
+  no había forma de verlas enteras: la misma foto se comportaba distinto según
+  quién la hubiera hecho.
+- **El texto del feed.** La frase «X estuvo en Y» iba a una línea y se cortaba
+  justo en el dato que se venía a leer. Ahora dos.
+- **Una etiqueta abre la puerta por sí sola** (migración **0015**). Etiquetar en
+  una comida privada no hacía nada: la persona salía en la lista de
+  participantes y no se enteraba nunca. `visibility` reparte a un público;
+  escribir el nombre de alguien nombra a un destinatario. **El feed no cambia**
+  — `feed_page` sigue exigiendo `is_shared` —, así que la visita privada llega a
+  «Contigo» y no se cuela en el feed de nadie. Con aserciones de seguridad para
+  las dos mitades.
+- **Notificaciones al etiquetar** (migración **0016**): tabla `notifications`,
+  trigger, RPCs, campana con punto en el Feed y pantalla **Novedades**.
+
+### Notificaciones: qué está hecho y qué no
+
+- **Hecho y probado en SQL:** la tabla, el trigger, `notifications_page`,
+  `unread_notifications`, `mark_notifications_read`. Un índice único hace el
+  trigger **idempotente**, que no es un detalle: el móvil de quien etiqueta
+  reenvía el conjunto completo de participantes en cada sync, así que sin él el
+  aviso reaparecía en cada pasada.
+- **Hecho, sin probar con datos reales:** la pantalla y la campana. El emulador
+  está en `OFFLINE_MODE` y sin sesión, así que solo se pudo ver el estado vacío.
+- **Sin hacer, a propósito:** el **push** no está encendido. Están la tabla
+  `device_push_tokens` y `register_push_token`, pero **no** hay
+  `expo-notifications`, ni permiso, ni registro del token desde el móvil, ni
+  envío en el Worker. Falta que existan las credenciales FCM en EAS. El Worker
+  tendrá que recorrer `notifications` con `pushed_at is null`.
 
 ### Verificaciones que dependen del dispositivo
-
-Cambios hechos que **no se pudieron probar aquí** y hay que confirmar usando:
 
 - El **orden en Android** del peek (`elevation` en `PeekOverlay`).
 - El **arrastre hacia abajo** para cerrar paneles.
 - El **parpadeo en vista calendario** (`removeClippedSubviews={false}`).
-- Si los **botones de crear** que fallaban eran el desbordamiento de paneles ya
-  corregido, o son el bug de `PressableScale`.
-
-> Diagnóstico útil para la X de los paneles: si **arrastrar cierra pero la X
-> no**, es zona táctil en la cabecera. Si **tampoco cierra arrastrando**, es el
-> estado del padre. Si **ahora cierran las dos**, era el desbordamiento.
+- **Novedades con datos de verdad**: que llegue el aviso al etiquetar desde otra
+  cuenta y que el punto se apague al entrar.
+- **0015 y 0016 hay que aplicarlas en Supabase** (`supabase db push`); hasta
+  entonces la campana contará cero y la pantalla dará error.
 
 ### Deuda anotada
 
@@ -82,21 +175,20 @@ Cambios hechos que **no se pudieron probar aquí** y hay que confirmar usando:
 verificado contra una base real) y el móvil (`reset-device.md`). Van juntos: si
 solo se vacía uno, el otro lo repuebla en el siguiente sync.
 
-
 ## Estado global
 
 Leyenda: 🟢 código completo y testeado · 🟡 código escrito, necesita servicio/dispositivo para verificarse · ⬜ pendiente.
 
-| Fase                    | Estado                                                                     |
-| ----------------------- | -------------------------------------------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–14)                                                    |
-| 0 — Puesta a punto      | ✅                                                                          |
-| 1 — Esquema local       | ✅ Migraciones 0007–0010 verificadas contra una base v1 poblada             |
-| 2 — Supabase + Auth     | ✅ Google OAuth funcionando en dispositivo                                  |
-| 3 — Sync                | ✅ Filas, uniones y fotos, verificado en dispositivo                        |
-| 4 — Worker / Share      | ✅ Desplegado; R2 sirviendo fotos                                           |
-| 5 — Social              | ✅ Amigos, feed, perfiles, etiquetado y bandeja «Contigo»                   |
-| 6 — UI                  | ✅ Rediseño completo                                                        |
+| Fase                    | Estado                                                                                                          |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–14)                                                                                        |
+| 0 — Puesta a punto      | ✅                                                                                                              |
+| 1 — Esquema local       | ✅ Migraciones 0007–0010 verificadas contra una base v1 poblada                                                 |
+| 2 — Supabase + Auth     | ✅ Google OAuth funcionando en dispositivo                                                                      |
+| 3 — Sync                | ✅ Filas, uniones y fotos, verificado en dispositivo                                                            |
+| 4 — Worker / Share      | ✅ Desplegado; R2 sirviendo fotos                                                                               |
+| 5 — Social              | ✅ Amigos, feed, perfiles, etiquetado y bandeja «Contigo»                                                       |
+| 6 — UI                  | ✅ Rediseño completo                                                                                            |
 | 7 — Asistente IA        | 🟡 Tools de consulta testeadas · agente/voz/embeddings pendientes · **apagado en la 2.0.0** (`lib/features.ts`) |
 
 **Verificación transversal en cada commit:** TypeScript en 0, **283 tests** (59 app-mobile + 200 node-mobile + 24 worker) más ~75 aserciones SQL (`npm run db:test`), `npm run lint` sin errores ni warnings, bundle Android.
