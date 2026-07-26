@@ -10,6 +10,22 @@ La v2.0.0 **está instalada y en uso en el móvil del autor**, con datos reales 
 cuenta iniciada. Ya no estamos construyendo: estamos corrigiendo lo que aparece
 al usarla.
 
+### 👉 Lo siguiente, en orden
+
+1. **Fusionar `fix/sync-como-copia-y-notificaciones`.** Seis commits; `main` no
+   los tiene. Todo verde: TS en 0, 298 tests (274 de app + 24 del worker), 117
+   aserciones SQL, lint limpio.
+2. **Probar el sync con dos dispositivos y sesión iniciada.** Es lo único que
+   valida de verdad el trabajo de esta sesión, y el caso que fallaba en
+   silencio. Empezar por Ajustes → «¿Está todo en la nube?»: si algo no cuadra,
+   esa pantalla dice qué falta y en qué dirección.
+3. **Arreglar `IntentHandler` con el dev client** (abajo, en cómo probar). Sin
+   eso, la app no arranca contra Metro y no se puede verificar nada en pantalla.
+4. **Confirmar que la clave FCM está subida a EAS** y seguir con el push
+   ([docs/15](15-notificaciones-push.md) §2).
+
+Nada de esto está bloqueado por terceros salvo el punto 4.
+
 ### ✅ El bug de los paneles: era el pie, no `PressableScale`
 
 **La sesión anterior lo diagnosticó mal y el arreglo que proponía —tocar ~50
@@ -83,15 +99,51 @@ Nuevo `sync-status`: compara los conteos de los dos lados y dice qué falta por
 subir y por bajar. «Última sincronización correcta» dice que el proceso no
 falló, no que la copia esté completa.
 
-**Sin verificar contra servicios reales:** la descarga de fotos y la
-comparación necesitan sesión y Worker; el emulador está en `OFFLINE_MODE`. Y
-**0017 hay que aplicarla** (`supabase db push`) — hasta entonces el pull no
-encuentra `sync_seq` y no baja nada.
+### ✅ Elegir quién manda cuando hay dos diarios
 
-**Falta:** elegir qué manda al iniciar sesión con datos en los dos lados
-(combinar / la nube manda / este móvil manda). Las dos últimas destruyen datos,
-así que van con confirmación y copia previa. Sin esto, la estrategia sigue
-siendo combinar siempre, en silencio.
+Último hueco del sync, ya cerrado. Tres salidas: **combinar** (lo de siempre,
+recomendada), **que mande la nube**, **que mande este móvil**.
+
+- **La comprobación va antes del primer sync**, y ese orden no es reversible:
+  sincronizar primero ya combina, y preguntar después sería preguntar por algo
+  que ya pasó.
+- **Solo se pregunta cuando la respuesta no es obvia**: hacen falta filas a los
+  dos lados _y_ cambios locales sin subir. Un móvil vacío que entra en una
+  cuenta con diario solo puede querer restaurar.
+- **Copia de seguridad automática antes de vaciar.** `docs/09` la pedía desde el
+  principio y nunca se hizo; aquí sí, y no es opcional.
+- **Lo que se retira de la nube va como lápida, no como `delete`.** Un borrado a
+  secas reaparecería en el siguiente push del otro móvil, que sigue teniéndolo y
+  no sabe que fue a propósito.
+- Navegar es cosa de `SyncRunner`, no del hook: `useSync` se monta en dos sitios
+  y un `router.push` ahí dentro abriría la pantalla dos veces.
+
+### Migraciones: aplicadas y verificadas
+
+**0015, 0016 y 0017 están aplicadas en el proyecto real** y comprobadas, no solo
+empujadas: `supabase migration list --linked` da 17/17 con `local` = `remote`, y
+`supabase db diff --linked` **no muestra ninguna deriva estructural** (si
+faltaran `sync_seq`, sus triggers o las tablas nuevas, saldrían aquí).
+
+Los `NOTICE ... trigger does not exist, skipping` de 0017 son esperados: salen
+del `drop trigger if exists` la primera vez que corre, puesto a propósito para
+que la migración se pueda reaplicar.
+
+El diff sí muestra cientos de `grant … to anon/authenticated/service_role`: es
+ruido conocido de la herramienta —Supabase los concede por defecto a toda tabla
+de `public` y la base desechable con la que compara no los reproduce—. Lo que
+protege esas tablas es RLS, activado en todas.
+
+> **El primer sync tras 0017 baja el diario entero una vez.** Los cursores
+> guardados son fechas ISO; `Number()` de eso da `NaN` y `sync_seq > NaN` no
+> devolvería nada, o sea que el móvil dejaría de bajar cambios para siempre. Un
+> cursor que no es número se trata como «no hay cursor». Volver a aplicar filas
+> que ya tienes es inofensivo; no volver a mirarlas, no.
+
+**Sin verificar contra servicios reales:** la descarga de fotos, la comparación
+y la pantalla de conflictos necesitan sesión y Worker, y el emulador está en
+`OFFLINE_MODE` y sin sesión. La lógica de las tres tiene tests; el camino real
+(Worker + R2 + token) no se ha ejercitado nunca.
 
 ### Bugs pendientes, del uso real
 
@@ -110,8 +162,12 @@ siendo combinar siempre, en silencio.
 
 ### Lo cerrado en esta sesión (26 de julio)
 
-Verde: TypeScript en 0, **265 tests** de app, lint sin avisos, y las aserciones
-SQL en verde con **un fichero nuevo** (`notifications.test.sql`, 14 aserciones).
+> ⚠️ **El trabajo está en la rama `fix/sync-como-copia-y-notificaciones`, no en
+> `main`.** Seis commits. Falta fusionarla.
+
+Verde: TypeScript en 0, **274 tests** de app, lint sin avisos, y las aserciones
+SQL en verde con dos ficheros nuevos (`notifications.test.sql` y
+`sync-cursor.test.sql`).
 
 - **El pie de los paneles** — arriba. Verificado midiendo en el emulador.
 - **La sección de fotos duplicada al editar.** Era literal: `ImagesUploader`
@@ -133,6 +189,8 @@ SQL en verde con **un fichero nuevo** (`notifications.test.sql`, 14 aserciones).
   las dos mitades.
 - **Notificaciones al etiquetar** (migración **0016**): tabla `notifications`,
   trigger, RPCs, campana con punto en el Feed y pantalla **Novedades**.
+- **El sync como copia de seguridad**, arriba: 0017, descarga de fotos,
+  `sync-status` y la pantalla de conflictos.
 
 ### Notificaciones: qué está hecho y qué no
 
@@ -143,11 +201,24 @@ SQL en verde con **un fichero nuevo** (`notifications.test.sql`, 14 aserciones).
   aviso reaparecía en cada pasada.
 - **Hecho, sin probar con datos reales:** la pantalla y la campana. El emulador
   está en `OFFLINE_MODE` y sin sesión, así que solo se pudo ver el estado vacío.
-- **Sin hacer, a propósito:** el **push** no está encendido. Están la tabla
-  `device_push_tokens` y `register_push_token`, pero **no** hay
-  `expo-notifications`, ni permiso, ni registro del token desde el móvil, ni
-  envío en el Worker. Falta que existan las credenciales FCM en EAS. El Worker
-  tendrá que recorrer `notifications` con `pushed_at is null`.
+- **Push: el reparto está en [docs/15](15-notificaciones-push.md).** La parte del
+  autor ya está hecha: proyecto de Firebase (`complete-welder-452606-k5`), app de
+  Android con el paquete correcto, `google-services.json` en el repo y enlazado
+  desde `app.config.js`, y la clave de cuenta de servicio en `.gitignore`
+  (verificado: **nunca ha entrado en el historial**, y el `google-services.json`
+  no lleva marcadores de cuenta de servicio).
+
+  **Sin confirmar:** que la clave esté subida a EAS (`eas credentials`). Es lo
+  primero que hay que mirar al retomar.
+
+  **Falta todo el código:** `expo-notifications`, el permiso, el registro del
+  token con `register_push_token` (la RPC ya existe) y el envío en el Worker
+  recorriendo `notifications` con `pushed_at is null`. Requiere **reconstruir el
+  APK**: es un módulo nativo, no una recarga de JavaScript.
+
+  Las credenciales FCM **no van por perfil de build**: cuelgan del identificador
+  de aplicación, y `BUNDLE_ID` es una constante, así que una sola subida cubre
+  `preview` y `production`. No hay que duplicarlas.
 
 ### Verificaciones que dependen del dispositivo
 
@@ -156,16 +227,42 @@ SQL en verde con **un fichero nuevo** (`notifications.test.sql`, 14 aserciones).
 - El **parpadeo en vista calendario** (`removeClippedSubviews={false}`).
 - **Novedades con datos de verdad**: que llegue el aviso al etiquetar desde otra
   cuenta y que el punto se apague al entrar.
-- **0015 y 0016 hay que aplicarlas en Supabase** (`supabase db push`); hasta
-  entonces la campana contará cero y la pantalla dará error.
+- **El sync con dos dispositivos**: registrar en cada uno y ver que aparece en el
+  otro. Es el caso que antes fallaba en silencio.
+- **La descarga de fotos y `sync-status`** con sesión y Worker de verdad.
+- **La pantalla de conflictos**, que no se llegó a ver en pantalla (ver abajo).
+
+### 🛠️ Cómo probar en el emulador (esto costó media sesión)
+
+- El APK instalado en el emulador **es ahora una build de debug** puesta encima
+  de la release, con la misma clave de firma — los datos siguen intactos. Se
+  conecta a Metro: `npx expo start --dev-client` + `adb reverse tcp:8081 tcp:8081`.
+- **`adb shell screencap` no es fiable** con la superficie de React Native en
+  dev: devuelve negro con la app perfectamente pintada. Se perdió bastante rato
+  creyendo que la app no arrancaba. `adb shell uiautomator dump` sí funciona
+  siempre, y además da **medidas reales**, que es como se cazó el bug del pie.
+- **`IntentHandler` se traga la URL de arranque del dev client.** Ve
+  `restaurantapp://expo-development-client/?url=…`, la trata como un fichero
+  `.restoshare` y navega a importar, que falla con «Invalid format». La app se
+  queda ahí y parece colgada en el splash. **Solo pasa en dev** — la release no
+  arranca con esa URL, por eso nunca se ha visto en el móvil. Arreglo: que
+  `IntentHandler` ignore el esquema `expo-development-client`. Es lo que impidió
+  ver la pantalla de conflictos.
+- El emulador se quedó **sin espacio** al instalar (`INSUFFICIENT_STORAGE`);
+  `adb shell pm trim-caches 2000M` liberó lo suficiente.
+- Está en `OFFLINE_MODE=true` y sin sesión, así que todo lo social y lo de sync
+  solo enseña estados vacíos.
 
 ### Deuda anotada
 
-- **Tarea #32: copia de seguridad automática antes de migrar.** `docs/09` la
-  describía como el paso 1 desde el principio y **nunca se implementó**. Mientras
-  no exista, la copia manual antes de instalar no es una precaución opcional.
+- **Tarea #32: copia de seguridad automática antes de migrar.** Sigue sin
+  hacerse **para las migraciones**, que es lo que `docs/09` pedía desde el
+  principio; la copia manual antes de instalar sigue sin ser opcional. Lo que sí
+  existe ya es la copia automática antes de vaciar el diario en la pantalla de
+  conflictos, con el mismo `BackupService` — o sea que la pieza está y falta
+  engancharla al arranque de las migraciones.
 - **Docs sin repasar:** 00, 01, 04, 07, 08, 10, 12 y README. Los repasados
-  (02, 03, 05, 06, 09, 11, 13, ESTADO) ya dicen lo que hace el código.
+  (02, 03, 05, 06, 09, 11, 13, 15, ESTADO) ya dicen lo que hace el código.
 - **`lint:compiler`**: 83 avisos de React Compiler readiness, fuera de la puerta
   principal a propósito. Ver `docs/12`.
 
@@ -179,19 +276,19 @@ solo se vacía uno, el otro lo repuebla en el siguiente sync.
 
 Leyenda: 🟢 código completo y testeado · 🟡 código escrito, necesita servicio/dispositivo para verificarse · ⬜ pendiente.
 
-| Fase                    | Estado                                                                                                          |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–14)                                                                                        |
-| 0 — Puesta a punto      | ✅                                                                                                              |
-| 1 — Esquema local       | ✅ Migraciones 0007–0010 verificadas contra una base v1 poblada                                                 |
-| 2 — Supabase + Auth     | ✅ Google OAuth funcionando en dispositivo                                                                      |
-| 3 — Sync                | ✅ Filas, uniones y fotos, verificado en dispositivo                                                            |
-| 4 — Worker / Share      | ✅ Desplegado; R2 sirviendo fotos                                                                               |
-| 5 — Social              | ✅ Amigos, feed, perfiles, etiquetado y bandeja «Contigo»                                                       |
-| 6 — UI                  | ✅ Rediseño completo                                                                                            |
-| 7 — Asistente IA        | 🟡 Tools de consulta testeadas · agente/voz/embeddings pendientes · **apagado en la 2.0.0** (`lib/features.ts`) |
+| Fase                    | Estado                                                                                                                                                                                                   |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documentación de diseño | ✅ Completa (docs 00–15)                                                                                                                                                                                 |
+| 0 — Puesta a punto      | ✅                                                                                                                                                                                                       |
+| 1 — Esquema local       | ✅ Migraciones 0007–0010 verificadas contra una base v1 poblada                                                                                                                                          |
+| 2 — Supabase + Auth     | ✅ Google OAuth funcionando en dispositivo                                                                                                                                                               |
+| 3 — Sync                | 🟡 Filas y uniones sí. **La bajada de fotos y el caso de dos dispositivos nunca se habían probado**, y los dos estaban rotos (ver arriba); corregidos y con tests, sin verificar contra servicios reales |
+| 4 — Worker / Share      | ✅ Desplegado; R2 sirviendo fotos                                                                                                                                                                        |
+| 5 — Social              | ✅ Amigos, feed, perfiles, etiquetado y bandeja «Contigo»                                                                                                                                                |
+| 6 — UI                  | ✅ Rediseño completo                                                                                                                                                                                     |
+| 7 — Asistente IA        | 🟡 Tools de consulta testeadas · agente/voz/embeddings pendientes · **apagado en la 2.0.0** (`lib/features.ts`)                                                                                          |
 
-**Verificación transversal en cada commit:** TypeScript en 0, **283 tests** (59 app-mobile + 200 node-mobile + 24 worker) más ~75 aserciones SQL (`npm run db:test`), `npm run lint` sin errores ni warnings, bundle Android.
+**Verificación transversal en cada commit:** TypeScript en 0, **298 tests** (109 app-mobile + 165 node-mobile + 24 worker) más **117 aserciones SQL** (`npm run db:test`), `npm run lint` sin errores ni warnings, bundle Android.
 
 ## Primer despliegue — v2.0.0
 
