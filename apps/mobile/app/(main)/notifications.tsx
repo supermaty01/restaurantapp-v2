@@ -3,7 +3,6 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect } from 'react';
 import { ActivityIndicator, FlatList, RefreshControl, View } from 'react-native';
 
-import { Avatar } from '@/components/ui/Avatar';
 import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState } from '@/components/ui/Surface';
@@ -11,6 +10,7 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { fetchNotifications, markNotificationsRead } from '@/features/social/api';
 import type { AppNotification } from '@/features/social/api';
+import { AuthorHeader } from '@/features/social/components/AuthorHeader';
 import { usePagedResource } from '@/features/social/hooks/usePagedResource';
 import { remoteImageUri } from '@/features/social/remote-image';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -124,9 +124,25 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
         unread ? 'border-primary/40 bg-primary/8' : 'border-line bg-surface'
       }`}
     >
-      <Avatar name={actor} uri={notification.avatarUrl} size={38} />
-
-      <View className="min-w-0 flex-1 gap-0.5">
+      <AuthorHeader
+        userId={notification.actorId}
+        name={actor}
+        avatarUrl={notification.avatarUrl}
+        size={38}
+        trailing={
+          photo ? (
+            <Thumbnail
+              name={notification.title}
+              uri={photo}
+              size={44}
+              radius={10}
+              icon="restaurant"
+            />
+          ) : (
+            <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
+          )
+        }
+      >
         <Txt variant="callout" numberOfLines={2}>
           <Txt variant="callout" weight="bold">
             {actor}
@@ -139,13 +155,7 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
         <Txt variant="caption" tone="subtle">
           {formatRelativeDate(notification.createdAt)}
         </Txt>
-      </View>
-
-      {photo ? (
-        <Thumbnail name={notification.title} uri={photo} size={44} radius={10} icon="restaurant" />
-      ) : (
-        <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
-      )}
+      </AuthorHeader>
     </PressableScale>
   );
 }

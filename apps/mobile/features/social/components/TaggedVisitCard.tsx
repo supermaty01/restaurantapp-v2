@@ -1,9 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { View } from 'react-native';
 
-import { Avatar } from '@/components/ui/Avatar';
 import { PressableScale } from '@/components/ui/Motion';
 import { Card } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
@@ -12,6 +10,7 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
 
 import { remoteImageUri } from '../remote-image';
+import { AuthorHeader } from './AuthorHeader';
 
 import type { TaggedVisit } from '../api';
 
@@ -45,30 +44,31 @@ export function TaggedVisitCard({ visit }: { visit: TaggedVisit }) {
       scaleTo={0.985}
     >
       <Card className="gap-3">
-        <View className="flex-row items-center gap-2.5">
-          <Avatar name={author} uri={visit.avatarUrl} size={34} />
-          <View className="flex-1">
-            {/* Dos líneas, como en el feed: la frase lleva un nombre y el sitio
-                donde comisteis, y en una sola se corta justo en el sitio —
-                "Caro te etiquetó en L'Atelier Artisan Crê…". */}
-            <Txt variant="caption" tone="muted" numberOfLines={2}>
-              <Txt variant="caption" weight="bold" serif={false}>
-                {author}
-              </Txt>{' '}
-              te etiquetó en{' '}
-              <Txt variant="caption" weight="semi" serif={false}>
-                {visit.title}
-              </Txt>
+        <AuthorHeader
+          userId={visit.authorId}
+          name={author}
+          avatarUrl={visit.avatarUrl}
+          trailing={<Ionicons name="pricetag" size={15} color={colors.sage} />}
+        >
+          {/* Dos líneas, como en el feed: la frase lleva un nombre y el sitio
+              donde comisteis, y en una sola se corta justo en el sitio —
+              "Caro te etiquetó en L'Atelier Artisan Crê…". */}
+          <Txt variant="caption" tone="muted" numberOfLines={2}>
+            <Txt variant="caption" weight="bold" serif={false}>
+              {author}
+            </Txt>{' '}
+            te etiquetó en{' '}
+            <Txt variant="caption" weight="semi" serif={false}>
+              {visit.title}
             </Txt>
-            <Txt variant="caption" tone="subtle">
-              {formatVisitDate(visit.visitedAt)}
-              {others > 0
-                ? ` · ${others === 1 ? 'y 1 persona más' : `y ${others} personas más`}`
-                : ''}
-            </Txt>
-          </View>
-          <Ionicons name="pricetag" size={15} color={colors.sage} />
-        </View>
+          </Txt>
+          <Txt variant="caption" tone="subtle">
+            {formatVisitDate(visit.visitedAt)}
+            {others > 0
+              ? ` · ${others === 1 ? 'y 1 persona más' : `y ${others} personas más`}`
+              : ''}
+          </Txt>
+        </AuthorHeader>
 
         {photo ? (
           <Image

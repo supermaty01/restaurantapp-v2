@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';
-import { Avatar } from '@/components/ui/Avatar';
 import { PressableScale } from '@/components/ui/Motion';
 import { Card, Chip } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
@@ -13,6 +12,7 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
 
 import { remoteImageUri } from '../remote-image';
+import { AuthorHeader } from './AuthorHeader';
 
 import type { FeedEntry, FeedKind } from '../api';
 
@@ -57,24 +57,25 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
 
   const body = (
     <Card className="gap-3">
-      <View className="flex-row items-center gap-2.5">
-        <Avatar name={author} uri={entry.avatarUrl} size={34} />
-        <View className="flex-1">
-          {/* Dos líneas: es la frase que dice de qué va la tarjeta, y en una
-              sola se cortaba en cuanto el nombre y el sitio pasaban de cortos
-              — "Mateo Álvarez estuvo en L'Atelier Artisan Crê…" deja fuera
-              justo el dato que se venía a leer. */}
-          <Text className="text-[13px] leading-[18px] text-ink-muted" numberOfLines={2}>
-            <Text className="font-bold text-ink">{author}</Text> {verb[entry.kind]}{' '}
-            <Text className="font-semi text-ink">{entry.title}</Text>
-          </Text>
-          <Text className="text-[11px] text-ink-subtle">
-            {formatRelativeDate(entry.occurredAt)}
-            {entry.place && entry.place !== entry.title ? ` · ${entry.place}` : ''}
-          </Text>
-        </View>
-        <Ionicons name={icon[entry.kind]} size={16} color={colors.inkSubtle} />
-      </View>
+      <AuthorHeader
+        userId={entry.authorId}
+        name={author}
+        avatarUrl={entry.avatarUrl}
+        trailing={<Ionicons name={icon[entry.kind]} size={16} color={colors.inkSubtle} />}
+      >
+        {/* Dos líneas: es la frase que dice de qué va la tarjeta, y en una
+            sola se cortaba en cuanto el nombre y el sitio pasaban de cortos
+            — "Mateo Álvarez estuvo en L'Atelier Artisan Crê…" deja fuera
+            justo el dato que se venía a leer. */}
+        <Text className="text-[13px] leading-[18px] text-ink-muted" numberOfLines={2}>
+          <Text className="font-bold text-ink">{author}</Text> {verb[entry.kind]}{' '}
+          <Text className="font-semi text-ink">{entry.title}</Text>
+        </Text>
+        <Text className="text-[11px] text-ink-subtle">
+          {formatRelativeDate(entry.occurredAt)}
+          {entry.place && entry.place !== entry.title ? ` · ${entry.place}` : ''}
+        </Text>
+      </AuthorHeader>
 
       {photo ? (
         <Image
