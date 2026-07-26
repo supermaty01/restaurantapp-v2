@@ -1,8 +1,87 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-25
+**Última actualización:** 2026-07-26
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
+
+## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026
+
+La v2.0.0 **está instalada y en uso en el móvil del autor**, con datos reales y
+cuenta iniciada. Ya no estamos construyendo: estamos corrigiendo lo que aparece
+al usarla. Todo lo de abajo sale de probarla, no de leer código.
+
+### Lo primero: `PressableScale`
+
+Es el más importante y **está diagnosticado pero sin arreglar**.
+
+**Síntoma:** en casi todos los paneles (filtros, etiquetas, «Registrar»…) se ve
+la animación de pulsación pero la acción no ocurre. Incluye la X que no cierra.
+
+**Causa:** `components/ui/Motion.tsx` construye `PressableScale` sobre
+`Animated.createAnimatedComponent(Pressable)` — anima el propio `Pressable` en
+vez de una vista hija. Eso deja que `onPressIn`/`onPressOut` sigan disparando
+(de ahí la animación) mientras `onPress` se pierde. Como `PressableScale` es
+casi todo lo pulsable de la app, encaja con «pasa en casi todos los drawers».
+
+**Por qué no está hecho:** el arreglo obvio —mover la animación a una vista
+hija— desplaza `className` hacia dentro, y `className` lleva también el
+`flex-row`, el `gap` y el `flex-1` de siete sitios de uso. Meter un `Pressable`
+entre el contenedor y sus hijos los saca de su padre flex y descoloca esas
+pantallas. Se revirtió: cambiar un bug de toque por una regresión visual, sobre
+una hipótesis sin verificar en dispositivo, no compensa.
+
+**Cómo hacerlo bien:** separar en `PressableScale` lo que es *layout* (va fuera,
+en el `Pressable`) de lo que es *caja visual* (va dentro, en la `Animated.View`).
+Toca ~50 sitios de uso y hay que mirarlos pantalla a pantalla.
+
+### Bugs pendientes, del uso real
+
+De la lista del autor, en orden de valor:
+
+1. **`PressableScale`** — arriba. Desbloquea la X de los paneles y el resto.
+2. **Memoria: 1–2 GB en caché.** Diagnosticado, sin arreglar. Dos causas:
+   `ImagePicker` usa `quality: 0.5` pero **nunca redimensiona**, así que una foto
+   de 3000×4000 ocupa ~48 MB *decodificada* independientemente de lo que pese el
+   fichero; y hay 13 usos de `cachePolicy="memory-disk"` sin límite, que guardan
+   una segunda copia en disco de cada imagen mostrada. El arreglo es generar
+   miniaturas al guardar y no alimentar los originales a las listas.
+3. **Etiquetar a alguien muestra la foto del restaurante**, debería ser la de la
+   visita, y el detalle debería verse como en compartidos (foto, platos,
+   personas, descripción).
+4. **«con 1 persona»** en Amigos y Contigo: poner los nombres/usuarios.
+5. **Cambiar la foto de perfil**: no existe.
+6. **Tap en nombre/foto → perfil**, en amigos y en etiquetas.
+
+### Verificaciones que dependen del dispositivo
+
+Cambios hechos que **no se pudieron probar aquí** y hay que confirmar usando:
+
+- El **orden en Android** del peek (`elevation` en `PeekOverlay`).
+- El **arrastre hacia abajo** para cerrar paneles.
+- El **parpadeo en vista calendario** (`removeClippedSubviews={false}`).
+- Si los **botones de crear** que fallaban eran el desbordamiento de paneles ya
+  corregido, o son el bug de `PressableScale`.
+
+> Diagnóstico útil para la X de los paneles: si **arrastrar cierra pero la X
+> no**, es zona táctil en la cabecera. Si **tampoco cierra arrastrando**, es el
+> estado del padre. Si **ahora cierran las dos**, era el desbordamiento.
+
+### Deuda anotada
+
+- **Tarea #32: copia de seguridad automática antes de migrar.** `docs/09` la
+  describía como el paso 1 desde el principio y **nunca se implementó**. Mientras
+  no exista, la copia manual antes de instalar no es una precaución opcional.
+- **Docs sin repasar:** 00, 01, 04, 07, 08, 10, 12 y README. Los repasados
+  (02, 03, 05, 06, 09, 11, 13, ESTADO) ya dicen lo que hace el código.
+- **`lint:compiler`**: 83 avisos de React Compiler readiness, fuera de la puerta
+  principal a propósito. Ver `docs/12`.
+
+### Guiones de mantenimiento
+
+`supabase/scripts/` — vaciar una cuenta en la nube (`reset-account.sql`,
+verificado contra una base real) y el móvil (`reset-device.md`). Van juntos: si
+solo se vacía uno, el otro lo repuebla en el siguiente sync.
+
 
 ## Estado global
 

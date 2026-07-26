@@ -69,3 +69,21 @@ Además:
 - `services/api.ts` + token en AsyncStorage — se elimina.
 - Mezcla español/inglés en el código — se unifica.
 - Ausencia de capa de repositorios explícita (hay SQL en hooks) — se introduce.
+
+## Las reglas de React Compiler van aparte
+
+`npm run lint` es la puerta: si pasa, el código cumple el estándar. `npm run
+lint:compiler` es una pregunta distinta que se hace a propósito.
+
+Las reglas de *compiler readiness* de `eslint-plugin-react-hooks` v6 estuvieron
+en `warn`, que suena a la opción prudente y era la peor de las tres: el script
+lleva `--max-warnings=0`, así que 83 avisos hacían que el estándar no pudiera
+pasar nunca — y CI en rojo permanente. Un estándar que no se puede cumplir es un
+estándar que se aprende a ignorar.
+
+React Compiler no está activado, así que esos avisos no dicen nada sobre cómo se
+comporta la app hoy: describen trabajo necesario **antes** de activarlo. O una
+regla bloquea la build, o es una consulta aparte. Es lo segundo.
+
+Las dos clásicas —`rules-of-hooks` y `exhaustive-deps`— siguen siendo errores:
+esas sí son correctitud de ahora.
