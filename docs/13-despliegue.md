@@ -254,7 +254,44 @@ Esto es una **actualización en sitio**, no una instalación nueva. La v2 mantie
 
 Las tres primeras hacen que Android trate el APK como la misma app y **conserve la base de datos y las fotos**. La cuarta es la que permite instalarlo: con un `versionCode` igual o menor, Android rechaza el APK con un «App not installed» que no explica el motivo.
 
-**Firma.** El APK tiene que ir firmado con la misma clave que la v1.3, o Android lo rechaza aunque el `versionCode` suba. Al usar el mismo proyecto EAS, `eas build` reutiliza las credenciales guardadas; compruébalo con `eas credentials -p android` antes de compilar.
+**Firma.** El APK tiene que ir firmado con **la misma clave** que la versión instalada, o Android lo rechaza aunque el `versionCode` suba:
+
+```
+INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package … signatures do not match
+```
+
+Usar el mismo proyecto EAS **no basta**. Lo que decide es con qué se firmó lo que hay en el dispositivo:
+
+| Cómo se instaló lo que hay | Firma | ¿Entra un APK de EAS? |
+|---|---|---|
+| `expo run:android`, Android Studio, dev-client | Keystore de depuración (`CN=Android Debug`, la misma en todas las máquinas) | **No** |
+| `eas build` en este proyecto | Keystore de release de EAS | Sí |
+| Google Play | Play App Signing | No (hay que pasar por Play) |
+
+Comprobarlo antes de compilar, con el dispositivo conectado:
+
+```bash
+adb devices                       # asegúrate de apuntar al móvil, no a un emulador
+adb -s <ID> shell dumpsys package com.supermaty01.restaurantapp   | grep -E "versionName|versionCode|signatures|pkgFlags"
+```
+
+`pkgFlags=[ DEBUGGABLE … ]` significa build local: firmada con la clave de depuración, y **un APK de EAS no se instalará encima**.
+
+### Si las firmas no coinciden
+
+No se puede reconciliar: no se firma un release con la keystore de depuración, cuya clave privada es pública y viene con el SDK. Cualquiera podría firmar una actualización de tu app.
+
+La salida sin perder datos existe porque el formato de copia se ha mantenido:
+
+1. En la app vieja: **Ajustes → copia de seguridad**. Genera un ZIP con el fichero SQLite entero y el directorio de imágenes.
+2. **Sácalo del teléfono** (correo, Drive, cable). Este paso no es opcional: el siguiente borra la app.
+3. `adb uninstall com.supermaty01.restaurantapp`, o desinstalar a mano.
+4. Instalar el APK de EAS.
+5. En la app nueva: **Ajustes → restaurar** y elegir el ZIP.
+
+Restaurar sustituye el fichero SQLite y remonta el proveedor, así que las migraciones `0007–0010` corren sobre la base de la v1 — el mismo camino que cubren los tests de `migrations.node.test.ts`. Las fotos vuelven con el ZIP.
+
+A partir de ahí, todas las builds salen de EAS y esto no se repite.
 
 **Qué pasa al abrir por primera vez.** Drizzle encuentra las migraciones `0000–0006` ya aplicadas (mismos ficheros, mismo journal) y corre solo `0007–0010`:
 
