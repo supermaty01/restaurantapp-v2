@@ -1,12 +1,10 @@
-import { useEffect } from 'react';
 import { Pressable } from 'react-native';
 import Animated, {
+  FadeInUp as ReanimatedFadeInUp,
   interpolate,
   useAnimatedStyle,
   useSharedValue,
-  withDelay,
   withSpring,
-  withTiming,
 } from 'react-native-reanimated';
 
 import type { ReactNode } from 'react';
@@ -89,31 +87,35 @@ export function PressableScale({
  * handful lands together, because a long list would otherwise spend a visible
  * second assembling itself.
  */
+/**
+ * Entrada escalonada para una pantalla.
+ *
+ * Declarativa (`entering`) y no un efecto que sube la opacidad desde cero. La
+ * versión anterior arrancaba en `opacity: 0` y dependía de que un `useEffect`
+ * lanzara la animación; cuando esa animación no llegaba a asentarse —volver a
+ * una pestaña, un remonte del árbol tras importar datos— la vista se quedaba
+ * invisible **ocupando su sitio**. La pantalla de inicio aparecía en blanco con
+ * un hueco del tamaño exacto de su cabecera, y el diario parecía perdido.
+ *
+ * Reanimated gestiona las animaciones de entrada en el lado nativo y garantiza
+ * el estado final, así que la visibilidad deja de depender de que se ejecute
+ * nada en JS. Una animación de entrada es un adorno: no puede ser la condición
+ * para que se vea el contenido.
+ */
 export function FadeInUp({
   children,
   index = 0,
-  distance = 12,
   className = '',
 }: {
   children: ReactNode;
   index?: number;
-  distance?: number;
   className?: string;
 }) {
-  const progress = useSharedValue(0);
-
-  useEffect(() => {
-    const delay = Math.min(index, 6) * 45;
-    progress.value = withDelay(delay, withTiming(1, { duration: 320 }));
-  }, [index, progress]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [{ translateY: interpolate(progress.value, [0, 1], [distance, 0]) }],
-  }));
-
   return (
-    <Animated.View className={className} style={animatedStyle}>
+    <Animated.View
+      className={className}
+      entering={ReanimatedFadeInUp.delay(Math.min(index, 6) * 45).duration(320)}
+    >
       {children}
     </Animated.View>
   );
