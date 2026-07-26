@@ -19,7 +19,18 @@ export interface SegmentedTab {
 
 interface SegmentedTabsProps {
   tabs: SegmentedTab[];
+  /** Pestaña inicial. Solo se lee al montar: para forzarla después, `selectedKey`. */
   initialKey?: string | undefined;
+  /**
+   * Pestaña impuesta desde fuera.
+   *
+   * Existe porque `initialKey` no bastaba: la pantalla del diario vive en una
+   * pestaña que no se desmonta nunca, así que llegar a ella otra vez con otro
+   * `?tab=` no volvía a montar nada y el parámetro se ignoraba. Las tarjetas de
+   * inicio llevaban siempre a la última pestaña abierta.
+   */
+  selectedKey?: string | undefined;
+  onSelect?: ((key: string) => void) | undefined;
 }
 
 const SELECT_SPRING = { damping: 26, stiffness: 300, mass: 0.6 };
@@ -36,8 +47,20 @@ const SELECT_SPRING = { damping: 26, stiffness: 300, mass: 0.6 };
  * underline: an underline reads as page-level navigation, and these switch
  * content *within* a page, one level below the header that already uses one.
  */
-export function SegmentedTabs({ tabs, initialKey }: SegmentedTabsProps) {
-  const [activeKey, setActiveKey] = useState(initialKey ?? tabs[0]?.key ?? '');
+export function SegmentedTabs({
+  tabs,
+  initialKey,
+  selectedKey,
+  onSelect,
+}: SegmentedTabsProps) {
+  const [internalKey, setInternalKey] = useState(initialKey ?? tabs[0]?.key ?? '');
+
+  // Controlado si el padre manda una pestaña; si no, se gobierna solo.
+  const activeKey = selectedKey ?? internalKey;
+  const setActiveKey = (key: string) => {
+    setInternalKey(key);
+    onSelect?.(key);
+  };
 
   const activeIndex = Math.max(
     tabs.findIndex((tab) => tab.key === activeKey),

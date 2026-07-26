@@ -1,5 +1,5 @@
-import { useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
 import { View } from 'react-native';
 
 import { SegmentedTabs } from '@/components/ui/SegmentedTabs';
@@ -23,6 +23,26 @@ import { VisitList } from '@/features/visits/components/VisitList';
 export default function JournalScreen() {
   // `?tab=` lets the home screen deep-link straight to a section.
   const { tab } = useLocalSearchParams<{ tab?: string }>();
+  const [active, setActive] = useState('visits');
+
+  /**
+   * Aplicar el parámetro cada vez que se entra, no solo al montar.
+   *
+   * Esta pantalla vive en una pestaña que no se desmonta nunca, así que pasarle
+   * el parámetro como valor inicial solo funcionaba la primera vez: después,
+   * las tarjetas de inicio llevaban siempre a la última pestaña que hubieras
+   * dejado abierta.
+   *
+   * Y se limpia al aplicarlo. Si se quedara puesto, volver de ver un plato
+   * reaplicaría el parámetro y desharía la pestaña que acabas de elegir a mano.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (!tab) return;
+      setActive(tab);
+      router.setParams({ tab: undefined });
+    }, [tab]),
+  );
 
   const tabs = useMemo(
     () => [
@@ -38,7 +58,7 @@ export default function JournalScreen() {
       <View className="px-5 pb-1 pt-3">
         <Txt variant="display">Diario</Txt>
       </View>
-      <SegmentedTabs tabs={tabs} initialKey={tab} />
+      <SegmentedTabs tabs={tabs} selectedKey={active} onSelect={setActive} />
     </View>
   );
 }
