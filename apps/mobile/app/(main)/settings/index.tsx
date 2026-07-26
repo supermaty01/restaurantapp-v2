@@ -10,6 +10,7 @@ import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
+import NotificationsCard from '@/features/settings/components/NotificationsCard';
 import ThemeCard from '@/features/settings/components/ThemeCard';
 import ThemeSelectionModal from '@/features/settings/components/ThemeSelectionModal';
 import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
@@ -157,6 +158,14 @@ export default function SettingsScreen() {
           hint="El punto de partida de cada entrada; siempre puedes cambiarla una a una"
         >
           <PrivacyCard />
+        </FormSection>
+      ) : null}
+
+      {/* Solo con cuenta: sin ella no hay quien te etiquete, así que un
+          interruptor de avisos sería un interruptor de nada. */}
+      {sharing ? (
+        <FormSection title="Avisos" hint="Cuando alguien te etiqueta en una comida">
+          <NotificationsCard />
         </FormSection>
       ) : null}
 

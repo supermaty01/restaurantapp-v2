@@ -21,9 +21,17 @@ PUBLIC_BASE_URL = "https://restaurantapp-api.example.workers.dev"
 # AI Gateway slug (create in the Cloudflare dashboard). Empty = call AI directly.
 AI_GATEWAY = ""
 
-# Cron: purge expired share links + orphaned R2 objects (docs/05).
+# Cron (docs/05, docs/15). Dos trabajos con ritmos muy distintos:
+#
+#   - cada cinco minutos: repartir los avisos pendientes como push. Es la opción
+#     barata frente a un webhook desde Postgres, y un push que tarda cinco
+#     minutos sigue siendo un push.
+#   - de madrugada: purgar enlaces caducados y objetos huérfanos de R2.
+#
+# El manejador `scheduled` vive en src/index.ts. Sin él —que es como estuvo
+# hasta ahora— estas líneas no hacen nada y no lo dicen.
 [triggers]
-crons = ["0 3 * * *"]
+crons = ["*/5 * * * *", "0 3 * * *"]
 
 # Secrets (set with `wrangler secret put <NAME>`), documented for reference:
 #   SUPABASE_URL          - project URL; also where the JWKS endpoint lives, so

@@ -2,11 +2,12 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
 import { verifySupabaseJwt } from './auth';
+import { createSupabasePushStore, deliverPending, expoSender } from './push';
 import { aiRoutes } from './routes/ai';
 import { imageRoutes } from './routes/images';
 import { shareRoutes } from './routes/share';
 
-import type { AppContext } from './types';
+import type { AppContext, Env } from './types';
 
 /**
  * Worker entry (docs/05). Public routes: health, share preview/data, image
@@ -45,4 +46,49 @@ app.route('/', shareRoutes());
 app.route('/', imageRoutes());
 app.route('/', aiRoutes());
 
-export default app;
+/**
+ * Las rutas, por separado del manejador.
+ *
+ * `app.request()` es el ayudante de Hono para probar rutas sin levantar nada, y
+ * el export por defecto ya no es la app sino el objeto con `fetch` y
+ * `scheduled`. Sin esta salida, los tests del límite de autenticación tendrían
+ * que reconstruir una petición a mano.
+ */
+export { app };
+
+/**
+ * El Worker es dos cosas: las rutas y el cron.
+ *
+ * `export default app` a secas exporta solo `fetch`, así que el `[triggers]` de
+ * `wrangler.toml` se disparaba contra un Worker sin `scheduled` y no hacía
+ * nada — sin error, porque no hay a quién dárselo. Cualquier cosa periódica
+ * tiene que entrar por aquí.
+ */
+export default {
+  fetch: app.fetch,
+
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext): Promise<void> {
+    // `waitUntil` y no `await` a secas: Cloudflare corta la ejecución cuando el
+    // manejador vuelve, y una entrega a medias dejaría avisos mandados y sin
+    // marcar, que es exactamente como se manda un push dos veces.
+    ctx.waitUntil(
+      deliverPending(createSupabasePushStore(env), expoSender())
+        .then((result) => {
+          // Solo cuando pasó algo: un log que aparece cada pasada del cron es
+          // un log que se deja de leer.
+          if (result.delivered > 0 || result.prunedTokens > 0) {
+            console.log(
+              `[push] ${result.delivered} entregados, ` +
+                `${result.withoutDevice} sin dispositivo, ` +
+                `${result.prunedTokens} fichas retiradas`,
+            );
+          }
+        })
+        .catch((error: unknown) => {
+          // Nunca relanza: un fallo aquí deja los avisos sin marcar y la
+          // siguiente pasada los recoge. Tumbar el cron los perdería.
+          console.error('[push] no se pudo repartir:', error);
+        }),
+    );
+  },
+};
