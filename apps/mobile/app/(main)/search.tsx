@@ -202,7 +202,9 @@ function AssistantTeaser() {
             className="flex-row items-center gap-2.5 rounded-xl border border-dashed border-line-strong px-3.5 py-3"
           >
             <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.inkSubtle} />
-            <Txt variant="callout" tone="subtle" numberOfLines={1} className="flex-1">
+            {/* Sin recortar: el ejemplo *es* el mensaje. "¿Cuándo fue la
+                última vez que comí con Ir…" no promete nada. */}
+            <Txt variant="callout" tone="subtle" className="flex-1">
               {example}
             </Txt>
           </View>

@@ -83,7 +83,9 @@ function Option({
         <Txt variant="heading" weight="bold" serif={false}>
           {title}
         </Txt>
-        <Txt variant="caption" tone="subtle" numberOfLines={1}>
+        {/* Sin recortar: la frase es lo que distingue "un plato" de "una
+            visita", y a una línea se corta antes de decirlo. */}
+        <Txt variant="caption" tone="subtle">
           {description}
         </Txt>
       </View>

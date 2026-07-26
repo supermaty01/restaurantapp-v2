@@ -73,7 +73,10 @@ export function VisibilityField({
             </View>
 
             <View className="min-w-0 flex-1">
-              <View className="flex-row items-center gap-2">
+              {/* `flex-wrap`: el rótulo de "ahora" es tan largo como el nombre
+                  del ajuste al que apunta, y en una fila rígida empujaba al
+                  título fuera de la tarjeta. */}
+              <View className="flex-row flex-wrap items-center gap-x-2">
                 <Txt variant="body" weight="semi" serif={false}>
                   {meta.label}
                 </Txt>
@@ -85,7 +88,11 @@ export function VisibilityField({
                   </Txt>
                 ) : null}
               </View>
-              <Txt variant="caption" tone="subtle" numberOfLines={1}>
+              {/* Sin recortar: esto es lo que explica qué hace la opción, y
+                  "Sigue tu configuración general, también si la c…" corta
+                  justo antes de la mitad que aporta algo. Si no cabe en una
+                  línea, que ocupe dos. */}
+              <Txt variant="caption" tone="subtle">
                 {meta.description}
               </Txt>
             </View>

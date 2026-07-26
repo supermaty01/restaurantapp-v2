@@ -48,7 +48,10 @@ export function TaggedVisitCard({ visit }: { visit: TaggedVisit }) {
         <View className="flex-row items-center gap-2.5">
           <Avatar name={author} uri={visit.avatarUrl} size={34} />
           <View className="flex-1">
-            <Txt variant="caption" tone="muted" numberOfLines={1}>
+            {/* Dos líneas, como en el feed: la frase lleva un nombre y el sitio
+                donde comisteis, y en una sola se corta justo en el sitio —
+                "Caro te etiquetó en L'Atelier Artisan Crê…". */}
+            <Txt variant="caption" tone="muted" numberOfLines={2}>
               <Txt variant="caption" weight="bold" serif={false}>
                 {author}
               </Txt>{' '}
