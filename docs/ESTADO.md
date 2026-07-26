@@ -218,18 +218,14 @@ y la pantalla de conflictos necesitan sesión y Worker, y el emulador está en
 
 ### Bugs pendientes, del uso real
 
-1. **Memoria: 1–2 GB en caché.** Diagnosticado, sin arreglar. Dos causas:
-   `ImagePicker` usa `quality: 0.5` pero **nunca redimensiona**, así que una foto
-   de 3000×4000 ocupa ~48 MB _decodificada_ independientemente de lo que pese el
-   fichero; y hay 13 usos de `cachePolicy="memory-disk"` sin límite, que guardan
-   una segunda copia en disco de cada imagen mostrada. El arreglo es generar
-   miniaturas al guardar y no alimentar los originales a las listas.
-2. **Etiquetar a alguien muestra la foto del restaurante**, debería ser la de la
-   visita, y el detalle debería verse como en compartidos (foto, platos,
-   personas, descripción).
-3. **«con 1 persona»** en Amigos y Contigo: poner los nombres/usuarios.
-4. **Cambiar la foto de perfil**: no existe.
-5. **Tap en nombre/foto → perfil**, en amigos y en etiquetas.
+1. **Memoria: 1–2 GB en caché.** Diagnosticado y **documentado entero en
+   [docs/16](16-memoria-e-imagenes.md)**: la causa, el plan en orden de
+   rentabilidad, cómo medirlo con `dumpsys meminfo` antes y después, y las tres
+   cosas que _parecen_ la causa y no lo son. Aparcado a propósito para una
+   sesión propia.
+2. **«con 1 persona»** en Amigos y Contigo: poner los nombres/usuarios.
+3. **Cambiar la foto de perfil**: no existe.
+4. **Tap en nombre/foto → perfil**, en amigos y en etiquetas.
 
 ### Lo cerrado en esta sesión (26 de julio)
 
