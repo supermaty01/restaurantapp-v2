@@ -6,16 +6,18 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  Alert,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
 
+import { useDialog } from '@/components/ui/Dialog';
+import { useToast } from '@/components/ui/Toast';
 import { useAuth, type OAuthProvider } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { useSync } from '@/lib/hooks/useSync';
 import { linkLocalData } from '@/services/sync/linkLocalData';
+import { countPendingChanges } from '@/services/sync/pendingCount';
 
 /**
  * Optional account + sync screen (docs/04). Local-first: the app works without
@@ -36,6 +38,8 @@ export default function AccountScreen() {
   const db = useDatabase();
   const router = useRouter();
   const { status, lastOutcome, syncNow } = useSync();
+  const { ask, tell } = useDialog();
+  const toast = useToast();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,16 +63,45 @@ export default function AccountScreen() {
     setBusy(true);
     const { error } = await fn();
     setBusy(false);
-    if (error) Alert.alert('Error', error);
+    if (error) {
+      void tell({
+        title: 'No se pudo continuar',
+        message: error,
+        icon: 'alert-circle-outline',
+        destructive: true,
+      });
+    }
+  };
+
+  /*
+   * Cerrar sesión es la acción que más se lamenta de esta pantalla: se toca por
+   * error al buscar otra cosa, y si queda algo sin subir se pierde el único
+   * momento en que podía subirse. Así que pregunta, y si hay pendientes lo dice
+   * en la propia pregunta en vez de dejarlo para después.
+   */
+  const confirmSignOut = async () => {
+    const pending = await countPendingChanges(db);
+    const confirmed = await ask({
+      title: '¿Cerrar sesión?',
+      message:
+        pending > 0
+          ? `Quedan ${pending} cambios sin subir. Si cierras ahora, se quedan en este móvil hasta que vuelvas a entrar.`
+          : 'Tu diario se queda en este teléfono. Podrás volver a entrar cuando quieras.',
+      icon: 'log-out-outline',
+      confirmLabel: pending > 0 ? 'Cerrar de todas formas' : 'Cerrar sesión',
+      cancelLabel: 'Cancelar',
+      destructive: pending > 0,
+    });
+    if (confirmed) await signOut();
   };
 
   const handleLink = async () => {
     const count = await linkLocalData(db);
-    Alert.alert(
-      'Datos preparados',
+    // Un resultado que no pide decisión no merece un modal que descartar.
+    toast.notify(
       count === 0
-        ? 'Tus datos ya estaban sincronizados.'
-        : `Se subirán ${count} elementos a tu cuenta en la próxima sincronización.`,
+        ? 'Tus datos ya estaban sincronizados'
+        : `Se subirán ${count} elementos en la próxima sincronización`,
     );
     await syncNow();
   };
@@ -114,7 +147,7 @@ export default function AccountScreen() {
         </View>
 
         <TouchableOpacity
-          onPress={() => void signOut()}
+          onPress={() => void confirmSignOut()}
           className="bg-danger rounded-md px-4 py-3 items-center"
         >
           <Text className="text-on-primary font-semibold">Cerrar sesión</Text>

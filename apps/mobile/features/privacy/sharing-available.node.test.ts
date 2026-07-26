@@ -23,14 +23,11 @@ function sources(): string[] {
 }
 
 describe('privacidad sin cuenta', () => {
-  it.each(['VisibilityControl.tsx', 'PrivacyCard.tsx'])(
-    '%s se defiende sola',
-    (file) => {
-      const source = readFileSync(join(ROOT, 'features', 'privacy', file), 'utf-8');
-      expect(source).toMatch(/useSharingAvailable\(\)/);
-      expect(source).toMatch(/if \(!sharing\) return null;/);
-    },
-  );
+  it.each(['VisibilityControl.tsx', 'PrivacyCard.tsx'])('%s se defiende sola', (file) => {
+    const source = readFileSync(join(ROOT, 'features', 'privacy', file), 'utf-8');
+    expect(source).toMatch(/useSharingAvailable\(\)/);
+    expect(source).toMatch(/if \(!sharing\) return null;/);
+  });
 
   it('ninguna pantalla pinta un control de privacidad sin comprobarlo', () => {
     const offenders = sources().filter((file) => {

@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
+import { View, Text, ActivityIndicator, TouchableOpacity } from 'react-native';
 
 import ImportConflictModal from '@/components/ImportConflictModal';
+import { useToast } from '@/components/ui/Toast';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import {
@@ -22,6 +23,7 @@ export default function ImportScreen() {
   const { uri } = useLocalSearchParams<{ uri: string }>();
   const drizzleDb = useDatabase();
   const { colors } = useTheme();
+  const toast = useToast();
 
   const [loading, setLoading] = useState(true);
   const [shareData, setShareData] = useState<ShareFileData | null>(null);
@@ -66,16 +68,11 @@ export default function ImportScreen() {
         }
 
         if (result?.success) {
-          Alert.alert(
-            '¡Importación Exitosa!',
-            `Se ha importado correctamente: ${result.entityName}`,
-            [
-              {
-                text: 'Aceptar',
-                onPress: () => navigateToEntity(result.entityType, result.entityId!),
-              },
-            ],
-          );
+          // Se va directo a lo importado en vez de pedir un "Aceptar": el
+          // único motivo para pararse era anunciar que había ido bien, y eso lo
+          // dice mejor la propia entrada apareciendo en pantalla.
+          toast.notify(`Importado: ${result.entityName}`);
+          navigateToEntity(result.entityType, result.entityId!);
         } else {
           setError(result?.error || 'Error desconocido al importar');
         }
@@ -85,7 +82,7 @@ export default function ImportScreen() {
         setLoading(false);
       }
     },
-    [drizzleDb, navigateToEntity],
+    [drizzleDb, navigateToEntity, toast],
   );
 
   const handleImport = useCallback(
