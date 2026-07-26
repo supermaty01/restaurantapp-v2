@@ -277,6 +277,19 @@ adb -s <ID> shell dumpsys package com.supermaty01.restaurantapp   | grep -E "ver
 
 `pkgFlags=[ DEBUGGABLE … ]` significa build local: firmada con la clave de depuración, y **un APK de EAS no se instalará encima**.
 
+> **El mensaje que ves depende de por dónde instales.** `adb install` dice el motivo real (`INSTALL_FAILED_UPDATE_INCOMPATIBLE: signatures do not match`). El instalador gráfico de muchos Android —sobre todo capas de fabricante— dice sólo **«parece que el paquete no es válido»**, que suena a APK corrupto y no lo es. Son el mismo problema.
+>
+> Antes de dar por malo un APK, compruébalo:
+>
+> ```bash
+> # ¿ZIP completo, manifiesto y versionCode correctos?
+> aapt2 dump badging <apk> | head -3
+> # ¿firma válida?
+> apksigner verify --verbose --print-certs <apk>
+> ```
+>
+> Si `apksigner` dice `Verifies` y el `versionCode` es el esperado, el APK está bien y el problema es de firma contra lo instalado.
+
 ### Si las firmas no coinciden
 
 No se puede reconciliar: no se firma un release con la keystore de depuración, cuya clave privada es pública y viene con el SDK. Cualquiera podría firmar una actualización de tu app.
