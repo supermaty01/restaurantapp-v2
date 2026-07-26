@@ -26,7 +26,7 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 export default function ProfileScreen() {
   const router = useRouter();
   const { session, isConfigured, signOut } = useAuth();
-  const { status, lastOutcome, syncNow } = useSync();
+  const { status, lastOutcome, photos, syncNow } = useSync();
   const { tell } = useDialog();
   const { incoming } = useFriends();
 
@@ -44,6 +44,7 @@ export default function ProfileScreen() {
           profile={profile}
           email={session.user.email ?? ''}
           syncStatus={status}
+          syncPhotos={photos}
           syncError={lastOutcome?.ok === false ? (lastOutcome.error ?? undefined) : undefined}
           syncedAt={lastOutcome?.ok === true ? lastOutcome.at : undefined}
           showSyncError={(detail) =>
@@ -103,6 +104,7 @@ function AccountCard({
   profile,
   email,
   syncStatus,
+  syncPhotos,
   syncError,
   syncedAt,
   showSyncError,
@@ -112,6 +114,7 @@ function AccountCard({
   profile: Profile | null;
   email: string;
   syncStatus: SyncStatus;
+  syncPhotos: { done: number; remaining: number } | null;
   syncError?: string | undefined;
   syncedAt?: string | undefined;
   showSyncError: (detail: string) => void;
@@ -163,9 +166,14 @@ function AccountCard({
             numberOfLines={1}
             className="flex-1"
           >
-            {syncStatus === 'ok' && syncedAt
-              ? `Al día · ${formatRelativeDate(syncedAt)}`
-              : SYNC_LABEL[syncStatus]}
+            {/* Las fotos son lo lento. Sin decir cuántas faltan, cada tanda
+                de quince parecía el final y volver a "Sincronizando" un
+                segundo después parecía un fallo. */}
+            {syncStatus === 'syncing' && syncPhotos && syncPhotos.remaining > 0
+              ? `Subiendo fotos · quedan ${syncPhotos.remaining}`
+              : syncStatus === 'ok' && syncedAt
+                ? `Al día · ${formatRelativeDate(syncedAt)}`
+                : SYNC_LABEL[syncStatus]}
           </Txt>
           {syncError ? (
             <Ionicons name="information-circle-outline" size={15} color={colors.inkSubtle} />

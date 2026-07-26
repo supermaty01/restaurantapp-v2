@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo } from 'react';
 
 import { useAuth } from '@/lib/context/AuthContext';
@@ -25,6 +26,24 @@ export function useFriends() {
   });
 
   const { data, reload, setData } = resource;
+
+  /**
+   * Releer al volver a la pantalla.
+   *
+   * Cada pantalla que llama a este hook tiene su propia copia del estado, así
+   * que aceptar una solicitud en Amigos no tocaba la de Perfil: la insignia
+   * seguía marcando un 1 por una solicitud que ya no existía. Las amistades son
+   * estado del servidor y cambian desde otro sitio, así que la pregunta
+   * correcta al enfocar una pantalla es siempre "¿sigue siendo esto verdad?".
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (enabled) void reload();
+      // Solo al enfocar: `reload` cambia de identidad en cada render y
+      // ponerlo aquí dispararía una petición por render.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [enabled]),
+  );
 
   const groups = useMemo(() => {
     const all = data ?? [];

@@ -21,6 +21,15 @@ export const SYNC_LABEL: Record<SyncStatus, string> = {
 export interface SyncState {
   status: SyncStatus;
   lastOutcome: SyncOutcome | null;
+  /**
+   * Fotos subidas y pendientes de la pasada en curso.
+   *
+   * Las fotos son la parte lenta y van de quince en quince, así que cada tanda
+   * terminaba, la tarjeta decía "Al día" y un segundo después volvía a
+   * "Sincronizando" — que es exactamente lo que hace pensar que algo va mal.
+   * Con el recuento delante, la espera deja de ser un misterio.
+   */
+  photos: { done: number; remaining: number } | null;
 }
 
 /**
@@ -31,7 +40,7 @@ export interface SyncState {
  * let two passes run at once — double push, racing cursors. Concurrent callers
  * here await the same in-flight run instead.
  */
-let state: SyncState = { status: 'idle', lastOutcome: null };
+let state: SyncState = { status: 'idle', lastOutcome: null, photos: null };
 let inFlight: Promise<SyncOutcome> | null = null;
 const listeners = new Set<() => void>();
 
@@ -45,6 +54,11 @@ export function subscribeToSync(listener: () => void): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Lo llama el gestor de sync mientras suben las fotos. */
+export function reportPhotoProgress(done: number, remaining: number): void {
+  setState({ ...state, photos: { done, remaining } });
+}
+
 export function getSyncState(): SyncState {
   return state;
 }
@@ -56,7 +70,7 @@ export function getSyncState(): SyncState {
 export async function requestSync(db: AppDatabase, accountUuid: string): Promise<SyncOutcome> {
   if (inFlight) return inFlight;
 
-  setState({ status: 'syncing', lastOutcome: state.lastOutcome });
+  setState({ status: 'syncing', lastOutcome: state.lastOutcome, photos: null });
 
   inFlight = runSync(db, accountUuid)
     .catch((error: unknown): SyncOutcome => {
@@ -70,7 +84,7 @@ export async function requestSync(db: AppDatabase, accountUuid: string): Promise
       };
     })
     .then((outcome) => {
-      setState({ status: outcome.ok ? 'ok' : 'error', lastOutcome: outcome });
+      setState({ status: outcome.ok ? 'ok' : 'error', lastOutcome: outcome, photos: null });
       inFlight = null;
       return outcome;
     });
@@ -80,7 +94,7 @@ export async function requestSync(db: AppDatabase, accountUuid: string): Promise
 
 /** Test-only: clears state between cases. */
 export function resetSyncStateForTests(): void {
-  state = { status: 'idle', lastOutcome: null };
+  state = { status: 'idle', lastOutcome: null, photos: null };
   inFlight = null;
   listeners.clear();
 }

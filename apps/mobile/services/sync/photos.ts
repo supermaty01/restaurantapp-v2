@@ -72,7 +72,11 @@ async function accessToken(): Promise<string | null> {
  * a key and is retried next pass, which is the right outcome for something that
  * is usually a transient network problem.
  */
-export async function uploadPendingPhotos(db: AppDatabase): Promise<PhotoUploadResult> {
+export async function uploadPendingPhotos(
+  db: AppDatabase,
+  /** Se llama tras cada foto, para que la UI pueda decir cuánto falta. */
+  onProgress?: (done: number, remaining: number) => void,
+): Promise<PhotoUploadResult> {
   const result: PhotoUploadResult = { uploaded: 0, pending: 0, failed: 0, reasons: [] };
 
   // Distinct reasons, not one line per photo: fifteen identical 401s say the
@@ -148,6 +152,7 @@ export async function uploadPendingPhotos(db: AppDatabase): Promise<PhotoUploadR
       // and nobody can find it.
       await recordChange(db, 'images', photo.id, photo.uuid, 'update');
       result.uploaded += 1;
+      onProgress?.(result.uploaded, waiting.length - result.uploaded - result.failed);
     } catch (error) {
       // Anything the module itself refuses: an unreachable host, a URI it will
       // not read, a native method that is not there. Swallowing this is what

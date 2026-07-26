@@ -31,7 +31,7 @@ export type { SyncStatus } from '@/services/sync/syncStore';
 export function useSync() {
   const db = useDatabase();
   const { accountUuid } = useAuth();
-  const { status, lastOutcome } = useSyncExternalStore(subscribeToSync, getSyncState);
+  const { status, lastOutcome, photos } = useSyncExternalStore(subscribeToSync, getSyncState);
 
   const syncNow = useCallback(async () => {
     if (!accountUuid) return;
@@ -70,5 +70,5 @@ export function useSync() {
     return () => sub.remove();
   }, [syncNow]);
 
-  return { status, lastOutcome, syncNow, isSignedIn: accountUuid !== null };
+  return { status, lastOutcome, photos, syncNow, isSignedIn: accountUuid !== null };
 }

@@ -4,6 +4,7 @@ import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
 import { uploadPendingPhotos } from '@/services/sync/photos';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
+import { reportPhotoProgress } from '@/services/sync/syncStore';
 
 export interface SyncOutcome {
   ok: boolean;
@@ -28,7 +29,7 @@ export async function runSync(db: AppDatabase, accountUuid: string): Promise<Syn
     // because this is the part that can take minutes: getting the diary itself
     // to the server should not wait behind a slow upload. Never throws — a
     // photo that will not go up must not turn a successful sync into a failure.
-    const photos = await uploadPendingPhotos(db);
+    const photos = await uploadPendingPhotos(db, reportPhotoProgress);
     // Solo cuando queda algo por hacer o algo salió mal. Una tanda que sube
     // entera no necesita anunciarse: la tarjeta de perfil ya dice "Al día", y
     // un log que aparece siempre es un log que se deja de leer.
