@@ -1,7 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  FadeIn,
+  FadeOut,
+  runOnJS,
+  SlideInDown,
+  SlideOutDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -45,6 +54,36 @@ export function Sheet({
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
+  // Cuánto se ha arrastrado la hoja hacia abajo.
+  const dragY = useSharedValue(0);
+
+  const dismiss = () => {
+    dragY.value = 0;
+    onClose();
+  };
+
+  const dragToClose = Gesture.Pan()
+    .onUpdate((event) => {
+      // Solo hacia abajo: tirar hacia arriba no significa nada y estirar el
+      // panel por encima de su sitio se ve como un fallo.
+      dragY.value = Math.max(event.translationY, 0);
+    })
+    .onEnd((event) => {
+      // Un empujón rápido cuenta aunque haya recorrido poco: es lo que hace que
+      // el gesto se sienta como soltar algo y no como arrastrarlo hasta el
+      // final.
+      const flung = event.velocityY > 800;
+      if (flung || dragY.value > 90) {
+        runOnJS(dismiss)();
+        return;
+      }
+      dragY.value = withSpring(0, { damping: 30, stiffness: 260, mass: 0.9 });
+    });
+
+  const dragStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: dragY.value }],
+  }));
+
   return (
     <Modal
       visible={visible}
@@ -75,6 +114,7 @@ export function Sheet({
           exiting={SlideOutDown.duration(180)}
           style={[
             elevation.high,
+            dragStyle,
             {
               backgroundColor: colors.surface,
               maxHeight: `${maxHeightRatio * 100}%`,
@@ -89,10 +129,15 @@ export function Sheet({
           // deliberately reads better than one that almost reaches the edge.
           className="rounded-[26px]"
         >
-          {/* Grab handle: says "this came from the bottom and goes back there". */}
-          <View className="items-center pb-1 pt-2.5">
-            <View className="h-1 w-10 rounded-pill bg-line-strong" />
-          </View>
+          {/* La muesca no es decoración: es la zona de agarre.
+              El gesto vive solo aquí, no en toda la hoja, porque dentro hay
+              listas y campos que scrollean — un pan sobre todo el panel les
+              robaría el gesto y haría imposible desplazar el contenido. */}
+          <GestureDetector gesture={dragToClose}>
+            <View className="items-center pb-1 pt-2.5" style={{ paddingHorizontal: 60 }}>
+              <View className="h-1 w-10 rounded-pill bg-line-strong" />
+            </View>
+          </GestureDetector>
 
           {title ? (
             <View className="flex-row items-start justify-between gap-3 px-5 pb-3 pt-2">
@@ -116,9 +161,17 @@ export function Sheet({
             </View>
           ) : null}
 
-          {children}
+          {/* flexShrink: el cuerpo cede espacio antes que el pie. Sin esto, un
+              contenido más alto que `maxHeightRatio` empujaba los botones fuera
+              del panel: en el de filtros, "Limpiar" y "Aplicar" quedaban
+              literalmente por debajo del borde. */}
+          <View style={{ flexShrink: 1 }}>{children}</View>
 
-          {footer ? <View className="border-t border-line px-5 pt-3">{footer}</View> : null}
+          {footer ? (
+            <View className="border-t border-line px-5 pt-3" style={{ flexShrink: 0 }}>
+              {footer}
+            </View>
+          ) : null}
         </Animated.View>
       </GestureHandlerRootView>
     </Modal>

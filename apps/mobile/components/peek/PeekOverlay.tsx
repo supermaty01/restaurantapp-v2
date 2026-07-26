@@ -197,6 +197,11 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFill,
     backgroundColor: '#000000',
     zIndex: 1000,
+    // Android ordena por `elevation`, no por `zIndex`, en cuanto alguno de los
+    // hermanos la usa — y la tarjeta la usa para su sombra. Sin declararla
+    // aquí, el fondo negro se dibujaba *encima* de la vista previa y se veía
+    // como una capa semitransparente por delante.
+    elevation: 0,
   },
   card: {
     position: 'absolute',
@@ -207,7 +212,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 10,
+    // Por encima del fondo en los dos sistemas de ordenación a la vez.
+    elevation: 24,
   },
   footer: {
     paddingTop: 10,
