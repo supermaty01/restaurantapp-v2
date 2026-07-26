@@ -55,6 +55,12 @@ export default function NotificationsCard() {
 
   return (
     <View className="gap-3 rounded-xl bg-surface p-4">
+      {/* El estado es el titular, no la palabra "Avisos".
+          La sección de Ajustes ya se llama así, y repetirlo aquí dejaba la
+          pantalla diciendo "Avisos / cuando alguien te etiqueta en una comida /
+          Avisos / te llegará un aviso cuando alguien te etiquete": cuatro
+          líneas para una idea. Lo único que no se sabía de un vistazo era si
+          estaban encendidos, así que eso es lo que va grande. */}
       <View className="flex-row items-center gap-2.5">
         <Ionicons
           name={granted ? 'notifications' : 'notifications-off-outline'}
@@ -62,18 +68,17 @@ export default function NotificationsCard() {
           color={granted ? colors.sage : colors.inkSubtle}
         />
         <Txt variant="body" weight="semi" serif={false} className="flex-1">
-          Avisos
-        </Txt>
-        <Txt variant="caption" tone={granted ? 'muted' : 'subtle'}>
           {granted === null ? 'Sin comprobar' : granted ? 'Activados' : 'Desactivados'}
         </Txt>
       </View>
 
-      <Txt variant="caption" tone="subtle">
-        {granted
-          ? 'Te llegará un aviso cuando alguien te etiquete, aunque no tengas la app abierta.'
-          : 'Sin esto seguirás viendo quién te etiqueta en Novedades, pero solo al abrir la app.'}
-      </Txt>
+      {/* Solo cuando están apagados: quien los tiene encendidos ya no necesita
+          que le expliquen para qué sirven. */}
+      {granted ? null : (
+        <Txt variant="caption" tone="subtle">
+          Sin ellos seguirás viendo quién te etiqueta en Novedades, pero solo al abrir la app.
+        </Txt>
+      )}
 
       {granted ? null : (
         <Button
