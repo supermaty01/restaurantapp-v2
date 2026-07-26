@@ -29,11 +29,12 @@ export async function runSync(db: AppDatabase, accountUuid: string): Promise<Syn
     // to the server should not wait behind a slow upload. Never throws — a
     // photo that will not go up must not turn a successful sync into a failure.
     const photos = await uploadPendingPhotos(db);
-    if (photos.uploaded > 0 || photos.pending > 0) {
+    if (photos.uploaded > 0 || photos.pending > 0 || photos.failed > 0) {
       console.log(
         `[sync] fotos: ${photos.uploaded} subidas, ${photos.pending} en cola, ` +
           `${photos.failed} sin poder subir`,
       );
+      for (const reason of photos.reasons) console.warn(`[sync] fotos — ${reason}`);
     }
 
     return { ok: true, error: null, at: new Date().toISOString() };

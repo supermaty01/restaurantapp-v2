@@ -40,6 +40,16 @@ export interface PhotoUploadResult {
   uploaded: number;
   pending: number;
   failed: number;
+  /**
+   * Why they failed, one entry per distinct reason.
+   *
+   * The first version of this counted failures and threw the reasons away, so
+   * "15 sin poder subir" was all anyone got — the same number whether the files
+   * were missing, the Worker was refusing, or the endpoint did not exist. A
+   * count that cannot be acted on is not diagnostics, and finding out took a
+   * round trip through the person running the app.
+   */
+  reasons: string[];
 }
 
 /** The key a photo gets in R2. Its uuid, so it is stable across devices. */
@@ -63,11 +73,29 @@ async function accessToken(): Promise<string | null> {
  * is usually a transient network problem.
  */
 export async function uploadPendingPhotos(db: AppDatabase): Promise<PhotoUploadResult> {
-  const result: PhotoUploadResult = { uploaded: 0, pending: 0, failed: 0 };
-  if (!API_URL) return result;
+  const result: PhotoUploadResult = { uploaded: 0, pending: 0, failed: 0, reasons: [] };
+
+  // Distinct reasons, not one line per photo: fifteen identical 401s say the
+  // same thing once.
+  const seen = new Set<string>();
+  const note = (reason: string) => {
+    result.failed += 1;
+    if (!seen.has(reason)) {
+      seen.add(reason);
+      result.reasons.push(reason);
+    }
+  };
+
+  if (!API_URL) {
+    result.reasons.push('EXPO_PUBLIC_API_URL no está definida: no hay a dónde subir');
+    return result;
+  }
 
   const token = await accessToken();
-  if (!token) return result;
+  if (!token) {
+    result.reasons.push('sin sesión de Supabase: no hay con qué autenticarse');
+    return result;
+  }
 
   const waiting = await db
     .select({ id: schema.images.id, uuid: schema.images.uuid, path: schema.images.path })
@@ -85,29 +113,29 @@ export async function uploadPendingPhotos(db: AppDatabase): Promise<PhotoUploadR
       const uri = imagePathToUri(photo.path);
       const info = await FileSystem.getInfoAsync(uri);
       if (!info.exists) {
-        // The file is gone from the device. Nothing to upload and nothing to
-        // fix; leaving the row keyless means it is skipped, not retried
-        // forever with the same result.
-        result.failed += 1;
+        // The file is not where the row says it is. Names the path, because
+        // "no existe" without it cannot be told apart from a wrong base
+        // directory, which is the more likely of the two after an import.
+        note(`fichero no encontrado (ej. ${uri})`);
         continue;
       }
 
       const key = keyFor(photo.uuid);
-      const upload = await FileSystem.uploadAsync(
-        `${API_URL.replace(/\/$/, '')}/images/${encodeURIComponent(key)}`,
-        uri,
-        {
-          httpMethod: 'PUT',
-          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'content-type': 'image/jpeg',
-          },
+      const target = `${API_URL.replace(/\/$/, '')}/images/${encodeURIComponent(key)}`;
+      const upload = await FileSystem.uploadAsync(target, uri, {
+        httpMethod: 'PUT',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'content-type': 'image/jpeg',
         },
-      );
+      });
 
       if (upload.status < 200 || upload.status >= 300) {
-        result.failed += 1;
+        // The body is where a Worker says what it disliked; 401 with no body
+        // is itself the answer (auth), and a 404 means the route is not there.
+        const body = (upload.body ?? '').slice(0, 200);
+        note(`HTTP ${upload.status}${body ? ` — ${body}` : ''} en ${target}`);
         continue;
       }
 
@@ -120,8 +148,11 @@ export async function uploadPendingPhotos(db: AppDatabase): Promise<PhotoUploadR
       // and nobody can find it.
       await recordChange(db, 'images', photo.id, photo.uuid, 'update');
       result.uploaded += 1;
-    } catch {
-      result.failed += 1;
+    } catch (error) {
+      // Anything the module itself refuses: an unreachable host, a URI it will
+      // not read, a native method that is not there. Swallowing this is what
+      // made the whole thing opaque the first time round.
+      note(error instanceof Error ? error.message : String(error));
     }
   }
 
