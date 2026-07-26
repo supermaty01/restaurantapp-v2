@@ -12,22 +12,48 @@ al usarla.
 
 ### 👉 Lo siguiente, en orden
 
-1. **Generar un APK nuevo y probarlo.** `expo-notifications` es un módulo
-   nativo: el APK instalado no sirve, y sin uno nuevo no se puede verificar
-   nada de esta tanda en pantalla. `eas build -p android --profile preview`.
-2. **Desplegar el Worker** (`cd apps/api && npx wrangler deploy`). El envío de
+0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero, y ahora hay
+   una razón medida: los drawers, el toque en el nombre para abrir el perfil y
+   los textos cortados **se reportaron como rotos y funcionan** en el emulador
+   contra esta rama. Lo que se está probando en el móvil es un APK anterior a la
+   sesión que los arregló. Antes de rehacer nada de eso, `eas build -p android
+--profile preview`.
+
+### Pendiente de esta tanda, sin empezar
+
+- **Notificaciones nuevas**: un amigo publica (con silencio de 10 min por
+  persona, y que sea el **primer** aviso y no el último) y solicitudes de
+  amistad. La tabla `notifications` de 0016 ya es genérica por `kind`, así que
+  son dos triggers y dos textos, no una migración de fondo.
+- **Eliminar cuenta y datos (GDPR)**: apartado poco visible en Ajustes, con
+  confirmación fuerte —escribir el usuario, no un «sí»—. Tiene que borrar de
+  verdad: espejo, fotos en R2, perfil, tokens de push, avisos y la cuenta de
+  auth. Y decir qué **no** se borra: lo que otras personas ya guardaron de una
+  visita compartida. Ofrecer exportar antes (`BackupService` ya existe).
+- **Cambiar la foto de perfil**: reemplazar la de Google, o añadir una si la
+  cuenta se creó por correo. Sube a R2 por el Worker como las del diario y
+  actualiza `profiles.avatar_url`.
+- **La vista calendario se vuelve loca al scrollear rápido.** Sospechas en
+  orden: alturas de fila no constantes sin `getItemLayout`, el agrupado por mes
+  recalculándose en cada render, o `removeClippedSubviews`. **Medir antes de
+  tocar.**
+- **Inicio, una entrada por sesión de registro** (prioridad Visita > Plato >
+  Restaurante). Decidido con el autor: «lo último que añadiste» en vez de
+  «últimas visitas», pero agrupando — si en una misma sesión se creó visita,
+  platos y restaurante, sale **una** entrada, la que más información lleva. La
+  visita ya menciona su restaurante y sus platos; el plato ya menciona su
+  restaurante.
+
+### Servicios (bloqueado por terceros)
+
+1. **Desplegar el Worker** (`cd apps/api && npx wrangler deploy`). El envío de
    push vive en un cron, y un cron sin desplegar no se dispara. Comprobar que
    el panel de Cloudflare lista **dos** triggers.
-3. **Confirmar que la clave FCM está subida a EAS** (`eas credentials`). Es lo
-   único bloqueado por terceros, y lo único que queda de
-   [docs/15](15-notificaciones-push.md) §1.
-4. **Probar el sync con dos dispositivos y sesión iniciada.** Sigue sin
+2. **Confirmar que la clave FCM está subida a EAS** (`eas credentials`).
+3. **Probar el sync con dos dispositivos y sesión iniciada.** Sigue sin
    verificarse contra servicios reales. Empezar por Ajustes → «¿Está todo en la
-   nube?»: si algo no cuadra, esa pantalla dice qué falta y en qué dirección.
-5. **Arreglar `IntentHandler` con el dev client** (abajo, en cómo probar). Sin
-   eso, la app no arranca contra Metro.
-6. **Fusionar `claude/sync-multiple-fixes-vzwo8h`.** `main` no tiene nada de
-   las dos últimas sesiones.
+   nube?».
+4. **Fusionar la rama.** `main` no tiene nada de las últimas tres sesiones.
 
 ### 🟢 Lo cerrado en esta tanda (feedback en dispositivo, ronda 3)
 
