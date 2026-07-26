@@ -54,6 +54,8 @@ export interface FeedEntry {
   /** What was eaten, for a visit. Empty for the other kinds. */
   dishNames: string[];
   companionCount: number;
+  /** Quiénes fueron, sin ti. Un número no contesta la pregunta que se hace uno. */
+  companionNames: string[];
 }
 
 /** Rows come back snake_case from PostgREST; the app speaks camelCase. */
@@ -192,6 +194,7 @@ function toFeedEntry(row: Record<string, unknown>): FeedEntry {
     imageKey: (row['image_key'] as string | null) ?? null,
     dishNames: (row['dish_names'] as string[] | null) ?? [],
     companionCount: Number(row['companion_count'] ?? 0),
+    companionNames: (row['companion_names'] as string[] | null) ?? [],
   };
 }
 
@@ -375,6 +378,8 @@ export interface TaggedVisit {
   comments: string | null;
   imageKey: string | null;
   companionCount: number;
+  /** Quiénes fueron, sin ti. Un número no contesta la pregunta que se hace uno. */
+  companionNames: string[];
 }
 
 /**
@@ -403,6 +408,7 @@ export async function fetchTaggedVisits(before?: string): Promise<TaggedVisit[]>
     comments: (row['comments'] as string | null) ?? null,
     imageKey: (row['image_key'] as string | null) ?? null,
     companionCount: Number(row['companion_count'] ?? 0),
+    companionNames: (row['companion_names'] as string[] | null) ?? [],
   }));
 }
 

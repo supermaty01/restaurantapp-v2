@@ -9,6 +9,7 @@ import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
 
+import { companionsLabel } from '../companions';
 import { remoteImageUri } from '../remote-image';
 import { AuthorHeader } from './AuthorHeader';
 
@@ -32,8 +33,9 @@ export function TaggedVisitCard({ visit }: { visit: TaggedVisit }) {
   const author = visit.displayName ?? visit.username;
   const photo = remoteImageUri(visit.authorId, visit.imageKey);
 
-  // You are one of them, so the card counts the others.
-  const others = Math.max(visit.companionCount - 1, 0);
+  // Tú eres uno de ellos, así que la línea habla de los demás. Los nombres los
+  // filtra ya el servidor (0018): quien mira no se lista a sí misma.
+  const companions = companionsLabel(visit.companionNames, Math.max(visit.companionCount - 1, 0));
 
   return (
     <PressableScale
@@ -64,9 +66,7 @@ export function TaggedVisitCard({ visit }: { visit: TaggedVisit }) {
           </Txt>
           <Txt variant="caption" tone="subtle">
             {formatVisitDate(visit.visitedAt)}
-            {others > 0
-              ? ` · ${others === 1 ? 'y 1 persona más' : `y ${others} personas más`}`
-              : ''}
+            {companions ? ` · ${companions}` : ''}
           </Txt>
         </AuthorHeader>
 

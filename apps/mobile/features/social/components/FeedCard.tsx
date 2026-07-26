@@ -11,6 +11,7 @@ import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
 
+import { companionsLabel } from '../companions';
 import { remoteImageUri } from '../remote-image';
 import { AuthorHeader } from './AuthorHeader';
 
@@ -49,6 +50,7 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
   const author = entry.displayName ?? entry.username;
   const photo = remoteImageUri(entry.authorId, entry.imageKey);
   const dishes = eaten(entry.dishNames);
+  const companions = companionsLabel(entry.companionNames, entry.companionCount);
 
   // Only a visit has a screen of its own to open. A loose dish or restaurant
   // has no shared detail behind it, so the card stays inert rather than
@@ -113,13 +115,11 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
 
       <View className="flex-row items-center gap-2">
         {entry.kind === 'dish' && entry.place ? <Chip label={entry.place} tone="sage" /> : null}
-        {entry.companionCount > 0 ? (
-          <View className="flex-row items-center gap-1">
+        {companions ? (
+          <View className="min-w-0 flex-1 flex-row items-center gap-1">
             <Ionicons name="people-outline" size={12} color={colors.inkSubtle} />
-            <Txt variant="caption" tone="subtle">
-              {entry.companionCount === 1
-                ? 'con 1 persona'
-                : `con ${entry.companionCount} personas`}
+            <Txt variant="caption" tone="subtle" numberOfLines={1} className="flex-1">
+              {companions}
             </Txt>
           </View>
         ) : null}
