@@ -11,9 +11,13 @@
  * las tumba el sistema operativo antes que el servidor, y en un móvil con datos
  * la primera víctima es el resto de la app.
  *
- * No lanza aunque `worker` lance: quien lo llama decide qué hacer con cada
- * fallo, y una foto rota no puede parar a las demás. Los resultados salen en el
- * orden de entrada, no en el de terminación.
+ * Los resultados salen en el orden de entrada, no en el de terminación.
+ *
+ * **`worker` no debe lanzar.** Si lo hace, la excepción sale de aquí y las
+ * tareas en vuelo se quedan a medias, que es justo lo contrario de lo que hace
+ * falta: una foto rota no puede parar a las demás. Quien llama es quien sabe
+ * qué es un fallo aceptable, así que es quien lo captura — `photos.ts` envuelve
+ * cada transferencia en su propio `try`.
  */
 export async function mapWithLimit<T, R>(
   items: readonly T[],

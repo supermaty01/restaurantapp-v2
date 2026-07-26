@@ -109,6 +109,15 @@ export function Sheet({
   /** Caps the body height as a fraction of the screen, so long lists scroll. */
   maxHeightRatio = 0.85,
 }: {
+  /**
+   * Controlada por quien la usa: `onClose` **tiene** que acabar poniendo esto a
+   * `false`.
+   *
+   * No es una formalidad. La hoja sigue montada mientras baja —si no, no habría
+   * nada que animar— y es el paso a `false` lo que cierra el ciclo. Un
+   * `<Sheet visible>` fijo, escondiendo el panel desmontando al padre, se salta
+   * la animación de salida entera: desaparece de golpe.
+   */
   visible: boolean;
   onClose: () => void;
   title?: string;

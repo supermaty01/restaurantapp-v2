@@ -52,9 +52,6 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
  */
 const CONCURRENCY = 6;
 
-/** Cada cuántas fotos se avisa a la UI. */
-const PROGRESS_EVERY = 1;
-
 export type PhotoPhase = 'upload' | 'download';
 
 /**
@@ -186,9 +183,7 @@ export async function uploadPendingPhotos(
   let done = 0;
   const advance = () => {
     done += 1;
-    if (done % PROGRESS_EVERY === 0 || done === waiting.length) {
-      onProgress?.({ phase: 'upload', done, total: waiting.length });
-    }
+    onProgress?.({ phase: 'upload', done, total: waiting.length });
   };
 
   await mapWithLimit(waiting, CONCURRENCY, async (photo) => {
@@ -313,9 +308,7 @@ export async function downloadMissingPhotos(
   let done = 0;
   const advance = () => {
     done += 1;
-    if (done % PROGRESS_EVERY === 0 || done === missing.length) {
-      onProgress?.({ phase: 'download', done, total: missing.length });
-    }
+    onProgress?.({ phase: 'download', done, total: missing.length });
   };
 
   await mapWithLimit(missing, CONCURRENCY, async (photo) => {
