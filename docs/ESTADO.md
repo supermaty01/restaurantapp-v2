@@ -1,6 +1,6 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-26 (ronda 6 — auditoría)
+**Última actualización:** 2026-07-27 (ronda 7 — los hallazgos de usar la app)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
@@ -26,8 +26,8 @@ fuente**. Marcar aquí al cerrar algo.
 
 **Baratas y visibles**
 
-- [ ] A1 · Foto de perfil no sale en Inicio (`Avatar` sin `uri`)
-- [ ] A2 · Editar perfil no refresca la pestaña Perfil — _misma raíz que A1: no hay fuente única de «mi perfil»_
+- [x] ~~A1 · Foto de perfil no sale en Inicio~~ — junto con A2: `MyProfileProvider`
+- [x] ~~A2 · Editar perfil no refresca la pestaña Perfil~~ — **misma raíz que A1, arreglada una vez**: una sola copia de «mi perfil» en un contexto, poblada por sesión y actualizada por quien la cambia. Con los primeros tests de interfaz del proyecto
 - [x] ~~A3 · Errores de login en inglés~~ — las dos capas: `signInWithEmail`/`signUpWithEmail` pasan por `describeAuthError` (+7 entradas de correo/contraseña) y `account.tsx` valida con zod + react-hook-form antes de salir a la red, como el resto de la app
 
 **Arquitectura**
@@ -35,14 +35,14 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] B1 · La app se congela en el primer sync — ceder el hilo entre lotes + loader con progreso
 - [ ] B2 · **Dos cuentas en el mismo móvil** — necesita columna `account_uuid` + filtro en todas las lecturas. La más grande
 - [ ] B3 · Push no llega — verificar los 4 eslabones de despliegue **antes** de tocar código
-- [ ] B4 · La barra de navegación del sistema tapa la interfaz (`Screen` no aplica safe area)
+- [x] ~~B4 · La barra de navegación del sistema tapa la interfaz~~ — el `edge` inferior entra en el `SafeAreaView` de `(main)/_layout`, **no en `Screen`** como decía el plan: siete pantallas no usan `Screen`. **Sin verificar en dispositivo**
 
 **Interfaz**
 
 - [ ] C1 · Transición del Diario fluida + «efecto gota» **y quitar los previews** (10 ficheros, va todo junto)
 - [ ] C2 · Filtros de etiquetas: extraer el componente de `TagField` y reutilizarlo
-- [x] ~~C3 · El teclado tapa «Sobre ti»~~ — `profile-edit` pasa por `FormScaffold`; Guardar va al pie fijo. **Sin verificar en dispositivo**
-- [ ] C4 · Fotos de «Lo último que añadiste»: falta caer a la URL remota si el fichero local no está
+- [x] ~~C3 · El teclado tapa «Sobre ti»~~ — **el primer arreglo no funcionó y el porqué está abajo**: el `KeyboardAvoidingView` del core no hace nada en Android edge-to-edge. Ahora va con `react-native-keyboard-controller`. **Sin verificar en dispositivo**
+- [x] ~~C4 · Fotos de «Lo último que añadiste»~~ — `Photo` cae a la copia de R2 cuando el fichero local no está; `remote_key` viaja hasta el componente, así que vale para toda la app
 - [x] ~~C5 · Márgenes laterales del drawer «¿Quién puede ver esto?»~~ — `px-5`, como el resto de hojas
 
 **Producto**
@@ -53,7 +53,7 @@ fuente**. Marcar aquí al cerrar algo.
 
 - [ ] Eliminar cuenta y datos (**GDPR**) — obligación legal el día que haya producción
 - [ ] La **regla del dinero** está rota: `price: integer` guardando `3.5`; se arregló solo el lado servidor
-- [ ] **Cero tests de UI** — ni un `.test.tsx`; `@testing-library/react-native` instalado y sin usar
+- [ ] **Tests de UI**: ya no son cero (8: `MyProfileContext` y `Photo`), pero falta lo que pide docs/12 — el visor de imágenes y los formularios con prefill
 - [ ] Round-trip export→import idempotente (docs/12 lo exige)
 - [ ] Sync contra Supabase local con dos dispositivos de verdad
 - [ ] Aislamiento entre features (`eslint-plugin-boundaries` + mover lo compartido)
@@ -91,7 +91,82 @@ fuente**. Marcar aquí al cerrar algo.
 
 ---
 
-## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (ronda 6)
+## 🔴 AQUÍ SE RETOMA — 27 de julio de 2026 (ronda 7)
+
+Rama `fix/auditoria-ronda-6`. Se atacan los hallazgos de **usar** la app, no los
+de leer el código. Cinco cerrados, y ninguno se ha visto todavía en un
+dispositivo: **el APK nuevo sigue siendo el paso cero**, y ahora además hace
+falta de verdad, porque entra un módulo nativo.
+
+### El teclado, y por qué el arreglo anterior no arregló nada
+
+La ronda 6 dio C3 por bueno pasando `profile-edit` por `FormScaffold`, «el único
+sitio de la app con `KeyboardAvoidingView`». La pantalla cambió y el teclado
+siguió sentado encima de «Sobre ti». **El diagnóstico estaba a medias: el
+problema no era que la pantalla estuviera fuera del scaffold, era que el
+scaffold tampoco lo resolvía en Android.**
+
+`FormScaffold` tenía `behavior={Platform.OS === 'ios' ? 'padding' : undefined}`,
+y sin `behavior` el componente del core **pinta un `View` y nada más** (su
+`render`, caso `default`). Delegaba en que la ventana se encogiera con
+`adjustResize`, que es lo que Android hacía **antes** de edge-to-edge. Desde el
+SDK 57 edge-to-edge es obligatorio —`edgeToEdgeEnabled` desapareció de la
+configuración de Expo—, la ventana ocupa la pantalla entera y el teclado llega
+como un _inset_: no hay nada que encoger. Y por eso tampoco se podía sacar el
+campo de debajo haciendo scroll, porque sin encoger no hay contenido desbordado.
+
+`behavior="padding"` tampoco habría valido: la altura sale de un `screenY` que
+el core deriva de `getWindowVisibleDisplayFrame`, que en edge-to-edge tampoco se
+mueve.
+
+Entra **`react-native-keyboard-controller`**, que lee los insets de la IME. Se
+descartó `useAnimatedKeyboard` de reanimated —ya instalado y también correcto—
+porque está deprecado desde la 4.5 y su propio aviso remite a esta librería. Va
+en los `bundledNativeModules` del SDK 57, así que la versión la fija Expo. El
+detalle está en [docs/11](11-dependencias.md#segunda-excepción-el-teclado-en-android).
+
+> **La lección, que es la misma que la de D2 en la ronda anterior:** «lo puse
+> donde estaba el componente que sirve para esto» no es haber comprobado que el
+> componente sirve. Un test lee ahora el código fuente y rechaza que el
+> `KeyboardAvoidingView` del core vuelva a importarse.
+
+### Lo demás que se cerró
+
+- **La barra de navegación se comía el final de la pantalla (B4).** El `edge`
+  inferior entra en el `SafeAreaView` de `(main)/_layout`, y **no en `Screen`**
+  como decía el plan escrito: `Screen` es la base de «casi» todas las pantallas
+  y ese «casi» eran siete —journal, account, map, assistant y los tres
+  detalles—, justo donde más se nota. Los dos sitios que lo gestionaban por su
+  cuenta (el carril de pestañas y el pie de los formularios) lo sueltan, porque
+  sumarlo dos veces deja un hueco. `Sheet`, `Toast` y `PeekOverlay` conservan el
+  suyo: se pintan en un `Modal`, que es otra ventana.
+
+- **La foto de perfil y el refresco al editar (A1 y A2), que eran el mismo
+  fallo.** No había fuente única de «mi perfil»: cada pantalla lo pedía por su
+  cuenta y se quedaba con su copia. Ahora hay un contexto, poblado una vez por
+  sesión y actualizado por quien la cambia. El parche por pantalla
+  (`useFocusEffect`, como `useFriends`) arreglaba el síntoma y dejaba el patrón
+  puesto para la tercera pantalla que quisiera la foto.
+
+- **Las fotos que no cargaban (C4).** La fila dice que hay un fichero antes de
+  que lo haya: `localDefaults` escribe `path` al insertar y la descarga va
+  después. `components/ui/Photo` intenta el fichero local y cae a la copia de
+  R2 si falla — por fallo y no por adelantado, que preguntarle al disco antes de
+  pintar cuesta un salto nativo por foto y por render. `remote_key` viaja ahora
+  hasta el componente, así que vale para listas, detalles, carrusel, visor,
+  buscador y selectores.
+
+- **Los primeros tests de interfaz del proyecto.** Ocho, con
+  `@testing-library/react-native`, que llevaba instalado y sin usar desde
+  siempre. Trampa anotada en los ficheros: **en la v14 `render` y `renderHook`
+  son asíncronos**, y sin `await` el error que se lee es «Cannot read properties
+  of undefined», que no señala a ninguna parte.
+
+Números: **347 tests** en la app (antes 332), 57 en el Worker, 9 en shared.
+
+---
+
+## 🗄️ Ronda 6 — 26 de julio de 2026 (auditoría)
 
 Rama `fix/auditoria-ronda-6`. Auditoría completa del proyecto y corrección de lo
 encontrado, en orden de gravedad. **Cómo se trabaja a partir de ahora está en
@@ -155,16 +230,18 @@ el Worker (+11), **9** en shared (nuevos), **154 asserts SQL** (antes 146).
 
 ## 🐛 Hallazgos del autor probando la app — 26 de julio de 2026
 
-Catorce cosas encontradas usando la app, **anteriores a la auditoría** y ninguna
-corregida todavía. Cada una está investigada contra el código: aquí va la causa
-raíz, no el síntoma. El orden es por (impacto × certeza) ÷ coste.
+Catorce cosas encontradas usando la app, **anteriores a la auditoría**. Cada una
+está investigada contra el código: aquí va la causa raíz, no el síntoma. El
+orden es por (impacto × certeza) ÷ coste.
 
 > Nota: ninguna la arregló la ronda 6. La auditoría miró el código; esto salió de
-> usar la app, que es otra cosa y encuentra otras cosas.
+> usar la app, que es otra cosa y encuentra otras cosas. **La ronda 7 cerró A1,
+> A2, B4, C3 y C4**; el texto de cada una se conserva porque el diagnóstico es
+> lo que hay que poder releer, y en dos casos el diagnóstico estaba mal.
 
 ### 🔴 A — Baratas y muy visibles (una sesión las tres)
 
-#### A1. La foto de perfil nunca sale en Inicio
+#### A1. La foto de perfil nunca sale en Inicio — ✅ resuelto (ronda 7)
 
 **Causa raíz encontrada.** [`index.tsx:74`](<../apps/mobile/app/(main)/(tabs)/index.tsx>)
 pinta `<Avatar name={displayName ?? 'Tú'} size={38} />` — **sin pasar `uri`**.
@@ -176,7 +253,7 @@ sesión, y **nunca pide el perfil**, así que no tiene `avatarUrl` que pasar.
 
 **Comparte causa con A2** — ver abajo.
 
-#### A2. Editar el perfil y volver no actualiza la pestaña Perfil
+#### A2. Editar el perfil y volver no actualiza la pestaña Perfil — ✅ resuelto (ronda 7)
 
 **Causa raíz encontrada.** `profile-edit` termina con `router.back()`
 ([línea 138](<../apps/mobile/app/(main)/profile-edit.tsx>)). La pestaña Perfil
@@ -290,7 +367,7 @@ reparto). Lo que falta, en orden, y **todo tiene que estar**:
 Antes de tocar código, verificar los cuatro. Es muy probable que el código esté
 bien y el diagnóstico haya sido siempre de infraestructura.
 
-#### B4. La barra de navegación del sistema se come la interfaz
+#### B4. La barra de navegación del sistema se come la interfaz — ✅ resuelto (ronda 7)
 
 **Causa raíz encontrada.** `Sheet` y `FloatingTabBar` usan `useSafeAreaInsets` y
 respetan `insets.bottom`. **`Screen`, que es la base de casi todas las pantallas,
@@ -341,17 +418,23 @@ diseño que el autor quiere ya existe en `features/tags/components/TagField.tsx`
 componente de TagField y usarlo en los dos sitios**, que además elimina una
 duplicación real.
 
-#### C3. El teclado tapa «Sobre ti»
+#### C3. El teclado tapa «Sobre ti» — ✅ resuelto a la segunda (ronda 7)
 
-`KeyboardAvoidingView` existe **en un solo sitio de toda la app**:
+> **Este diagnóstico estaba a medias, y por eso el primer arreglo no cambió
+> nada.** Se deja entero porque la parte que falta es la interesante: ver
+> «Lo que se arregló» de la ronda 7, arriba.
+
+~~`KeyboardAvoidingView` existe **en un solo sitio de toda la app**:
 `components/ui/FormScaffold.tsx`. Y `profile-edit.tsx` **no usa FormScaffold** —
-tiene su propio layout. El campo de bio es `multiline` y está al final de un
-formulario largo, así que el teclado se le sienta encima.
+tiene su propio layout.~~ Las dos frases eran ciertas. La que faltaba: **ese
+`KeyboardAvoidingView` tampoco esquivaba nada en Android**, porque iba sin
+`behavior` y confiaba en un `adjustResize` que edge-to-edge dejó sin efecto.
 
-Lo barato es pasar `profile-edit` por `FormScaffold`. Conviene comprobar si hay
-más pantallas fuera de él con el mismo problema latente.
+El campo de bio es `multiline` y está al final de un formulario largo, así que
+el teclado se le sienta encima — y sin nada que encoger, tampoco se podía sacar
+de ahí haciendo scroll.
 
-#### C4. Las fotos de «Lo último que añadiste» no siempre cargan
+#### C4. Las fotos de «Lo último que añadiste» no siempre cargan — ✅ resuelto (ronda 7)
 
 **Causa raíz encontrada, y es interesante.** `useHomeSummary` selecciona de
 `images` solo `path` — **nunca `remoteKey`**. Y cuando una foto llega por sync,
@@ -466,10 +549,9 @@ Dos cosas más que salieron de aquí:
    lado servidor** (`numeric(12,2)`). Hay que decidir uno de los dos —céntimos
    enteros en ambos lados, o `real` en ambos— y migrar el local.
 
-3. **Cero tests de UI.** No hay un solo `.test.tsx`;
-   `@testing-library/react-native` está instalado y no se importa en ninguna
-   parte. docs/12 pide cubrir «lógica no trivial»: el visor de imágenes y los
-   formularios con prefill.
+3. **Tests de UI.** ~~No hay un solo `.test.tsx`~~ — la ronda 7 escribió los
+   primeros ocho (`MyProfileContext`, `Photo`). Sigue faltando lo que docs/12
+   pide cubrir: el visor de imágenes y los formularios con prefill.
 
 4. **Round-trip export→import.** docs/12 lo exige y no existe. El esquema del
    `.restoshare` ya está cubierto en `packages/shared`; falta la vuelta entera.
