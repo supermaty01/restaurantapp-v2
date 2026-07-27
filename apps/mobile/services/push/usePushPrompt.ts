@@ -6,19 +6,28 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { getSetting, setSetting } from '@/services/db/settings-repository';
 
-import { pushPermissionGranted, registerPushIfAllowed, requestPushPermission } from './push';
-
-/** Que ya se preguntó una vez. La respuesta la guarda el sistema, no nosotros. */
-const ASKED_KEY = 'pushPromptAsked';
+import {
+  PUSH_PROMPT_ASKED_KEY,
+  pushPermissionGranted,
+  registerPushIfAllowed,
+  requestPushPermission,
+} from './push';
 
 /**
- * Pedir el permiso de avisos en el único momento en que se entiende.
+ * Pedir el permiso de avisos justo después de etiquetar a alguien.
  *
- * Justo después de etiquetar a alguien por primera vez: ahí acabas de crear el
- * motivo por el que existiría un aviso, y la pregunta se contesta sola. Al
- * arrancar la app no —la respuesta rápida es "no", y en Android 13+ un no cierra
- * la puerta hasta que alguien vaya a los ajustes del sistema, así que la primera
- * pregunta es también la última.
+ * Ahí acabas de crear el motivo por el que existiría un aviso, y la pregunta se
+ * contesta sola.
+ *
+ * **Ya no es el único sitio que pregunta**, y el matiz importa: el onboarding
+ * también lo hace, porque este disparador deja fuera a quien nunca etiqueta y
+ * solo recibe —te etiquetan, te mandan una solicitud— que es justo el caso en
+ * que un aviso hace más falta. El razonamiento largo está en
+ * `features/onboarding/PermissionsScreen.tsx`.
+ *
+ * Lo que sigue en pie es que **el diálogo del sistema no se enseña al
+ * arrancar**: la respuesta rápida es "no", y en Android 13+ un no cierra la
+ * puerta hasta que alguien vaya a los ajustes. Por eso las dos preguntas.
  *
  * Por eso hay **dos** preguntas y no una: primero la nuestra, que se puede
  * volver a hacer, y solo si dice que sí la del sistema, que no. Rechazar la
@@ -49,11 +58,11 @@ export function usePushPrompt() {
           return;
         }
 
-        if ((await getSetting(db, ASKED_KEY)) === 'true') return;
+        if ((await getSetting(db, PUSH_PROMPT_ASKED_KEY)) === 'true') return;
         // Antes de preguntar, no después: si la app se cierra a mitad del
         // diálogo, la pregunta se ha hecho igual y repetirla sería peor que
         // perderla.
-        await setSetting(db, ASKED_KEY, 'true');
+        await setSetting(db, PUSH_PROMPT_ASKED_KEY, 'true');
 
         const wants = await ask({
           title: '¿Te avisamos?',

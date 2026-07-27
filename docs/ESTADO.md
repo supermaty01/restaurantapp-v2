@@ -47,7 +47,7 @@ fuente**. Marcar aquí al cerrar algo.
 
 **Producto**
 
-- [x] ~~D1 · Pantalla de bienvenida~~ — solo la primera ejecución, con los dos botones del mismo peso y «Empezar sin cuenta» primero. Con test que vigila que no se convierta en puerta de login. **Verificada en el emulador**
+- [x] ~~D1 · Onboarding~~ — dos pasos en la primera ejecución: qué es la app (con los dos botones del mismo peso y «Empezar sin cuenta» primero) y los permisos. **Solo se piden los avisos**, y el porqué está en `PermissionsScreen`. Con tests que vigilan que no se convierta en puerta de login ni en una petición de permisos en bloque. **Verificado en el emulador**
 
 ### 🎯 Lo grande que queda, en orden
 
@@ -68,6 +68,55 @@ Nada de esto está empezado, y los dos primeros son los que se abaratan haciénd
    `npm run db:test` es obligatorio (AGENTS §2) y en esta ronda Docker Desktop no
    estaba levantado.
 
+## 📦 Actualizar desde la v1 sin desinstalar
+
+**Es un problema de firma, y no se arregla con código.** Android instala una
+actualización encima de otra app solo si coinciden tres cosas, y de las tres
+solo falta comprobar una:
+
+| Requisito                | Estado                                                                 |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Mismo `applicationId`    | ✅ `com.supermaty01.restaurantapp` en `app.config.js`, igual que la v1 |
+| `versionCode` mayor      | ✅ La v1.3 salió con 1; la v2 declara 2                                |
+| **Misma clave de firma** | ❓ **Esto es lo que hay que averiguar**                                |
+
+Si la clave no coincide, la instalación falla con
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE` —o el genérico «App not installed», que no
+explica nada— y la única salida es desinstalar, que **se lleva por delante el
+diario de quien no haya hecho copia**. Por eso importa saberlo antes de repartir
+nada, no después.
+
+### Cómo comprobarlo
+
+Con el APK de la v1 que esté instalado y uno nuevo de EAS:
+
+```bash
+apksigner verify --print-certs v1.apk
+```
+
+Comparar el `SHA-256` del certificado con el del APK de la v2. Si son iguales,
+no hay nada que hacer.
+
+### Si no coinciden
+
+Depende de cómo se repartió la v1, y son caminos distintos:
+
+- **La v1 se instalaba a mano (APK suelto).** Hay que encontrar el keystore con
+  el que se firmó —el `.jks` o `.keystore`, más alias y contraseñas— y subirlo a
+  EAS con `eas credentials` → Android → el perfil → Keystore → subir uno
+  existente. A partir de ahí las builds salen firmadas igual.
+- **La v1 estaba en Google Play.** Entonces la clave que instala es la de _app
+  signing_ y la tiene Google; la que se sube es la de _upload_. Repartir un APK
+  de EAS por fuera nunca va a coincidir con lo instalado desde Play, así que el
+  camino es publicar la v2 en Play con la misma clave de subida.
+- **El keystore de la v1 se perdió.** No hay solución técnica: Android no deja
+  cambiar la clave de una app instalada. Toca desinstalar, y entonces lo
+  importante pasa a ser **avisar de exportar antes** — la copia manual desde
+  Ajustes, que ya existe y funciona.
+
+**Lo que hace falta para decidir:** un APK de la v1 y saber si llegó a estar en
+Play. Con eso, la respuesta es una de las tres de arriba.
+
 ### 🔍 De la auditoría (ronda 6) — detalle en [Lo que queda pendiente](#-lo-que-queda-pendiente-por-orden)
 
 - [ ] Eliminar cuenta y datos (**GDPR**) — obligación legal el día que haya producción
@@ -82,11 +131,10 @@ Nada de esto está empezado, y los dos primeros son los que se abaratan haciénd
 ### 🧱 De rondas anteriores
 
 - [ ] **RAM: ~1 GB medido** (`TOTAL PSS`), con swap. Plan en [docs/16 §2](16-memoria-e-imagenes.md), **midiendo antes de construir miniaturas**
-- [ ] Tarea #32 · Copia de seguridad automática **antes de migrar** — la pieza existe (`BackupService`), falta engancharla
+- [ ] **Que la v2 se instale encima de la v1, sin desinstalar** — es un problema de firma, no de código. Detalle en [Actualizar desde la v1](#-actualizar-desde-la-v1-sin-desinstalar)
 - [x] ~~Persona etiquetada en una visita no se muestra tras crearla~~ — **ya estaba arreglado y nadie lo tachó**: era uno de los cinco hooks de la ronda 6 que pasaban `'visitParticipants'` (el nombre del export) en vez de `visit_participant` (el SQL), así que la pantalla no se enteraba de la tabla de unión. Comprobado en el histórico; hoy lo impide el tipo y lo vigila `live-tables-contract`
 - [x] ~~La moneda está fijada a COP~~ — ajuste en Ajustes, con el valor inicial deducido de la región del móvil. **No convierte lo ya escrito**, y la propia fila lo dice
 - [x] ~~`jszip` sigue en `dependencies`~~ — a `devDependencies`; solo lo usa `zip.node.test.ts`
-- [ ] «Armonía» en formularios de detalle y creación — idea concreta: **empezar por la foto**
 - [ ] Repasar docs sin revisar: **00, 01, 04, 07, 08, 10**
 - [ ] `lint:compiler`: 83 avisos de React Compiler readiness (fuera de la puerta a propósito)
 - [ ] Confirmar si el orden de «Lo último que añadiste» (por fecha de registro) chirría — una línea en `useHomeSummary`
@@ -1180,12 +1228,12 @@ SQL en verde con dos ficheros nuevos (`notifications.test.sql` y
 
 ### Deuda anotada
 
-- **Tarea #32: copia de seguridad automática antes de migrar.** Sigue sin
-  hacerse **para las migraciones**, que es lo que `docs/09` pedía desde el
-  principio; la copia manual antes de instalar sigue sin ser opcional. Lo que sí
-  existe ya es la copia automática antes de vaciar el diario en la pantalla de
-  conflictos, con el mismo `BackupService` — o sea que la pieza está y falta
-  engancharla al arranque de las migraciones.
+- ~~**Tarea #32: copia de seguridad automática antes de migrar.**~~ **Retirada
+  el 27 de julio, a petición del autor.** «Migrar» no es un momento que la app
+  pueda elegir: lo hace la persona cuando decide instalar. La copia automática
+  antes de vaciar el diario en la pantalla de conflictos —que es el caso en que
+  la app sí destruye algo por su cuenta— ya existe, con el mismo
+  `BackupService`, y es la que de verdad hacía falta.
 - **Docs sin repasar:** 00, 01, 04, 07, 08, 10, 12 y README. Los repasados
   (02, 03, 05, 06, 09, 11, 13, 15, ESTADO) ya dicen lo que hace el código.
 - **`lint:compiler`**: 83 avisos de React Compiler readiness, fuera de la puerta
@@ -1310,7 +1358,11 @@ Se retiran tres componentes que ya no usa nadie: `DishSelectorModal`, `TagSelect
 
 ### 🔜 Lo que sigue abierto
 
-**«Armonía» en detalle y creación.** Es lo más subjetivo de tu feedback y lo que menos he cerrado. Los formularios ya no son una lista plana de campos y los tres selectores que llamabas terribles están resueltos, pero el _orden_ de un formulario de visita sigue siendo el de las columnas de la base de datos, no el de cómo se registra una comida. Idea concreta pendiente: **empezar por la foto**, que suele ser lo que acabas de hacer, para que se lea como una entrada de diario y no como un alta.
+~~**«Armonía» en detalle y creación.**~~ **Cerrado el 27 de julio: el autor dice
+que los formularios están como quiere.** Queda escrito porque la idea que había
+apuntada —reordenarlos para «empezar por la foto»— era razonable y va a volver a
+ocurrírsele a alguien: **no se toca la estructura de los formularios.** El orden
+actual está aprobado mirándolo, que es la única forma de aprobar algo así.
 
 ---
 

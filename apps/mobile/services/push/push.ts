@@ -76,6 +76,16 @@ export async function ensureAndroidChannel(): Promise<void> {
   });
 }
 
+/**
+ * Que ya se llegó a enseñar **el diálogo del sistema**, que solo sale una vez.
+ *
+ * La marca es de eso y no de «se preguntó»: la pregunta nuestra —la de la
+ * pantalla o la del diálogo de la app— se puede repetir cuantas veces haga
+ * falta y no gasta nada. Vive aquí y no en quien pregunta porque ahora
+ * preguntan dos sitios: el onboarding y el momento de etiquetar a alguien.
+ */
+export const PUSH_PROMPT_ASKED_KEY = 'pushPromptAsked';
+
 /** Si ya está concedido, sin preguntar nada. */
 export async function pushPermissionGranted(): Promise<boolean> {
   const { status } = await Notifications.getPermissionsAsync();
