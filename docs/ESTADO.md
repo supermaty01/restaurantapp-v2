@@ -4,6 +4,92 @@
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
+---
+
+## ☑️ TODO — todo lo pendiente, en una lista
+
+Índice de lo que queda, recogido de todas las rondas. Cada línea enlaza o
+referencia el apartado donde está el detalle; **esto es el resumen, no la
+fuente**. Marcar aquí al cerrar algo.
+
+### 🚀 Despliegue — bloquea a casi todo lo demás
+
+- [ ] **APK nuevo** (`eas build -p android --profile preview`). Paso cero de las últimas tres rondas
+- [ ] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
+- [ ] Aplicar migraciones pendientes a Supabase (`supabase db push`): **0019, 0020, 0021**
+- [ ] Confirmar la clave FCM subida a EAS (`eas credentials`)
+- [ ] Añadir `.easignore` — el archivo de build pesa 334 MB porque sube `.git` · [D2](#d2-el-archivo-de-eas-pesa-334-mb)
+- [ ] Fusionar la rama a `main`: no tiene nada de las últimas seis sesiones
+
+### 🐛 De probar la app (26 jul) — detalle en [Hallazgos](#-hallazgos-del-autor-probando-la-app--26-de-julio-de-2026)
+
+**Baratas y visibles**
+
+- [ ] A1 · Foto de perfil no sale en Inicio (`Avatar` sin `uri`)
+- [ ] A2 · Editar perfil no refresca la pestaña Perfil — _misma raíz que A1: no hay fuente única de «mi perfil»_
+- [ ] A3 · Errores de login en inglés (`describeAuthError` solo se usa en OAuth) + el formulario no valida
+
+**Arquitectura**
+
+- [ ] B1 · La app se congela en el primer sync — ceder el hilo entre lotes + loader con progreso
+- [ ] B2 · **Dos cuentas en el mismo móvil** — necesita columna `account_uuid` + filtro en todas las lecturas. La más grande
+- [ ] B3 · Push no llega — verificar los 4 eslabones de despliegue **antes** de tocar código
+- [ ] B4 · La barra de navegación del sistema tapa la interfaz (`Screen` no aplica safe area)
+
+**Interfaz**
+
+- [ ] C1 · Transición del Diario fluida + «efecto gota» **y quitar los previews** (10 ficheros, va todo junto)
+- [ ] C2 · Filtros de etiquetas: extraer el componente de `TagField` y reutilizarlo
+- [ ] C3 · El teclado tapa «Sobre ti» (`profile-edit` no usa `FormScaffold`)
+- [ ] C4 · Fotos de «Lo último que añadiste»: falta caer a la URL remota si el fichero local no está
+- [ ] C5 · Márgenes laterales del drawer «¿Quién puede ver esto?»
+
+**Producto**
+
+- [ ] D1 · Pantalla de bienvenida (primera ejecución, sin convertirse en puerta de login)
+
+### 🔍 De la auditoría (ronda 6) — detalle en [Lo que queda pendiente](#-lo-que-queda-pendiente-por-orden)
+
+- [ ] Eliminar cuenta y datos (**GDPR**) — obligación legal el día que haya producción
+- [ ] La **regla del dinero** está rota: `price: integer` guardando `3.5`; se arregló solo el lado servidor
+- [ ] **Cero tests de UI** — ni un `.test.tsx`; `@testing-library/react-native` instalado y sin usar
+- [ ] Round-trip export→import idempotente (docs/12 lo exige)
+- [ ] Sync contra Supabase local con dos dispositivos de verdad
+- [ ] Aislamiento entre features (`eslint-plugin-boundaries` + mover lo compartido)
+- [ ] Telemetría de errores — hoy un fallo que no se reproduzca delante no deja rastro
+- [ ] `npm audit`: `overrides` de `brace-expansion` y `uuid`. **Nunca `npm audit fix --force`**
+
+### 🧱 De rondas anteriores
+
+- [ ] **RAM: ~1 GB medido** (`TOTAL PSS`), con swap. Plan en [docs/16 §2](16-memoria-e-imagenes.md), **midiendo antes de construir miniaturas**
+- [ ] Tarea #32 · Copia de seguridad automática **antes de migrar** — la pieza existe (`BackupService`), falta engancharla
+- [ ] Persona etiquetada en una visita no se muestra tras crearla
+- [ ] La moneda está fijada a COP en el detalle de plato
+- [ ] `jszip` sigue en `dependencies` y solo lo usa un test
+- [ ] «Armonía» en formularios de detalle y creación — idea concreta: **empezar por la foto**
+- [ ] Repasar docs sin revisar: **00, 01, 04, 07, 08, 10**
+- [ ] `lint:compiler`: 83 avisos de React Compiler readiness (fuera de la puerta a propósito)
+- [ ] Confirmar si el orden de «Lo último que añadiste» (por fecha de registro) chirría — una línea en `useHomeSummary`
+
+### 📱 Verificar en dispositivo (con el APK nuevo)
+
+- [ ] Sync con **dos dispositivos** — el caso que antes fallaba en silencio
+- [ ] Descarga de fotos y `sync-status` con sesión y Worker reales
+- [ ] Novedades con datos de verdad: que llegue el aviso al etiquetar y que el punto se apague
+- [ ] Pantalla de conflictos (nunca se ha visto en pantalla)
+- [ ] Que las hojas toquen el borde inferior sin meterse bajo la barra de navegación
+- [ ] Arrastre hacia abajo para cerrar paneles
+- [ ] Parpadeo en vista calendario (`removeClippedSubviews={false}`)
+
+### ⚠️ Riesgo conocido, asumido
+
+- **Sin transacciones**: la fila y su `change_log` se escriben por separado (con
+  better-sqlite3 un callback `async` en `transaction()` crashea el proceso).
+  Mitigado con `linkLocalData` en cada push y cubierto por test. Anotado, no
+  pendiente.
+
+---
+
 ## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (ronda 6)
 
 Rama `fix/auditoria-ronda-6`. Auditoría completa del proyecto y corrección de lo
