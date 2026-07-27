@@ -95,14 +95,18 @@ export function FormScaffold({
       </KeyboardAwareScrollView>
 
       {/*
-       * El pie viaja pegado al borde del teclado. `opened: insets.bottom`
-       * cancela el hueco de la barra de navegación mientras el teclado está
-       * abierto: ahí abajo ya no hay barra que esquivar, la tapa el teclado.
+       * El pie viaja pegado al borde del teclado.
+       *
+       * `opened: insets.bottom` no es decoración: el hueco de la barra de
+       * navegación lo pone el SafeAreaView de `(main)/_layout`, así que el pie
+       * ya está `insets.bottom` por encima del borde físico. La altura del
+       * teclado, en cambio, se mide desde ese borde. Sin este offset el pie
+       * subiría de más y quedaría flotando sobre el teclado.
        */}
       <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         <View
-          className="border-t border-line bg-surface-alt px-5 pt-3"
-          style={[elevation.medium, { paddingBottom: insets.bottom + 12 }]}
+          className="border-t border-line bg-surface-alt px-5 pb-4 pt-3"
+          style={elevation.medium}
           onLayout={measureFooter}
         >
           {hint ? (

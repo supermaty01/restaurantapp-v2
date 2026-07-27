@@ -45,7 +45,27 @@ export default function MainLayout() {
 
   return (
     <PeekProvider>
-      <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'left', 'right']}>
+      {/*
+       * `bottom` entró aquí y no en `Screen`, que era el plan escrito.
+       *
+       * El diagnóstico decía «que `Screen` aplique el inset inferior», y `Screen`
+       * es la base de casi todas las pantallas — pero **siete no lo usan**:
+       * `journal`, `account`, `map`, `assistant` y los tres detalles
+       * (`dishes/[id]/view`, `restaurants/[id]/view`, `visits/[id]/view`).
+       * Arreglarlo ahí habría dejado fuera justo las pantallas donde más se ve,
+       * y habría dejado la puerta abierta a la octava.
+       *
+       * Desde el SDK 57 edge-to-edge es obligatorio: la ventana llega hasta el
+       * borde físico y la barra de navegación se dibuja encima. Sin este `edge`
+       * el último elemento de cualquier lista queda debajo de los tres botones.
+       *
+       * Los dos sitios que sí gestionaban el inferior por su cuenta —
+       * `FloatingTabBar` y el pie de `FormScaffold`— dejaron de hacerlo en el
+       * mismo cambio: sumarlo dos veces deja un hueco, que era el otro síntoma.
+       * `Sheet`, `Toast` y `PeekOverlay` siguen con el suyo porque se pintan en
+       * un `Modal`, que es otra ventana y no hereda esto.
+       */}
+      <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'bottom', 'left', 'right']}>
         <StatusBar style={isDarkMode ? 'light' : 'dark'} />
         <Stack
           screenOptions={{
