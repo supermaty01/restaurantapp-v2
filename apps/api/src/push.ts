@@ -33,15 +33,28 @@ const MAX_PER_RUN = 200;
 /** Expo acepta hasta cien mensajes por petición. */
 const CHUNK = 100;
 
+/**
+ * Las clases que emite el servidor (0016, 0019).
+ *
+ * Como unión abierta con `string`: un aviso de una clase que este Worker
+ * todavía no conoce —porque la migración va por delante del despliegue— tiene
+ * que salir con un texto genérico, no quedarse sin enviar para siempre.
+ */
+export type NotificationKind =
+  'tagged_in_visit' | 'friend_published' | 'friend_request' | 'friend_accepted';
+
 /** Un aviso pendiente, con lo necesario para redactarlo. */
 export interface PendingNotification {
   id: number;
   userId: string;
+  kind: NotificationKind | string;
   visitUuid: string | null;
-  /** Quien etiquetó, ya resuelto a un nombre legible. */
+  /** Quién lo provocó, para abrir su perfil cuando no hay comida que abrir. */
+  actorId: string | null;
+  /** Quien lo provocó, ya resuelto a un nombre legible. */
   actorName: string;
-  /** Dónde se comió. */
-  title: string;
+  /** Dónde se comió. Nulo en los avisos que no ocurren en un restaurante. */
+  title: string | null;
 }
 
 export interface DeviceToken {
@@ -54,7 +67,7 @@ export interface ExpoPushMessage {
   to: string;
   title: string;
   body: string;
-  data: { visitUuid: string | null; notificationId: number };
+  data: { visitUuid: string | null; actorId: string | null; notificationId: number };
   channelId: string;
   sound: string | null;
 }
@@ -101,16 +114,50 @@ export interface PushRunResult {
   prunedTokens: number;
 }
 
+/**
+ * Qué dice el cuerpo de cada clase.
+ *
+ * El texto vive aquí y no en Postgres para que arreglar una palabra sea un
+ * despliegue del Worker y no una migración: los avisos ya escritos en la tabla
+ * se redactan al enviarlos, así que cambian de texto sin reescribir ninguna
+ * fila.
+ *
+ * Una clase desconocida sale con una frase que sirve para todas. Esa rama no es
+ * decorativa: la migración se aplica antes que el despliegue, así que hay una
+ * ventana real en la que la base emite clases que este código no conoce, y
+ * dejarlas sin enviar las perdería para siempre.
+ */
+function bodyFor(notification: PendingNotification): string {
+  switch (notification.kind) {
+    case 'tagged_in_visit':
+      return `Te etiquetó en ${notification.title ?? 'una comida'}`;
+    case 'friend_published':
+      return 'Ha añadido algo nuevo';
+    case 'friend_request':
+      return 'Quiere ser tu amigo';
+    case 'friend_accepted':
+      return 'Aceptó tu solicitud de amistad';
+    default:
+      return 'Tienes una novedad';
+  }
+}
+
 /** Cómo se lee el aviso en la pantalla de bloqueo. */
 export function composeMessage(notification: PendingNotification, token: string): ExpoPushMessage {
   return {
     to: token,
-    // El nombre en el título y el sitio en el cuerpo: en la pantalla de bloqueo
-    // el título es lo único que se lee entero, y quién te etiquetó es lo que
-    // decide si abres el aviso ahora o luego.
+    // El nombre en el título y qué ha pasado en el cuerpo: en la pantalla de
+    // bloqueo el título es lo único que se lee entero, y de quién es el aviso es
+    // lo que decide si lo abres ahora o luego.
     title: notification.actorName,
-    body: `Te etiquetó en ${notification.title}`,
-    data: { visitUuid: notification.visitUuid, notificationId: notification.id },
+    body: bodyFor(notification),
+    // Los dos, y el que sobre viaja nulo: la app abre la visita si la hay y el
+    // perfil de quien lo provocó si no. Ver `services/push/payload.ts`.
+    data: {
+      visitUuid: notification.visitUuid,
+      actorId: notification.actorId,
+      notificationId: notification.id,
+    },
     channelId: 'default',
     sound: 'default',
   };
@@ -331,7 +378,7 @@ export function createSupabasePushStore(env: Env): PushStore {
       // este filtro, así que no recorre la tabla.
       const url =
         `${rest}/notifications?pushed_at=is.null` +
-        `&select=id,user_id,visit_uuid,actor_id` +
+        `&select=id,user_id,kind,visit_uuid,actor_id` +
         `&order=created_at.asc&limit=${limit}`;
 
       const response = await fetch(url, { headers });
@@ -340,6 +387,7 @@ export function createSupabasePushStore(env: Env): PushStore {
       const rows = (await response.json()) as {
         id: number;
         user_id: string;
+        kind: string;
         visit_uuid: string | null;
         actor_id: string | null;
       }[];
@@ -354,11 +402,13 @@ export function createSupabasePushStore(env: Env): PushStore {
       return rows.map((row) => ({
         id: row.id,
         userId: row.user_id,
+        kind: row.kind,
         visitUuid: row.visit_uuid,
+        actorId: row.actor_id,
         // "Alguien te etiquetó" es raro pero se entiende; no mandar el aviso
         // porque falte un perfil, no.
         actorName: (row.actor_id && names.get(row.actor_id)) || 'Alguien',
-        title: (row.visit_uuid && titles.get(row.visit_uuid)) || 'una comida',
+        title: (row.visit_uuid && titles.get(row.visit_uuid)) || null,
       }));
     },
 

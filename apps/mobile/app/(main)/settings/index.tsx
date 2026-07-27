@@ -156,7 +156,10 @@ export default function SettingsScreen() {
       {/* Solo con cuenta: sin ella no hay quien te etiquete, así que un
           interruptor de avisos sería un interruptor de nada. */}
       {sharing ? (
-        <FormSection title="Avisos" hint="Cuando alguien te etiqueta en una comida, aunque no tengas la app abierta">
+        <FormSection
+          title="Avisos"
+          hint="Etiquetas, solicitudes de amistad y lo que comparten tus amigos, aunque no tengas la app abierta"
+        >
           <NotificationsCard />
         </FormSection>
       ) : null}

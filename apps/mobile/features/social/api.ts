@@ -435,7 +435,16 @@ export async function restoreTag(visitUuid: string): Promise<void> {
   await callRpc<null>('restore_tag', { visit: visitUuid });
 }
 
-export type NotificationKind = 'tagged_in_visit';
+/**
+ * Las clases de aviso que emite el servidor (0016, 0019).
+ *
+ * `friend_published` resume una ráfaga: registrar una comida escribe el sitio,
+ * la visita y los platos, y de ahí sale un aviso y no tres. Por eso llega sin
+ * visita a la que apuntar — la ráfaga no tiene una fila que la represente— y se
+ * abre en el perfil de quien publicó, que es donde están las tres.
+ */
+export type NotificationKind =
+  'tagged_in_visit' | 'friend_published' | 'friend_request' | 'friend_accepted';
 
 export interface AppNotification {
   id: number;
@@ -447,7 +456,8 @@ export interface AppNotification {
   username: string | null;
   displayName: string | null;
   avatarUrl: string | null;
-  title: string;
+  /** Dónde fue. Nulo en los avisos que no ocurren en ningún restaurante. */
+  title: string | null;
   imageKey: string | null;
 }
 
@@ -474,7 +484,7 @@ export async function fetchNotifications(before?: string): Promise<AppNotificati
     username: (row['username'] as string | null) ?? null,
     displayName: (row['display_name'] as string | null) ?? null,
     avatarUrl: (row['avatar_url'] as string | null) ?? null,
-    title: (row['title'] as string | null) ?? 'Una visita',
+    title: (row['title'] as string | null) ?? null,
     imageKey: (row['image_key'] as string | null) ?? null,
   }));
 }

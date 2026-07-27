@@ -223,15 +223,75 @@ de inicio.
   (docs/00) descarta las alternativas de pago sin más discusión.
 - **Solo Android por ahora.** iOS necesita cuenta de desarrollador de Apple de
   pago; cuando exista, aquí solo cambia el paso 1.
-- **Una clase de aviso para empezar** (`tagged_in_visit`). La tabla ya es
-  genérica por `kind`, así que añadir "te han mandado solicitud de amistad" es
-  una fila más y no una migración.
+- **La tabla es genérica por `kind`**, y la 0019 cobró esa decisión: tres clases
+  más sin tocar el espejo, sin tocar el envío y sin una tabla nueva.
 
 ---
 
-## 3. Qué esperar cuando funcione
+## 3. Las cuatro clases
 
-- El aviso llega con la app cerrada. Al tocarlo abre la visita compartida.
+| `kind`             | Cuándo                             | Al tocarlo |
+| ------------------ | ---------------------------------- | ---------- |
+| `tagged_in_visit`  | te etiquetan en una comida         | la visita  |
+| `friend_request`   | alguien quiere ser tu amigo        | su perfil  |
+| `friend_accepted`  | aceptan la solicitud que mandaste  | su perfil  |
+| `friend_published` | un amigo añade algo que puedes ver | su perfil  |
+
+Las tres nuevas viven en la migración **0019**, en dos triggers: uno sobre
+`friendships` y otro sobre `visits`, `dishes` y `restaurants`.
+
+### Por qué el trigger de amistad va en la tabla
+
+Hay **dos** caminos hasta «ahora sois amigos»: responder que sí, y mandar una
+solicitud a quien ya te la había mandado, que `send_friend_request` acepta en el
+sitio. Escrito en el trigger, los dos avisan igual y no hay un tercero que se
+quede sin avisar el día que lo haya.
+
+### Los dos frenos de `friend_published`
+
+Es la única clase que se emite sola y en volumen, así que lleva dos:
+
+1. **Silencio de diez minutos por persona.** Registrar una comida escribe el
+   restaurante, la visita y los platos, y de ahí tiene que salir **un** aviso.
+   Gana el **primero**, no el último: es lo que hace que llegue cuando la cosa
+   pasa y no cuando se termina de escribir. El silencio mira si hubo cualquier
+   aviso de ese amigo hace poco, no solo de esta clase — si acaba de etiquetarte,
+   ya te enteraste, y repetirlo en genérico sobra.
+
+2. **Lo viejo no avisa.** `created_at` lo pone el móvil al crear la fila, no el
+   servidor al recibirla, así que iniciar sesión por primera vez sube un diario
+   de años de golpe. Sin el freno, todos tus amigos reciben «ha añadido algo
+   nuevo» por una comida de 2023. Siete días deja pasar el caso real que hay que
+   respetar —un móvil sin cobertura una semana de viaje, que es justo cuando más
+   se registra— y para el volcado histórico.
+
+Solo al insertar, nunca al actualizar: cambiar el ajuste general de privacidad
+vuelve visibles de golpe todas las entradas en `default` (0014), y avisar de eso
+sería un aviso por amigo cada vez que alguien toca un interruptor.
+
+### Por qué `friend_published` no apunta a una fila
+
+Resume una ráfaga, y la fila que la dispara es la que ganó la carrera del sync
+—el restaurante unas veces, la visita otras—. Apuntar a ella sería llevar a un
+sitio distinto según el orden de subida. El perfil de quien publicó es el
+destino correcto para las tres, porque es donde están las tres.
+
+### El texto vive en el Worker
+
+`bodyFor` en `apps/api/src/push.ts`, no en Postgres: los avisos ya escritos en
+la tabla se redactan **al enviarlos**, así que arreglar una palabra es un
+despliegue y no una migración que reescriba filas. Hay una rama por defecto para
+una clase desconocida, y no es decorativa: la migración se aplica antes que el
+despliegue, así que existe una ventana en la que la base emite clases que el
+Worker no conoce, y sin esa rama se quedarían sin enviar para siempre.
+
+---
+
+## 4. Qué esperar cuando funcione
+
+- El aviso llega con la app cerrada. Al tocarlo abre la visita, o el perfil de
+  quien lo provocó cuando el aviso no ocurre en una comida (ver la tabla de
+  arriba). El push y su fila en Novedades llevan **al mismo sitio**, a propósito.
 - Con la app abierta **no** se muestra notificación del sistema: ya está la
   campana con su punto, y una notificación por algo que estás mirando es ruido.
 - Sigue funcionando todo sin permiso concedido: quien lo deniegue conserva la

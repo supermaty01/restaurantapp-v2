@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { VISIT_FIELD, visitFromNotification } from '@/services/push/payload';
+import {
+  ACTOR_FIELD,
+  VISIT_FIELD,
+  actorFromNotification,
+  visitFromNotification,
+} from '@/services/push/payload';
 
 /**
  * Tocar un aviso tiene que abrir la comida de la que habla.
@@ -29,7 +34,19 @@ describe('lo que viaja en un aviso', () => {
     expect(visitFromNotification({ visitUuid: 42 })).toBeNull();
   });
 
-  it('el Worker escribe el mismo campo que la app lee', () => {
+  it('saca a quien lo provocó', () => {
+    // El destino de las clases que no ocurren en una comida: su perfil.
+    expect(actorFromNotification({ actorId: 'caro' })).toBe('caro');
+  });
+
+  it('aguanta lo que llegue también en el actor', () => {
+    expect(actorFromNotification(null)).toBeNull();
+    expect(actorFromNotification({})).toBeNull();
+    expect(actorFromNotification({ actorId: '' })).toBeNull();
+    expect(actorFromNotification({ actorId: 42 })).toBeNull();
+  });
+
+  it('el Worker escribe los mismos campos que la app lee', () => {
     const worker = readFileSync(
       join(__dirname, '..', '..', '..', '..', 'api', 'src', 'push.ts'),
       'utf8',
@@ -39,5 +56,6 @@ describe('lo que viaja en un aviso', () => {
     // entero pasaría con el nombre suelto en un comentario.
     const compose = worker.slice(worker.indexOf('export function composeMessage'));
     expect(compose).toContain(`${VISIT_FIELD}:`);
+    expect(compose).toContain(`${ACTOR_FIELD}:`);
   });
 });

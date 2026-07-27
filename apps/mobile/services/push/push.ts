@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 import { devLog } from '@/lib/helpers/dev-log';
 import { getSupabase } from '@/services/supabase/client';
 
-export { visitFromNotification } from './payload';
+export { actorFromNotification, visitFromNotification } from './payload';
 
 /**
  * Que el aviso llegue con la app cerrada.

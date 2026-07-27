@@ -12,12 +12,29 @@
  * aviso no llevara a ningún sitio.
  */
 
-/** El nombre del campo. Los dos lados tienen que decir lo mismo. */
+/** Los nombres de los campos. Los dos lados tienen que decir lo mismo. */
 export const VISIT_FIELD = 'visitUuid';
+export const ACTOR_FIELD = 'actorId';
+
+function field(data: unknown, name: string): string | null {
+  if (typeof data !== 'object' || data === null) return null;
+  const value = (data as Record<string, unknown>)[name];
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
 
 /** La visita que abre un aviso, si la trae. */
 export function visitFromNotification(data: unknown): string | null {
-  if (typeof data !== 'object' || data === null) return null;
-  const visit = (data as Record<string, unknown>)[VISIT_FIELD];
-  return typeof visit === 'string' && visit.length > 0 ? visit : null;
+  return field(data, VISIT_FIELD);
+}
+
+/**
+ * Quién lo provocó.
+ *
+ * Es el destino de las clases que no ocurren en una comida —una solicitud de
+ * amistad, una aceptación, un amigo que ha publicado algo—: su perfil. Sin
+ * esto, tocar cualquiera de esas tres abre la pantalla de inicio, que desde
+ * fuera es igual que un aviso roto.
+ */
+export function actorFromNotification(data: unknown): string | null {
+  return field(data, ACTOR_FIELD);
 }

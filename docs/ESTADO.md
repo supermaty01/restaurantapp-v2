@@ -1,55 +1,52 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-26 (noche)
+**Última actualización:** 2026-07-26 (ronda 5)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
-## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (noche)
+## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (ronda 5)
 
-La v2.0.0 **está instalada y en uso en el móvil del autor**, con datos reales y
-cuenta iniciada. Ya no estamos construyendo: estamos corrigiendo lo que aparece
-al usarla.
+Las **notificaciones nuevas están hechas y probadas contra Postgres de verdad**
+(migración 0019). De la lista que fijó el autor —foto de perfil > scroll >
+Inicio > notificaciones > borrar cuenta— queda **solo la última**.
+
+Esta ronda hubo Docker, así que por primera vez en tres sesiones las aserciones
+SQL se pudieron correr: **146 comprobaciones sobre el esquema real**, aplicando
+las 19 migraciones desde cero en una base desechable por fichero de test.
 
 ### 👉 Lo siguiente, en orden
 
-0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero, con dos
-   razones medidas:
-   - Los drawers, el toque en el nombre para abrir el perfil y los textos
-     cortados **se reportaron como rotos y funcionan** en el emulador contra
-     esta rama. Lo que se prueba en el móvil es un APK anterior a la sesión que
-     los arregló.
-   - El push falla al arrancar con `Default FirebaseApp is not initialized`
-     (visto en el log del emulador). Es lo esperado: el APK instalado se
-     construyó **antes** de que `googleServicesFile` entrara en
-     `app.config.js`. Ninguna recarga de JavaScript lo arregla.
+0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero y sigue sin
+   hacerse, con las mismas dos razones de la ronda 4: los drawers y los textos
+   cortados funcionan contra esta rama pero el móvil tiene un APK anterior, y el
+   push falla al arrancar con `Default FirebaseApp is not initialized` porque el
+   APK instalado se construyó antes de que `googleServicesFile` entrara en
+   `app.config.js`. Ninguna recarga de JavaScript lo arregla.
 
    `eas build -p android --profile preview`.
 
-### Pendiente, sin empezar
+1. **Eliminar cuenta y datos (GDPR).** Lo único que queda del plan, y entra
+   limpio en una sesión propia. Apartado poco visible en Ajustes, con
+   confirmación fuerte —escribir el usuario, no un «sí»—. Tiene que borrar de
+   verdad: espejo, fotos en R2, perfil, tokens de push, avisos y la cuenta de
+   auth. Y decir qué **no** se borra: lo que otras personas ya guardaron de una
+   visita compartida. Ofrecer exportar antes (`BackupService` ya existe). No es
+   urgente porque no hay producción todavía, pero es obligación legal el día que
+   la haya.
 
-El autor fijó el orden: foto de perfil > scroll > Inicio > **notificaciones** >
-**borrar cuenta**. Los tres primeros están hechos y verificados; quedan estos
-dos, y entran limpios en una sesión propia.
+### ⚠️ Encontrado de paso, sin arreglar
 
-- **Notificaciones nuevas.** Dos clases más sobre la tabla `notifications` de
-  0016, que ya es genérica por `kind`: son dos triggers y dos textos, no una
-  migración de fondo.
-  - `friend_published`: un amigo crea una visita, un plato o un restaurante que
-    puedes ver. Con **silencio de 10 minutos por persona**, y decidido con el
-    autor que el aviso sea **el primero y no el último**: registrar una comida
-    entera crea tres cosas seguidas y solo debe salir una. Se implementa en el
-    trigger mirando la última notificación de ese actor para ese destinatario.
-  - `friend_request` y `friend_accepted`.
-  - **Descartada a propósito** la idea de «un amigo visita un sitio que
-    puntuaste alto»: depende de que dos personas registren el mismo local —
-    misma sede, mismo nombre— y eso no se puede dar por hecho.
-- **Eliminar cuenta y datos (GDPR).** Apartado poco visible en Ajustes, con
-  confirmación fuerte —escribir el usuario, no un «sí»—. Tiene que borrar de
-  verdad: espejo, fotos en R2, perfil, tokens de push, avisos y la cuenta de
-  auth. Y decir qué **no** se borra: lo que otras personas ya guardaron de una
-  visita compartida. Ofrecer exportar antes (`BackupService` ya existe). No es
-  urgente porque no hay producción todavía, pero es obligación legal el día que
-  la haya.
+Los dos son anteriores a esta ronda y están **verificados contra el árbol
+limpio**, así que no son regresiones. El detalle, en [Deuda
+anotada](#deuda-anotada):
+
+- **`npm run check` desde la raíz está roto**, y lleva tiempo estándolo:
+  `packages/shared` no tiene `src/` y revienta en `typecheck`, `test:ci` y
+  `lint`. Las rondas que declararon «verde» corrían los workspaces por separado.
+  **Al verificar esta rama, hazlo con `-w apps/mobile -w apps/api`** hasta que se
+  arregle, o creerás que rompiste algo que ya estaba roto.
+- **Diez ficheros sin formatear** que `format:check` marca y que nadie ha tocado
+  aquí. Se dejan para un commit propio.
 
 ### Decidido y sin cerrar del todo
 
@@ -63,12 +60,68 @@ dos, y entran limpios en una sesión propia.
 
 1. **Desplegar el Worker** (`cd apps/api && npx wrangler deploy`). El envío de
    push vive en un cron, y un cron sin desplegar no se dispara. Comprobar que
-   el panel de Cloudflare lista **dos** triggers.
-2. **Confirmar que la clave FCM está subida a EAS** (`eas credentials`).
-3. **Probar el sync con dos dispositivos y sesión iniciada.** Sigue sin
+   el panel de Cloudflare lista **dos** triggers. Ahora además hace falta para
+   que salgan las clases nuevas: la 0019 las emite, pero el Worker desplegado no
+   sabe redactarlas.
+2. **Aplicar la 0019 al proyecto de Supabase** (`supabase db push`). Las tres
+   clases nuevas no existen hasta que se aplique.
+3. **Confirmar que la clave FCM está subida a EAS** (`eas credentials`).
+4. **Probar el sync con dos dispositivos y sesión iniciada.** Sigue sin
    verificarse contra servicios reales. Empezar por Ajustes → «¿Está todo en la
    nube?».
-4. **Fusionar la rama.** `main` no tiene nada de las últimas cuatro sesiones.
+5. **Fusionar la rama.** `main` no tiene nada de las últimas cinco sesiones.
+
+### 🟢 Lo cerrado en la ronda 5
+
+Verde: TypeScript en 0 y lint sin avisos en `apps/mobile` y `apps/api`, **311
+tests** de app (+2), **40 del worker** (+4) y **146 aserciones SQL** en verde
+—estas últimas corridas de verdad, no supuestas—.
+
+- **Tres clases de aviso más** (migración **0019**), sobre la tabla que la 0016
+  dejó genérica por `kind`: `friend_request`, `friend_accepted` y
+  `friend_published`. El detalle de cada decisión está en
+  [docs/15](15-notificaciones-push.md#3-las-cuatro-clases); lo que importa aquí:
+  - El aviso de amistad va en un **trigger sobre `friendships`** y no dentro de
+    las RPC, porque hay dos caminos hasta «ahora sois amigos» —responder que sí,
+    y pedir amistad a quien ya te la había pedido, que `send_friend_request`
+    acepta en el sitio— y desde la tabla los dos avisan igual.
+  - `friend_published` sale **una vez por ráfaga y gana el primero**: registrar
+    una comida escribe tres filas y de ahí sale un aviso. El silencio de diez
+    minutos mira **cualquier** aviso reciente de esa persona, no solo de esta
+    clase: si acaba de etiquetarte ya te enteraste.
+  - **Y no apunta a ninguna fila.** La que dispara el trigger es la que ganó la
+    carrera del sync —el restaurante unas veces, la visita otras—, así que
+    apuntar a ella llevaría a un sitio distinto según el orden de subida. Lleva
+    al perfil, que es donde están las tres.
+  - **Un diario histórico no despierta a nadie.** `created_at` lo pone el móvil,
+    no el servidor, así que la primera sesión sube años de comidas de golpe. Sin
+    freno, todos tus amigos reciben «ha añadido algo nuevo» por una comida de 2023. La ventana es de siete días: deja pasar el móvil sin cobertura una
+    semana de viaje —justo cuando más se registra— y para el volcado.
+  - **Descartada a propósito** la idea de «un amigo visita un sitio que puntuaste
+    alto»: depende de que dos personas registren el mismo local —misma sede,
+    mismo nombre— y eso no se puede dar por hecho.
+
+- **El punto y la lista contaban cosas distintas.** `unread_notifications` y
+  `notifications_page` tenían la regla escrita dos veces y ya no coincidían: el
+  contador no miraba si la visita seguía existiendo, así que una visita borrada
+  dejaba el punto encendido sobre una lista vacía. Ahora las dos llaman a
+  `notification_visible`, y hay un test que las compara entre sí.
+
+- **🐛 `dishe` no es una entidad.** La 0014 montó las tres policies de lectura
+  entre amigos en un bucle que sacaba el nombre recortando la última letra, y
+  sobre `dishes` eso da `'dishe'`. `effective_visibility` no tiene rama para esa
+  entidad: devuelve NULL, el coalesce lo vuelve `'private'`, y **todo plato en
+  `default` quedaba ilegible para tus amigos** por mucho que el ajuste dijera que
+  sí. No se notaba porque nada lee `dishes` de otra persona por RLS —el feed, el
+  perfil ajeno y el detalle van por RPC security definer, que sí escriben
+  `'dish'`—, así que era una mina y no una avería. Arreglado en la 0019, con un
+  test en `visibility.test.sql` que se comprobó que falla contra la policy vieja.
+
+- **🐛 El aviso enseñaba la fachada del restaurante.** El mismo bicho que arregló
+  la 0018 en `tagged_visits`, en un segundo nido que se quedó atrás:
+  `notifications_page` ordenaba con `(i.visit_uuid = v.uuid) desc`, que da NULL
+  para una foto de restaurante, y Postgres ordena NULLS FIRST en `DESC`. Le llega
+  ahora el mismo `nulls last`.
 
 ### 🟢 Lo cerrado en la ronda 4 (todo verificado en el emulador)
 
@@ -292,6 +345,11 @@ recomendada), **que mande la nube**, **que mande este móvil**.
 
 ### Migraciones: aplicadas y verificadas
 
+> **Al día de la ronda 5 esto se queda en 17 de 19.** La **0018** y la **0019**
+> están escritas y verdes contra una base desechable, pero **no aplicadas al
+> proyecto real**: hasta que se haga `supabase db push`, las tres clases nuevas
+> de aviso no existen en el servidor.
+
 **0015, 0016 y 0017 están aplicadas en el proyecto real** y comprobadas, no solo
 empujadas: `supabase migration list --linked` da 17/17 con `local` = `remote`, y
 `supabase db diff --linked` **no muestra ninguna deriva estructural** (si
@@ -324,9 +382,15 @@ y la pantalla de conflictos necesitan sesión y Worker, y el emulador está en
    rentabilidad, cómo medirlo con `dumpsys meminfo` antes y después, y las tres
    cosas que _parecen_ la causa y no lo son. Aparcado a propósito para una
    sesión propia.
-2. **«con 1 persona»** en Amigos y Contigo: poner los nombres/usuarios.
-3. **Cambiar la foto de perfil**: no existe.
-4. **Tap en nombre/foto → perfil**, en amigos y en etiquetas.
+2. ~~**«con 1 persona»** en Amigos y Contigo~~ — **cerrado en la ronda 4**, ahora
+   dice «con Irene y Moni».
+3. ~~**Cambiar la foto de perfil**~~ — **cerrado en la ronda 4**.
+4. ~~**Tap en nombre/foto → perfil**~~ — **cerrado**: se reportó roto y funciona
+   contra esta rama; lo que se probó en el móvil era un APK anterior.
+
+O sea que de esta lista **solo queda la memoria**. Los tres de abajo se dejan
+tachados y no borrados porque «esto ya lo arreglamos» es justo lo que hay que
+poder comprobar cuando alguien lo vuelve a reportar desde un APK viejo.
 
 ### Lo cerrado en esta sesión (26 de julio)
 
@@ -379,10 +443,11 @@ SQL en verde con dos ficheros nuevos (`notifications.test.sql` y
   **Sin confirmar:** que la clave esté subida a EAS (`eas credentials`). Es lo
   primero que hay que mirar al retomar.
 
-  **Falta todo el código:** `expo-notifications`, el permiso, el registro del
-  token con `register_push_token` (la RPC ya existe) y el envío en el Worker
-  recorriendo `notifications` con `pushed_at is null`. Requiere **reconstruir el
-  APK**: es un módulo nativo, no una recarga de JavaScript.
+  > ~~**Falta todo el código.**~~ **Desactualizado desde la ronda 3.** El código
+  > está entero a los dos lados —`expo-notifications`, el permiso, el registro
+  > del token y el envío en el Worker— y en la ronda 5 se le añadieron tres
+  > clases más. Lo que sigue faltando es **reconstruir el APK**: es un módulo
+  > nativo, no una recarga de JavaScript.
 
   Las credenciales FCM **no van por perfil de build**: cuelgan del identificador
   de aplicación, y `BUNDLE_ID` es una constante, así que una sola subida cubre
@@ -433,6 +498,29 @@ SQL en verde con dos ficheros nuevos (`notifications.test.sql` y
   (02, 03, 05, 06, 09, 11, 13, 15, ESTADO) ya dicen lo que hace el código.
 - **`lint:compiler`**: 83 avisos de React Compiler readiness, fuera de la puerta
   principal a propósito. Ver `docs/12`.
+
+- **🔧 `packages/shared` rompe `npm run check` desde la raíz.** El paquete existe
+  con `package.json` y `tsconfig.json` pero **sin `src/`**, así que sus tres
+  scripts fallan: `typecheck` con `TS18003` («No inputs were found»), `test:ci`
+  con «No test files found, exiting with code 1» y `lint` con «couldn't find an
+  eslint.config».
+
+  Comprobado en la ronda 5 que **falla igual con el árbol limpio** (`git stash` y
+  a correr): es anterior, no una regresión. Las rondas que declararon «verde»
+  corrían los workspaces por separado sin darse cuenta, y por eso la puerta
+  principal del repo lleva tiempo roja sin que nadie lo notara.
+
+  Dos salidas, y la buena depende de si el paquete va a tener código: o se le
+  pone un `src/index.ts` —el README lo describe como los schemas zod compartidos
+  entre `mobile` y `api`, así que en algún momento lo tendrá—, o se le quitan los
+  tres scripts hasta entonces. Lo que no puede quedarse es como está, porque
+  entrena a no mirar el resultado de `npm run check`.
+
+- **🔧 Diez ficheros sin formatear** que `format:check` marca desde antes de la
+  ronda 5: `docs/02`, `05`, `06`, `09`, `11`, `12`, `13`, `package.json`,
+  `apps/mobile/google-services.json` y `supabase/scripts/reset-device.md`. Un
+  `prettier --write .` los arregla; se dejó para un commit propio porque mezclado
+  con trabajo real vuelve el diff ilegible.
 
 ### Guiones de mantenimiento
 

@@ -3,7 +3,11 @@ import { useRouter } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useAuth } from '@/lib/context/AuthContext';
-import { registerPushIfAllowed, visitFromNotification } from '@/services/push/push';
+import {
+  actorFromNotification,
+  registerPushIfAllowed,
+  visitFromNotification,
+} from '@/services/push/push';
 
 /**
  * El push, sin pintar nada.
@@ -48,9 +52,22 @@ export function PushRunner() {
     let cancelled = false;
 
     const open = (data: unknown) => {
+      if (cancelled) return;
+
       const visit = visitFromNotification(data);
-      if (!visit || cancelled) return;
-      router.push({ pathname: '/(main)/shared/[visit]', params: { visit } });
+      if (visit) {
+        router.push({ pathname: '/(main)/shared/[visit]', params: { visit } });
+        return;
+      }
+
+      // Las clases que no ocurren en una comida —solicitud, aceptación, un
+      // amigo que ha publicado— abren el perfil de quien las provocó. Es el
+      // mismo destino que en Novedades, y a propósito: el aviso y su fila de la
+      // lista tienen que llevar al mismo sitio.
+      const actor = actorFromNotification(data);
+      if (actor) {
+        router.push({ pathname: '/(main)/friends/[id]', params: { id: actor } });
+      }
     };
 
     void Notifications.getLastNotificationResponseAsync().then((response) => {

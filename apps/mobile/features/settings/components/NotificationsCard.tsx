@@ -76,7 +76,7 @@ export default function NotificationsCard() {
           que le expliquen para qué sirven. */}
       {granted ? null : (
         <Txt variant="caption" tone="subtle">
-          Sin ellos seguirás viendo quién te etiqueta en Novedades, pero solo al abrir la app.
+          Sin ellos seguirás viendo tus novedades en la campana, pero solo al abrir la app.
         </Txt>
       )}
 

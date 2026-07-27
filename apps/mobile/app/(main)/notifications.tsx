@@ -83,7 +83,7 @@ export default function NotificationsScreen() {
             <EmptyState
               icon="notifications-outline"
               title="Nada nuevo"
-              message="Aquí aparecerá cuando alguien te etiquete en una comida."
+              message="Aquí aparecerán las solicitudes de amistad y lo que compartan tus amigos."
             />
           )
         }
@@ -99,6 +99,46 @@ export default function NotificationsScreen() {
   );
 }
 
+/**
+ * Cómo se lee cada clase de aviso.
+ *
+ * Una función y no cuatro componentes: lo único que cambia entre ellas es la
+ * frase. El avatar, la foto, la hora y el punto de no leído son los mismos, y
+ * duplicar la fila cuatro veces para cambiar seis palabras es donde se acaban
+ * yendo cada una por su lado.
+ *
+ * Devuelve también la frase en plano porque un lector de pantalla no puede leer
+ * el texto compuesto: lo que ve es una lista de trozos con formato.
+ */
+function describe(kind: AppNotification['kind'], actor: string, place: string | null) {
+  switch (kind) {
+    case 'tagged_in_visit': {
+      // El servidor ya descarta los avisos de visitas borradas, así que aquí
+      // siempre hay sitio; el respaldo es para que un fallo suyo no acabe
+      // pintando "te etiquetó en null".
+      const where = place ?? 'una comida';
+      return { verb: ' te etiquetó en ', place: where, plain: `${actor} te etiquetó en ${where}` };
+    }
+    case 'friend_published':
+      // Sin decir qué, a propósito: el aviso resume el sitio, la visita y los
+      // platos de una misma comida, y nombrar solo uno de los tres sería
+      // nombrar el que ganó la carrera del sync.
+      return {
+        verb: ' ha añadido algo nuevo',
+        place: null,
+        plain: `${actor} ha añadido algo nuevo`,
+      };
+    case 'friend_request':
+      return { verb: ' quiere ser tu amigo', place: null, plain: `${actor} quiere ser tu amigo` };
+    case 'friend_accepted':
+      return {
+        verb: ' aceptó tu solicitud de amistad',
+        place: null,
+        plain: `${actor} aceptó tu solicitud de amistad`,
+      };
+  }
+}
+
 function NotificationRow({ notification }: { notification: AppNotification }) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -108,17 +148,34 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
     ? remoteImageUri(notification.actorId, notification.imageKey)
     : null;
   const unread = notification.readAt === null;
+  const said = describe(notification.kind, actor, notification.title);
+
+  /*
+   * Dónde lleva el aviso.
+   *
+   * La visita cuando la trae, y si no el perfil de quien lo provocó: ahí están
+   * sus entradas, y ahí se acepta o se rechaza una solicitud pendiente. Un aviso
+   * que no lleva a ningún sitio es indistinguible de uno roto, así que el perfil
+   * no es un premio de consolación — es el destino correcto para las tres clases
+   * que no ocurren en una comida concreta.
+   */
+  const open = () => {
+    if (notification.visitUuid) {
+      router.push({
+        pathname: '/(main)/shared/[visit]',
+        params: { visit: notification.visitUuid },
+      });
+      return;
+    }
+    if (notification.actorId) {
+      router.push({ pathname: '/(main)/friends/[id]', params: { id: notification.actorId } });
+    }
+  };
 
   return (
     <PressableScale
-      accessibilityLabel={`${actor} te etiquetó en ${notification.title}`}
-      onPress={() => {
-        if (!notification.visitUuid) return;
-        router.push({
-          pathname: '/(main)/shared/[visit]',
-          params: { visit: notification.visitUuid },
-        });
-      }}
+      accessibilityLabel={said.plain}
+      onPress={open}
       scaleTo={0.985}
       className={`flex-row items-center gap-3 rounded-xl border p-3 ${
         unread ? 'border-primary/40 bg-primary/8' : 'border-line bg-surface'
@@ -132,7 +189,7 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
         trailing={
           photo ? (
             <Thumbnail
-              name={notification.title}
+              name={said.place ?? 'Una visita'}
               uri={photo}
               size={44}
               radius={10}
@@ -147,10 +204,12 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
           <Txt variant="callout" weight="bold">
             {actor}
           </Txt>
-          {' te etiquetó en '}
-          <Txt variant="callout" weight="semi">
-            {notification.title}
-          </Txt>
+          {said.verb}
+          {said.place ? (
+            <Txt variant="callout" weight="semi">
+              {said.place}
+            </Txt>
+          ) : null}
         </Txt>
         <Txt variant="caption" tone="subtle">
           {formatRelativeDate(notification.createdAt)}
