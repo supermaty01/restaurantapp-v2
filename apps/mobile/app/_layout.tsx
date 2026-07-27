@@ -14,6 +14,7 @@ import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import React, { Suspense, useState, createContext, useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { IntentHandler } from '@/components/IntentHandler';
@@ -122,37 +123,48 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <DBVersionContext.Provider value={() => setDbVersion((v) => v + 1)}>
-          <Suspense fallback={<Booting />}>
-            <SQLiteProvider
-              key={dbVersion}
-              databaseName={DATABASE_NAME}
-              options={{ enableChangeListener: true }}
-              useSuspense
-            >
-              <MigrationsRunner>
-                <AuthProvider>
-                  <ThemeProvider>
-                    <DialogProvider>
-                      <ToastProvider>
-                        <NewRestaurantProvider>
-                          <NewDishProvider>
-                            <IntentHandler />
-                            <SyncRunner />
-                            <PushRunner />
-                            <Slot />
-                          </NewDishProvider>
-                        </NewRestaurantProvider>
-                      </ToastProvider>
-                    </DialogProvider>
-                  </ThemeProvider>
-                </AuthProvider>
-              </MigrationsRunner>
-            </SQLiteProvider>
-          </Suspense>
-        </DBVersionContext.Provider>
-      </GestureHandlerRootView>
+      {/*
+       * Quien sabe dónde está el teclado. Va en la raíz porque instala un
+       * listener de insets sobre la ventana, no sobre una pantalla.
+       *
+       * Las tres banderas son las de una app edge-to-edge, que en SDK 57 son
+       * todas las apps: sin ellas la librería asume barras opacas y le resta al
+       * teclado una altura que aquí no hay que restar, y al desmontarse
+       * devolvería la ventana a "decorFitsSystemWindows".
+       */}
+      <KeyboardProvider statusBarTranslucent navigationBarTranslucent preserveEdgeToEdge>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <DBVersionContext.Provider value={() => setDbVersion((v) => v + 1)}>
+            <Suspense fallback={<Booting />}>
+              <SQLiteProvider
+                key={dbVersion}
+                databaseName={DATABASE_NAME}
+                options={{ enableChangeListener: true }}
+                useSuspense
+              >
+                <MigrationsRunner>
+                  <AuthProvider>
+                    <ThemeProvider>
+                      <DialogProvider>
+                        <ToastProvider>
+                          <NewRestaurantProvider>
+                            <NewDishProvider>
+                              <IntentHandler />
+                              <SyncRunner />
+                              <PushRunner />
+                              <Slot />
+                            </NewDishProvider>
+                          </NewRestaurantProvider>
+                        </ToastProvider>
+                      </DialogProvider>
+                    </ThemeProvider>
+                  </AuthProvider>
+                </MigrationsRunner>
+              </SQLiteProvider>
+            </Suspense>
+          </DBVersionContext.Provider>
+        </GestureHandlerRootView>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

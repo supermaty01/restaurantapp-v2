@@ -184,8 +184,11 @@ export default function ProfileEditScreen() {
   return (
     /*
      * Por FormScaffold como el resto de formularios: es el único sitio de la app
-     * con KeyboardAvoidingView, y sin él el teclado se sentaba encima de «Sobre
+     * que sabe del teclado, y sin él el teclado se sentaba encima de «Sobre
      * ti», que es multilínea y va al final. De paso Guardar pasa al pie fijo.
+     *
+     * Pasar por aquí no bastó la primera vez —el scaffold tampoco esquivaba el
+     * teclado en Android—; el porqué está escrito en FormScaffold.tsx.
      *
      * El cuerpo va en un solo hijo a propósito: el `gap-6` del scaffold separa
      * hijos, y aquí uno de ellos es un Sheet que no ocupa sitio.
