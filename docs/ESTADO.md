@@ -405,11 +405,35 @@ además lo que **tumbó la build del 27 de julio**, por dos caminos a la vez:
 - En bare, `app.config.js` deja de mandar: _«Specified value for
   "android.package" is ignored»_. Manda el `applicationId` del Gradle.
 
-**`.easignore` no puede arreglar eso**, y conviene entender por qué: la
-detección es una comprobación del CLI **sobre el disco**, anterior al archivo.
-En el log el aviso del paquete sale _antes_ de «Compressing project files».
-`.easignore` solo decide qué se comprime. El arreglo es que el directorio no
-exista.
+**Y aquí hay una lección de método, porque la primera explicación fue falsa.**
+Se dijo, con seguridad, que `.easignore` no podía tener nada que ver: que la
+detección es «sobre el disco, anterior al archivo», con el orden del log como
+prueba. El orden del log es cierto y no prueba eso.
+
+Leyendo el código instalado, la detección es:
+
+```js
+// node_modules/@expo/fingerprint/build/ProjectWorkflow.js
+if (pathExists(marker) && !isIgnoredPath(...) && !(await vcsClient.isFileIgnoredAsync(marker)))
+  return 'generic'; // bare
+```
+
+El marcador (`android/app/build.gradle`) cuenta **solo si además no está
+ignorado**. Y el `Ignore` de eas-cli sí lee este fichero:
+`node_modules/expo-updates/utils/src/vcs.ts:85` dice de su propia copia que
+_«differs from the eas-cli Ignore class by not using `.easignore`»_.
+
+Lo que encaja con los hechos, entonces, es lo contrario de lo que se dijo:
+`apps/mobile/android/` **ya estaba ignorado por `.gitignore`**, así que la build
+lo habría tratado como managed. Al añadir un `.easignore` que no lo mencionaba,
+dejó de contar como ignorado y el proyecto pasó a bare. **Es decir: el
+`.easignore` añadido para arreglar D2 es el candidato más probable a haber
+provocado el fallo.** No está confirmado —haría falta leer el `Ignore` de
+eas-cli, que no está instalado— pero es la hipótesis que explica todo sin
+forzar nada.
+
+De ahí que `android/` e `ios/` sean ahora la entrada más importante del
+`.easignore`, y no una omisión deliberada como se escribió primero.
 
 Dos cosas más que salieron de aquí:
 

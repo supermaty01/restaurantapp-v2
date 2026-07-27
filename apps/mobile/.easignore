@@ -13,9 +13,26 @@
 #   - `packages/shared`: lo importa la app en runtime desde
 #     services/share/importService.ts. Excluirlo rompe la build. Solo caen sus
 #     tests, por las reglas de abajo.
-#   - `android/` e `ios/`: no existen y no deben existir. Los genera
-#     `expo prebuild` desde app.config.js y EAS los regenera en cada build. Si
-#     reaparecen, EAS pasa a workflow bare y deja de leer app.config.js.
+
+# ANDROID/ E IOS/, Y ESTA ES LA LÍNEA MÁS IMPORTANTE DEL FICHERO.
+#
+# No es solo peso. EAS decide si el proyecto es *bare* mirando si existe
+# `android/app/build.gradle` **y no está ignorado**. La lógica está replicada en
+# node_modules/@expo/fingerprint/build/ProjectWorkflow.js:
+#
+#     if (pathExists(marker) && !isIgnoredPath(...) && !vcsClient.isFileIgnored(marker))
+#         return 'generic';
+#
+# Y el `Ignore` de eas-cli consulta este fichero: node_modules/expo-updates/
+# utils/src/vcs.ts:85 dice literalmente que su copia «differs from the eas-cli
+# Ignore class by not using `.easignore`».
+#
+# Es decir: si `android/` reaparece por un `expo prebuild` local y este fichero
+# no lo ignora, EAS pasa a bare, deja de leer app.config.js y `runtimeVersion`
+# con policy revienta la build. `.gitignore` ya lo ignoraba — pero al existir un
+# `.easignore` deja de contar. Esta entrada devuelve esa protección.
+android/
+ios/
 
 # SECRETOS. Esto no es decoración: en cuanto existe un .easignore, EAS deja de
 # mirar .gitignore, así que todo lo que solo estaba protegido allí pasaría a
