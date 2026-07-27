@@ -120,7 +120,7 @@ export async function requestSync(db: AppDatabase, accountUuid: string): Promise
 
   setState({ status: 'syncing', lastOutcome: state.lastOutcome, rows: null, photos: null });
 
-  inFlight = runSync(db, accountUuid)
+  inFlight = runSync(db, accountUuid, { onRows: reportRowProgress, onPhotos: reportPhotoProgress })
     .catch((error: unknown): SyncOutcome => {
       // runSync already converts failures into outcomes; this is a last resort
       // so an unexpected throw can't leave `inFlight` stuck and block every

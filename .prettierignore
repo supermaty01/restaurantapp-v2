@@ -11,3 +11,9 @@ apps/mobile/drizzle
 # Lo escribe la consola de Firebase: reformatearlo solo produce ruido en el
 # diff la próxima vez que se descargue.
 apps/mobile/google-services.json
+
+# Lo genera Expo al arrancar la app (`expo run:android` / `expo start`) y está
+# en .gitignore. Sin esta línea, `npm run check` falla en cuanto alguien corre
+# la app en local — y falla por un fichero que no está en el repositorio, que es
+# el peor sitio donde buscar.
+apps/mobile/expo-env.d.ts

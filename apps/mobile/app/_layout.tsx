@@ -128,12 +128,16 @@ export default function RootLayout() {
        * Quien sabe dónde está el teclado. Va en la raíz porque instala un
        * listener de insets sobre la ventana, no sobre una pantalla.
        *
-       * Las tres banderas son las de una app edge-to-edge, que en SDK 57 son
-       * todas las apps: sin ellas la librería asume barras opacas y le resta al
-       * teclado una altura que aquí no hay que restar, y al desmontarse
-       * devolvería la ventana a "decorFitsSystemWindows".
+       * **Sin banderas de translucidez, a propósito.** El primer intento le
+       * pasó `statusBarTranslucent`, `navigationBarTranslucent` y
+       * `preserveEdgeToEdge`, que es lo que haría falta en una app que gestiona
+       * las barras por su cuenta. Esta no: desde el SDK 57 el edge-to-edge lo
+       * pone `react-native-edge-to-edge`, la librería lo detecta y **ignora las
+       * tres** — lo dice ella misma en un aviso de dev que salió en el primer
+       * arranque en el emulador. Unas props que no hacen nada son peores que no
+       * ponerlas: parecen la explicación de por qué funciona.
        */}
-      <KeyboardProvider statusBarTranslucent navigationBarTranslucent preserveEdgeToEdge>
+      <KeyboardProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
           <DBVersionContext.Provider value={() => setDbVersion((v) => v + 1)}>
             <Suspense fallback={<Booting />}>
