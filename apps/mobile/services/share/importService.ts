@@ -14,6 +14,7 @@ import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange } from '@/services/db/sync-write';
 import type { AppDatabase } from '@/services/db/types';
 
+import type { ConflictResult, ConflictResolution, ImportResult } from './types';
 import type {
   ShareFileData,
   ShareableRestaurant,
@@ -22,8 +23,6 @@ import type {
   ShareableTag,
 } from '@restaurantapp/shared';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
-
-import type { ConflictResult, ConflictResolution, ImportResult } from './types';
 
 type DrizzleDb = AppDatabase;
 

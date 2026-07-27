@@ -8,12 +8,12 @@ La app v2 se instala **sobre** la v1: mismo `package`, mismo `slug`, mismo proye
 
 Al primer arranque, Drizzle encuentra `0000–0006` ya aplicadas —los ficheros y el journal son byte a byte los mismos que en la v1— y corre solo:
 
-| | Qué hace | Riesgo |
-|---|---|---|
+|        | Qué hace                                                                     | Riesgo                                                                 |
+| ------ | ---------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
 | `0007` | uuid, `created_at`/`updated_at` y `visibility` en todas las filas existentes | Añadir columnas con default no constante; ya reventó una vez en diseño |
-| `0008` | **Reconstruye la tabla de visitas** para hacer la fecha opcional | El que más fácil pierde filas |
-| `0009` | Columnas de cuenta en `people` | Bajo, puramente aditivo |
-| `0010` | Todo el diario de la v1 pasa a `visibility = 'default'` | Reescribe una columna de todas las filas |
+| `0008` | **Reconstruye la tabla de visitas** para hacer la fecha opcional             | El que más fácil pierde filas                                          |
+| `0009` | Columnas de cuenta en `people`                                               | Bajo, puramente aditivo                                                |
+| `0010` | Todo el diario de la v1 pasa a `visibility = 'default'`                      | Reescribe una columna de todas las filas                               |
 
 **Las FKs no se reescriben.** Siguen siendo enteros locales; el uuid es una columna añadida al lado. Es la decisión de [02](02-modelo-de-datos.md) y lo que hace que esta migración sea puramente aditiva.
 

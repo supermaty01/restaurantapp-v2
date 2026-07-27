@@ -1,0 +1,10 @@
+#
+# La puerta completa antes de empujar: formato, lint, tipos y tests de los tres
+# workspaces. Es lo que docs/12 dice desde el principio y lo que no existia —
+# .husky solo tenia el directorio `_`, asi que `lint-staged` estaba configurado
+# en package.json y no lo ejecutaba nada.
+#
+# Aqui y no en pre-commit porque tarda: un commit tiene que seguir siendo barato.
+# Lo que no puede ser barato es mandar a la rama algo que CI va a rechazar.
+#
+npm run check

@@ -14,6 +14,14 @@
  * importación: conflictos y resultados. Nada de eso viaja dentro del fichero.
  */
 
+import type { ShareEntityType } from '@restaurantapp/shared';
+
+export {
+  CURRENT_SHARE_VERSION,
+  SHARE_FILE_EXTENSION,
+  SHARE_FILE_MIME_TYPE,
+} from '@restaurantapp/shared';
+
 export type {
   ShareEntityType,
   ShareableTag,
@@ -23,14 +31,6 @@ export type {
   ShareableVisit,
   ShareFileData,
 } from '@restaurantapp/shared';
-
-export {
-  CURRENT_SHARE_VERSION,
-  SHARE_FILE_EXTENSION,
-  SHARE_FILE_MIME_TYPE,
-} from '@restaurantapp/shared';
-
-import type { ShareEntityType } from '@restaurantapp/shared';
 
 /** Un nombre que ya existe en el diario, detectado antes de importar. */
 export interface ConflictResult {

@@ -75,7 +75,7 @@ Además:
 `npm run lint` es la puerta: si pasa, el código cumple el estándar. `npm run
 lint:compiler` es una pregunta distinta que se hace a propósito.
 
-Las reglas de *compiler readiness* de `eslint-plugin-react-hooks` v6 estuvieron
+Las reglas de _compiler readiness_ de `eslint-plugin-react-hooks` v6 estuvieron
 en `warn`, que suena a la opción prudente y era la peor de las tres: el script
 lleva `--max-warnings=0`, así que 83 avisos hacían que el estándar no pudiera
 pasar nunca — y CI en rojo permanente. Un estándar que no se puede cumplir es un

@@ -245,12 +245,12 @@ Deep links: `app.config.js` declara el scheme y los App Links del dominio de sha
 
 Esto es una **actualización en sitio**, no una instalación nueva. La v2 mantiene a propósito:
 
-| | v1.3 | v2.0 |
-|---|---|---|
+|                                | v1.3                            | v2.0  |
+| ------------------------------ | ------------------------------- | ----- |
 | `package` / `bundleIdentifier` | `com.supermaty01.restaurantapp` | igual |
-| `slug` y proyecto EAS | `restaurantapp` / `acb4a328…` | igual |
-| Base de datos | `restaurantapp` | igual |
-| `versionCode` | 1 | **2** |
+| `slug` y proyecto EAS          | `restaurantapp` / `acb4a328…`   | igual |
+| Base de datos                  | `restaurantapp`                 | igual |
+| `versionCode`                  | 1                               | **2** |
 
 Las tres primeras hacen que Android trate el APK como la misma app y **conserve la base de datos y las fotos**. La cuarta es la que permite instalarlo: con un `versionCode` igual o menor, Android rechaza el APK con un «App not installed» que no explica el motivo.
 
@@ -262,11 +262,11 @@ INSTALL_FAILED_UPDATE_INCOMPATIBLE: Existing package … signatures do not match
 
 Usar el mismo proyecto EAS **no basta**. Lo que decide es con qué se firmó lo que hay en el dispositivo:
 
-| Cómo se instaló lo que hay | Firma | ¿Entra un APK de EAS? |
-|---|---|---|
-| `expo run:android`, Android Studio, dev-client | Keystore de depuración (`CN=Android Debug`, la misma en todas las máquinas) | **No** |
-| `eas build` en este proyecto | Keystore de release de EAS | Sí |
-| Google Play | Play App Signing | No (hay que pasar por Play) |
+| Cómo se instaló lo que hay                     | Firma                                                                       | ¿Entra un APK de EAS?       |
+| ---------------------------------------------- | --------------------------------------------------------------------------- | --------------------------- |
+| `expo run:android`, Android Studio, dev-client | Keystore de depuración (`CN=Android Debug`, la misma en todas las máquinas) | **No**                      |
+| `eas build` en este proyecto                   | Keystore de release de EAS                                                  | Sí                          |
+| Google Play                                    | Play App Signing                                                            | No (hay que pasar por Play) |
 
 Comprobarlo antes de compilar, con el dispositivo conectado:
 

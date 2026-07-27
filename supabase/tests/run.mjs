@@ -9,8 +9,10 @@
  * reasons unrelated to the code — and worse, can pass for them too.
  *
  * This exercises what app-level unit tests cannot reach: RLS policies, triggers
- * and security-definer functions, as Postgres actually executes them. Requires
- * `supabase start` to be running (docs/13).
+ * and security-definer functions, as Postgres actually executes them.
+ *
+ * Necesita un Postgres: o `supabase start` levantado (docs/13), o `DATABASE_URL`
+ * apuntando a uno desechable — que es como corre en CI.
  */
 import { execSync, spawnSync } from 'node:child_process';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -21,35 +23,70 @@ const here = dirname(fileURLToPath(import.meta.url));
 const migrationsDir = resolve(here, '..', 'migrations');
 const DB = 'migcheck';
 
-/** The db container name varies with the project directory, so discover it. */
-function findContainer() {
-  const names = execSync('docker ps --format "{{.Names}}"', { encoding: 'utf8' });
-  const match = names.split('\n').find((n) => n.startsWith('supabase_db_'));
-  if (!match) {
-    throw new Error(
-      'No local Supabase database container found. Run `supabase start` first (docs/13).',
-    );
+/**
+ * Cómo llegar a un Postgres, en orden de preferencia.
+ *
+ * Dos caminos porque hay dos sitios donde esto corre. En local es el contenedor
+ * de `supabase start`, que es lo que hay a mano. En CI no hay Supabase: hay un
+ * servicio de Postgres y un `psql` en el runner, y montar la CLI entera de
+ * Supabase para lanzar unos ficheros SQL sería pagar minutos por nada.
+ *
+ * Antes solo existía el primero, así que estas pruebas —las únicas que
+ * comprueban que las políticas RLS dicen lo que creemos— no podían correr en CI
+ * y dependían de que alguien tuviera Docker levantado ese día. ESTADO.md lo
+ * cuenta: «esta ronda hubo Docker, así que por primera vez en tres sesiones las
+ * aserciones SQL se pudieron correr».
+ */
+function findTarget() {
+  if (process.env.DATABASE_URL) {
+    return { kind: 'url', url: process.env.DATABASE_URL, label: 'DATABASE_URL' };
   }
-  return match.trim();
+
+  try {
+    const names = execSync('docker ps --format "{{.Names}}"', { encoding: 'utf8' });
+    const match = names.split('\n').find((n) => n.startsWith('supabase_db_'));
+    if (match) return { kind: 'docker', container: match.trim(), label: match.trim() };
+  } catch {
+    // Sin docker instalado o sin demonio: se cae al mensaje de abajo, que dice
+    // las dos formas de arreglarlo en vez de solo una.
+  }
+
+  throw new Error(
+    'No hay a qué base conectarse. Levanta `supabase start` (docs/13) o exporta ' +
+      'DATABASE_URL apuntando a un Postgres desechable.',
+  );
 }
 
-function psql(container, args, input) {
+/** El nombre de la base dentro de la URL, que cambia por test. */
+function urlFor(base, database) {
+  const url = new URL(base);
+  url.pathname = `/${database}`;
+  return url.toString();
+}
+
+function psql(target, args, input, { database = DB } = {}) {
   // spawnSync, not execFileSync: psql writes RAISE NOTICE (i.e. the passing
   // checks) to stderr, and both streams are needed to report a run.
-  const result = spawnSync('docker', ['exec', '-i', container, 'psql', '-U', 'postgres', ...args], {
-    input,
-    encoding: 'utf8',
-  });
+  const [command, argv] =
+    target.kind === 'docker'
+      ? ['docker', ['exec', '-i', target.container, 'psql', '-U', 'postgres', ...args]]
+      : ['psql', [urlFor(target.url, database), ...args]];
+
+  const result = spawnSync(command, argv, { input, encoding: 'utf8' });
   return {
     ok: result.status === 0,
     out: `${result.stdout ?? ''}${result.stderr ?? ''}`,
   };
 }
 
-function runFile(container, file, label, { quiet = false } = {}) {
+function runFile(target, file, label, { quiet = false } = {}) {
   const { ok, out } = psql(
-    container,
-    ['-d', DB, '-v', 'ON_ERROR_STOP=1', '-q'],
+    target,
+    // Con URL el nombre de la base va dentro de la propia URL, así que `-d`
+    // sobra y además la pisaría.
+    target.kind === 'docker'
+      ? ['-d', DB, '-v', 'ON_ERROR_STOP=1', '-q']
+      : ['-v', 'ON_ERROR_STOP=1', '-q'],
     readFileSync(file, 'utf8'),
   );
 
@@ -69,22 +106,25 @@ function runFile(container, file, label, { quiet = false } = {}) {
 }
 
 /** Rebuilds the schema from scratch. Returns false if any migration fails. */
-function freshDatabase(container) {
-  psql(container, ['-q', '-c', `drop database if exists ${DB} with (force)`]);
-  psql(container, ['-q', '-c', `create database ${DB}`]);
+function freshDatabase(target) {
+  // El drop/create va contra otra base, no contra la que se está borrando: por
+  // docker es la de por defecto de psql, y por URL hay que decirlo.
+  const admin = { database: 'postgres' };
+  psql(target, ['-q', '-c', `drop database if exists ${DB} with (force)`], undefined, admin);
+  psql(target, ['-q', '-c', `create database ${DB}`], undefined, admin);
 
-  let ok = runFile(container, join(here, 'auth-stub.sql'), 'auth stub', { quiet: true });
+  let ok = runFile(target, join(here, 'auth-stub.sql'), 'auth stub', { quiet: true });
 
   for (const name of readdirSync(migrationsDir).sort()) {
     if (!name.endsWith('.sql')) continue;
-    ok = runFile(container, join(migrationsDir, name), name, { quiet: true }) && ok;
+    ok = runFile(target, join(migrationsDir, name), name, { quiet: true }) && ok;
   }
 
-  return runFile(container, join(here, 'helpers.sql'), 'helpers', { quiet: true }) && ok;
+  return runFile(target, join(here, 'helpers.sql'), 'helpers', { quiet: true }) && ok;
 }
 
-const container = findContainer();
-console.log(`Using ${container}`);
+const target = findTarget();
+console.log(`Using ${target.label}`);
 
 const testFiles = readdirSync(here)
   .filter((name) => name.endsWith('.test.sql'))
@@ -98,11 +138,11 @@ if (testFiles.length === 0) {
 let ok = true;
 for (const name of testFiles) {
   console.log(`\n── ${name}`);
-  if (!freshDatabase(container)) {
+  if (!freshDatabase(target)) {
     ok = false;
     continue;
   }
-  ok = runFile(container, join(here, name), name) && ok;
+  ok = runFile(target, join(here, name), name) && ok;
 }
 
 if (!ok) {

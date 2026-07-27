@@ -30,12 +30,9 @@
     "prettier": "^3.8.1",
     "react": "19.2.3"
   },
+  "_lint-staged": "Solo formato aquí. El lint vive en cada workspace, con su .lintstagedrc.json: ESLint 9 busca la configuración desde el directorio de trabajo, y en la raíz de un monorepo no hay ninguna. Correrlo desde aquí fallaba con 'couldn't find an eslint.config' sobre cualquier fichero de apps/.",
   "lint-staged": {
-    "*.{ts,tsx,js,jsx}": [
-      "prettier --write",
-      "eslint --fix --max-warnings=0"
-    ],
-    "*.{json,md,yml,yaml}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml}": [
       "prettier --write"
     ]
   },

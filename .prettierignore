@@ -7,3 +7,7 @@ ios
 .wrangler
 package-lock.json
 apps/mobile/drizzle
+
+# Lo escribe la consola de Firebase: reformatearlo solo produce ruido en el
+# diff la próxima vez que se descargue.
+apps/mobile/google-services.json

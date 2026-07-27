@@ -5,7 +5,7 @@ Vaciar solo una no sirve de nada:
 
 - Si vacías la nube y no el móvil, el siguiente sync la vuelve a llenar desde el
   teléfono, que sigue teniendo su bitácora de cambios.
-- Si vacías el móvil y no la nube, el siguiente *pull* se lo trae todo de vuelta.
+- Si vacías el móvil y no la nube, el siguiente _pull_ se lo trae todo de vuelta.
 
 Así que van juntos, y en este orden.
 

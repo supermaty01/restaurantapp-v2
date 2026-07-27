@@ -90,7 +90,6 @@ el _layout_ del archivo, que es el contrato de compatibilidad con v1.
 - Actualizar SDK **cada release** (saltarse SDKs es lo que convierte el upgrade en un proyecto).
 - Antes de añadir una dependencia nativa: ¿está en el ecosistema Expo? ¿tiene commits recientes? ¿qué pasa si muere? Si la respuesta a la última es "reescribirla es un fin de semana" → escribirla ya.
 
-
 ## Los binarios de lightningcss en el lock
 
 `package.json` de la raíz declara en `optionalDependencies`:

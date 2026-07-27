@@ -14,8 +14,7 @@ import {
   importDishFile,
   importVisitFile,
 } from '@/services/share/importService';
-import type { ShareFileData } from '@/services/share/types';
-import type { ConflictResult, ConflictResolution } from '@/services/share/types';
+import type { ShareFileData, ConflictResult, ConflictResolution } from '@/services/share/types';
 
 import type { ComponentProps } from 'react';
 

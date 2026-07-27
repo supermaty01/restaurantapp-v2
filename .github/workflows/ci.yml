@@ -6,9 +6,18 @@ on:
   pull_request:
 
 jobs:
-  # Green checks — these must pass. TypeScript is strict and fully clean; tests
-  # cover the mappers, schemas and helpers that are risky to regress.
-  verify:
+  # La puerta entera, la misma que corre `npm run check` en local y en pre-push.
+  #
+  # Antes esto comprobaba `format:check` + typecheck y tests **solo de
+  # apps/mobile**: los 57 tests del Worker y los 146 asserts SQL existían y no
+  # los ejecutaba nadie, y el lint vivía en un job aparte con
+  # `continue-on-error: true`. docs/12 decía «check por workspace en cada
+  # push/PR» desde el principio.
+  #
+  # Un lint que no bloquea es un lint que se aprende a ignorar; el motivo por el
+  # que estaba así —violaciones de frontera pendientes de la fase 1— dejó de ser
+  # cierto hace tiempo.
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -17,15 +26,44 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run format:check
-      - run: npm run -w apps/mobile typecheck
-      - run: npm run -w apps/mobile test:ci
+      - run: npm run check
 
-  # Lint is reported but not yet blocking: the working tree still has the
-  # architecture-boundary violations that phase 1 removes with the repository
-  # layer, plus React-Compiler-readiness warnings. See docs/ESTADO.md. Flip
-  # `continue-on-error` to false once phase 1 lands.
-  lint:
+  # El esquema, contra un Postgres de verdad: las 19 migraciones desde cero en
+  # una base desechable por fichero de test. Es lo único que comprueba que las
+  # políticas RLS dicen lo que creemos que dicen.
+  database:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run db:test
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+
+  # Informativo, no bloqueante, y a propósito.
+  #
+  # Los avisos de npm son casi todos de la cadena de construcción (eslint, jest,
+  # drizzle-kit) y sus «arreglos» son downgrades mayores: `npm audit fix --force`
+  # propone expo 46, jest 19 y drizzle-kit 0.18. El remedio destruye el proyecto
+  # y el aviso no. Lo que sí importa es enterarse de uno **nuevo**, y para eso
+  # basta con que se vea en el registro.
+  audit:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
@@ -35,4 +73,4 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run -w apps/mobile lint
+      - run: npm audit --audit-level=high
