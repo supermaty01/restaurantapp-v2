@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 
+import { getCurrentAccount } from '@/services/db/account-store';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import type { IdentityMap } from '@/services/sync/identityMap';
@@ -171,7 +172,16 @@ export async function applyRemoteRecord(
       .insert(cfg.table)
       // Solo al insertar: lo que es de este dispositivo y no viaja por la red.
       // Ver `localDefaults` en tables.ts.
-      .values({ ...values, ...(cfg.localDefaults?.({ uuid: record.uuid }) ?? {}) })
+      //
+      // `accountUuid` es de esa clase: lo que baja del servidor es, por
+      // definición, de la cuenta que ha hecho el pull — RLS no deja bajar otra
+      // cosa. No viene en el registro remoto y no debería: quién es el dueño lo
+      // decide el servidor, no un campo que manda un cliente.
+      .values({
+        ...values,
+        accountUuid: getCurrentAccount(),
+        ...(cfg.localDefaults?.({ uuid: record.uuid }) ?? {}),
+      })
       .returning({ id: column(cfg.table, 'id') })) as { id: number }[];
 
     // Mark it as already-synced in the outbox.

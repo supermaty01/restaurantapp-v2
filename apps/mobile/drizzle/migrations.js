@@ -13,6 +13,7 @@ import m0008 from './0008_visit_date_optional.sql';
 import m0009 from './0009_people_accounts.sql';
 import m0010 from './0010_visibility_default.sql';
 import m0011 from './0011_dish_price_real.sql';
+import m0012 from './0012_account_uuid.sql';
 
   export default {
     journal,
@@ -28,7 +29,8 @@ m0007,
 m0008,
 m0009,
 m0010,
-m0011
+m0011,
+m0012
     }
   }
   

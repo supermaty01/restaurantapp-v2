@@ -27,6 +27,19 @@ const syncColumns = () => ({
   uuid: text('uuid').notNull().unique().default(uuidDefault),
   createdAt: text('created_at').notNull().default(nowIso),
   updatedAt: text('updated_at').notNull().default(nowIso),
+  /**
+   * De qué cuenta de Supabase es esta fila, o `null` si de ninguna todavía.
+   *
+   * No es `userId`: ese apunta a la tabla `users` local, vestigial de la auth
+   * vieja, y no dice nada de la cuenta de la nube. **Null es un estado normal y
+   * no un hueco** — es lo que tiene un diario sin cuenta, que es el modo en que
+   * la app funciona entera (docs/00).
+   *
+   * No viaja en el sync: el servidor ya sabe de quién es cada fila por RLS, y
+   * mandarlo sería dejar que un cliente opinara sobre eso. Aquí solo sirve para
+   * saber qué enseñar en este teléfono. Ver la migración 0012.
+   */
+  accountUuid: text('account_uuid'),
 });
 
 // 'default' es un valor guardado, no un hueco: significa "lo que digan mis

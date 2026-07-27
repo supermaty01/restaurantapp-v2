@@ -1,4 +1,5 @@
 import { newUuid } from '@/lib/helpers/uuid';
+import { getCurrentAccount } from '@/services/db/account-store';
 import { changeLog } from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { notifyLocalChange } from '@/services/sync/pending';
@@ -20,11 +21,19 @@ export interface NewSyncValues {
   uuid: string;
   createdAt: string;
   updatedAt: string;
+  accountUuid: string | null;
 }
 
-/** Sync columns for a brand-new row. */
+/**
+ * Sync columns for a brand-new row.
+ *
+ * `accountUuid` sale del store y no de un argumento a propósito: lo llaman una
+ * veintena de repositorios que no saben —ni tienen por qué— que existen las
+ * cuentas. Con una firma nueva, olvidarse en un sitio dejaría filas sin dueño
+ * en silencio; así sellar es lo que pasa por defecto. Ver `account-store.ts`.
+ */
 export function newSyncValues(now: string = new Date().toISOString()): NewSyncValues {
-  return { uuid: newUuid(), createdAt: now, updatedAt: now };
+  return { uuid: newUuid(), createdAt: now, updatedAt: now, accountUuid: getCurrentAccount() };
 }
 
 /** The single column an update must always touch. */

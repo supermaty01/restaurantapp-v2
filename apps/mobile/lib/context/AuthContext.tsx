@@ -5,6 +5,7 @@ import { describeAuthError } from '@/lib/helpers/auth-errors';
 import { devLog } from '@/lib/helpers/dev-log';
 import { parseOAuthCallback } from '@/lib/helpers/oauth-callback';
 import { redactUrl } from '@/lib/helpers/redact';
+import { setCurrentAccount } from '@/services/db/account-store';
 import { getSupabase, isSupabaseConfigured } from '@/services/supabase/client';
 
 import type { Session } from '@supabase/supabase-js';
@@ -221,19 +222,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSession(null);
   }, [supabase]);
 
+  const accountUuid = session?.user.id ?? null;
+
+  /*
+   * La misma cuenta, también fuera de React.
+   *
+   * Los repositorios sellan cada fila nueva con ella y no son componentes, así
+   * que no pueden leer el contexto. Es el mismo reparto que `defaultsStore`: el
+   * contexto es para pintar, el store es para escribir. Ver `account-store.ts`.
+   *
+   * En un efecto y no en el render: escribir en un módulo mientras React está
+   * renderizando es un efecto secundario en el sitio donde React se reserva el
+   * derecho a llamarte dos veces.
+   */
+  useEffect(() => {
+    setCurrentAccount(accountUuid);
+  }, [accountUuid]);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       isConfigured: isSupabaseConfigured,
       loading,
       session,
-      accountUuid: session?.user.id ?? null,
+      accountUuid,
       signInWithEmail,
       signUpWithEmail,
       signInWithOAuth,
       completeOAuth,
       signOut,
     }),
-    [loading, session, signInWithEmail, signUpWithEmail, signInWithOAuth, completeOAuth, signOut],
+    [
+      loading,
+      session,
+      accountUuid,
+      signInWithEmail,
+      signUpWithEmail,
+      signInWithOAuth,
+      completeOAuth,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
