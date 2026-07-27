@@ -1,10 +1,11 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { SectionList, useWindowDimensions, View } from 'react-native';
 
 import PeekablePressable from '@/components/PeekablePressable';
 import { EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
+import { type as typeScale } from '@/lib/design/tokens';
 import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 
 import { groupByMonth } from '../utils/groupByMonth';
@@ -16,6 +17,33 @@ const GUTTER = 20;
 const GAP = 10;
 /** Two columns, not three: a photo plus a name and a date needs the width. */
 const COLUMNS = 2;
+
+/*
+ * Las alturas exactas de una fila y de una cabecera, para `getItemLayout`.
+ *
+ * Salen de los tokens y no de números a ojo: si mañana cambia la escala
+ * tipográfica, esto la sigue. Lo que queda a mano son los paddings, que van
+ * anotados junto a la clase que los pone para que se muevan a la vez.
+ *
+ * Debajo del `Thumbnail` van dos líneas de una sola línea cada una
+ * (`numberOfLines={1}`), así que su alto es fijo y la fila entera es medible
+ * sin renderizarla — que es justo lo que `getItemLayout` necesita.
+ */
+const TILE_TEXT_HEIGHT = 6 + typeScale.callout.lineHeight + typeScale.caption.lineHeight; // pt-1.5
+
+/**
+ * Punto de partida para la cabecera, hasta que se mida la de verdad.
+ *
+ * Medido en dispositivo, la real son 49,1 dp y esta cuenta da 52: el alto de
+ * una fila `items-baseline` no es el `lineHeight` del texto más alto. Casi tres
+ * dp por sección no se ven en una, pero **se acumulan** contra la posición de la
+ * cabecera fija hasta despegarla y dejar un hueco por el que se ve el fondo.
+ *
+ * Por eso solo es una semilla: `getItemLayout` tiene que contestar desde el
+ * primer fotograma, antes de que nada se haya medido, y a partir de ahí manda
+ * la medida real.
+ */
+const HEADER_ESTIMATE = 16 + typeScale.title.lineHeight + 10 + 1;
 
 /**
  * Visits as a photo timeline, grouped by month.
@@ -41,10 +69,70 @@ export function VisitTimeline({
   const { width } = useWindowDimensions();
   const tileSize = Math.floor((width - GUTTER * 2 - GAP * (COLUMNS - 1)) / COLUMNS);
 
+  /*
+   * Lo que mide una cabecera de verdad en este teléfono.
+   *
+   * Se aprende de la primera y **no se vuelve a tocar**: todas son iguales, así
+   * que una medida vale para las cientos que vengan. El guard no es una
+   * optimización — sin él, cada cabecera que entra en pantalla dispara un
+   * `setState`, la tabla de offsets se rehace a media animación y la lista se
+   * queda en blanco. Probado.
+   */
+  const [headerHeight, setHeaderHeight] = useState(HEADER_ESTIMATE);
+  const headerMeasured = useRef(false);
+
+  const learnHeaderHeight = useCallback((measured: number) => {
+    if (headerMeasured.current || measured <= 0) return;
+    headerMeasured.current = true;
+    setHeaderHeight(measured);
+  }, []);
+
   const sections = useMemo(
     () => groupByMonth(visits, (visit) => visit.visited_at, COLUMNS, new Date(), order),
     [visits, order],
   );
+
+  /*
+   * Dónde empieza y cuánto mide cada cosa, precalculado.
+   *
+   * Sin esto la `SectionList` **estima** las posiciones y las corrige cuando
+   * cada celda se mide de verdad. Al desplazar despacio no se nota; al lanzar un
+   * fling se saltan decenas de celdas sin medir y las estimaciones se
+   * desvían — y como `stickySectionHeadersEnabled` decide qué cabecera pintar a
+   * partir de esos offsets, acababa enseñando "Agosto 2025" encima de filas de
+   * julio. Reproducido en el emulador antes de tocar nada.
+   *
+   * Se precalcula una tabla en vez de deducir el índice con una fórmula: en una
+   * `SectionList` el índice que llega a `getItemLayout` está aplanado
+   * (cabecera + filas + pie, por sección) y esa aritmética es fácil de escribir
+   * mal y difícil de ver mal. Recorrer las secciones una vez es O(n) y no puede
+   * desalinearse.
+   */
+  const layouts = useMemo(() => {
+    const rowHeight = GAP + tileSize + TILE_TEXT_HEIGHT;
+    const table: { length: number; offset: number; index: number }[] = [];
+    let offset = 0;
+    let index = 0;
+
+    for (const section of sections) {
+      table.push({ length: headerHeight, offset, index });
+      offset += headerHeight;
+      index += 1;
+
+      for (let row = 0; row < section.data.length; row += 1) {
+        table.push({ length: rowHeight, offset, index });
+        offset += rowHeight;
+        index += 1;
+      }
+
+      // La `SectionList` reserva un hueco de pie por sección aunque no se pinte
+      // ninguno. Sin contarlo, todo lo que viene después queda desplazado.
+      table.push({ length: 0, offset, index });
+      index += 1;
+    }
+
+    return table;
+  }, [sections, tileSize, headerHeight]);
 
   if (visits.length === 0) {
     return (
@@ -77,11 +165,17 @@ export function VisitTimeline({
       // fotos, que ya son caras de montar, se nota como un parpadeo en un punto
       // fijo del recorrido.
       removeClippedSubviews={false}
+      getItemLayout={(_, index) =>
+        layouts[index] ?? { length: GAP + tileSize + TILE_TEXT_HEIGHT, offset: 0, index }
+      }
       renderSectionHeader={({ section }) => (
         // Full-bleed and opaque: the padding used to live on the content
         // container, which inset the pinned header and let photos scroll
         // visibly through the gutters on either side of it.
-        <View className="border-b border-line bg-canvas px-5 pb-2.5 pt-4">
+        <View
+          onLayout={(event) => learnHeaderHeight(event.nativeEvent.layout.height)}
+          className="border-b border-line bg-canvas px-5 pb-2.5 pt-4"
+        >
           <View className="flex-row items-baseline justify-between">
             <Txt variant="title">{section.title}</Txt>
             <Txt variant="caption" tone="subtle">

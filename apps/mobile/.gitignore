@@ -2,3 +2,8 @@
 expo-env.d.ts
 android/
 ios/
+*-firebase-adminsdk-*.json
+
+# Generado por Expo al arrancar; sin él, un clon recién hecho no compila
+# (el tipado de process.env.EXPO_PUBLIC_* y de los imports de CSS sale de aquí).
+expo-env.d.ts

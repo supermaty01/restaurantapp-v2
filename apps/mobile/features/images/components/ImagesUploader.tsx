@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useState } from 'react';
-import { Alert, Image, Linking, ScrollView, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, TouchableOpacity, View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/Motion';
 import { Sheet } from '@/components/ui/Sheet';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { usePermissionGate } from '@/lib/hooks/usePermissionGate';
 
 import type { ComponentProps } from 'react';
 
@@ -38,13 +39,9 @@ interface ImagesUploaderEditProps extends ImagesUploaderBaseProps {
 
 type ImagesUploaderProps = ImagesUploaderCreateProps | ImagesUploaderEditProps;
 
-const openAppSettings = () => {
-  Linking.openSettings().catch(() => {
-    Alert.alert('Error', 'No se pudo abrir la configuración de la aplicación.');
-  });
-};
-
 export default function ImagesUploader(props: ImagesUploaderProps) {
+  const askForSettings = usePermissionGate();
+
   // Kept as `props` (not destructured) so TS can narrow the discriminated
   // union on `props.isEdit` inside each handler; that removes the `as any`
   // casts v1 needed because the destructured callback was an untyped union.
@@ -63,14 +60,7 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
   const pickFromGallery = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert(
-        'Permiso denegado',
-        'Se requieren permisos para acceder a la galería. ¿Deseas ir a la configuración para habilitarlos?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Abrir Configuración', onPress: openAppSettings },
-        ],
-      );
+      await askForSettings('tus fotos');
       return;
     }
 
@@ -89,14 +79,7 @@ export default function ImagesUploader(props: ImagesUploaderProps) {
   const pickFromCamera = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
-      Alert.alert(
-        'Permiso denegado',
-        'Se requieren permisos para acceder a la cámara. ¿Deseas ir a la configuración para habilitarlos?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Abrir Configuración', onPress: openAppSettings },
-        ],
-      );
+      await askForSettings('la cámara');
       return;
     }
 

@@ -44,7 +44,8 @@ insert into people (uuid, user_id, name, linked_user_id, username, created_at, u
 insert into visit_participant (user_id, visit_uuid, person_uuid, tag_status)
   values (:mateo, :meal, :person, 'pending');
 
--- A private visit, to prove the tag does not override the setting.
+-- Una comida privada, para fijar que la etiqueta abre la puerta igualmente
+-- (0015) sin que la visita entre en el feed de nadie.
 insert into visits (uuid, user_id, restaurant_uuid, visited_at, visibility, created_at, updated_at)
   values (:solo, :mateo, :place, '2026-05-02', 'private', now(), now());
 insert into visit_participant (user_id, visit_uuid, person_uuid, tag_status)
@@ -61,13 +62,32 @@ select respond_friend_request(:mateo, true);
 set test.uid = :caro;
 select expect_eq(friendship_state(:mateo), 'none', 'Caro is not a friend');
 select expect_eq(can_read_visit(:meal), true, 'a tagged person can read the visit');
-select expect_eq((select count(*)::int from tagged_visits()), 1, 'and finds it in her tray');
-
--- ── ...but it does not override the visibility setting ───────────────────────
-select expect_eq(can_read_visit(:solo), false, 'a private visit stays private, tag or not');
 select expect_eq(
-  (select count(*)::int from tagged_visits() where entity_uuid = :solo), 0,
-  'a private visit never reaches the tray');
+  (select count(*)::int from tagged_visits() where entity_uuid = :meal), 1,
+  'and finds it in her tray');
+
+-- ── ...y desde 0015 también en una comida privada ────────────────────────────
+-- Este par de aserciones decía lo contrario hasta 0015, y el cambio es
+-- deliberado. `visibility` reparte a un público que no eliges uno a uno;
+-- escribir el nombre de alguien es nombrar a un destinatario. Que lo segundo lo
+-- anulara lo primero hacía que etiquetar en una comida privada no hiciera
+-- absolutamente nada: la persona salía en la lista de participantes del diario
+-- de quien la etiquetó y no se enteraba nunca.
+select expect_eq(can_read_visit(:solo), true, 'una etiqueta abre la puerta también en privado');
+select expect_eq(
+  (select count(*)::int from tagged_visits() where entity_uuid = :solo), 1,
+  'y la comida privada llega a la bandeja de quien estuvo');
+
+-- Lo que no cambia: el feed. Es la diferencia entre "verla en tus etiquetas" y
+-- "que se cuele en el feed de alguien", y es justo la línea que se pedía.
+set test.uid = :irene;
+select expect_eq(
+  (select count(*)::int from feed_page() where entity_uuid = :solo), 0,
+  'SEGURIDAD: una visita privada no entra en el feed de un amigo');
+set test.uid = :caro;
+select expect_eq(
+  (select count(*)::int from feed_page() where entity_uuid = :solo), 0,
+  'SEGURIDAD: ni en el de la persona etiquetada');
 
 -- ── A shared visit carries its restaurant and its dishes ─────────────────────
 -- The point of the whole migration. Both rows are `private`; neither is
@@ -184,9 +204,13 @@ select expect_eq(
 -- tiene que sobrevivir al siguiente sync de quien etiquetó, que reenvía el
 -- conjunto completo de participantes de cada visita.
 set test.uid = :caro;
-select expect_eq((select count(*)::int from tagged_visits()), 1, 'Caro está etiquetada');
+select expect_eq(
+  (select count(*)::int from tagged_visits() where entity_uuid = :meal), 1,
+  'Caro está etiquetada');
 select reject_tag(:meal);
-select expect_eq((select count(*)::int from tagged_visits()), 0, 'y se retira de la bandeja');
+select expect_eq(
+  (select count(*)::int from tagged_visits() where entity_uuid = :meal), 0,
+  'y se retira de la bandeja');
 select expect_eq(can_read_visit(:meal), false, 'retirarse también cierra el acceso');
 
 -- Mateo vuelve a sincronizar: su móvil reenvía los participantes tal cual.
@@ -198,7 +222,7 @@ insert into visit_participant (user_id, visit_uuid, person_uuid, tag_status)
 
 set test.uid = :caro;
 select expect_eq(
-  (select count(*)::int from tagged_visits()), 0,
+  (select count(*)::int from tagged_visits() where entity_uuid = :meal), 0,
   'el sync de quien etiquetó no repone la etiqueta retirada');
 select expect_eq(
   (select count(*)::int from visit_participant where visit_uuid = :meal), 1,
@@ -206,7 +230,9 @@ select expect_eq(
 
 -- Reversible: te retiraste, no te bloqueaste.
 select restore_tag(:meal);
-select expect_eq((select count(*)::int from tagged_visits()), 1, 'y se puede deshacer');
+select expect_eq(
+  (select count(*)::int from tagged_visits() where entity_uuid = :meal), 1,
+  'y se puede deshacer');
 
 \echo ''
 \echo 'All feed checks passed.'

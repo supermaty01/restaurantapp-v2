@@ -5,8 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   TouchableOpacity,
-  Alert,
-  Linking,
   Text,
   Animated,
   ActivityIndicator,
@@ -17,11 +15,13 @@ import {
 } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
 
+import { useToast } from '@/components/ui/Toast';
 import { RestaurantMarker } from '@/features/restaurants/components/RestaurantMarker';
 import { useRestaurantMapList } from '@/features/restaurants/hooks/useRestaurantMapList';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
 import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
+import { usePermissionGate } from '@/lib/hooks/usePermissionGate';
 import { getPlaceDetails } from '@/services/places';
 
 import type { PoiClickEvent } from 'react-native-maps';
@@ -51,6 +51,8 @@ export default function MapScreen() {
   const restaurants = useRestaurantMapList();
   const router = useRouter();
   const { colors } = useTheme();
+  const toast = useToast();
+  const askForSettings = usePermissionGate();
   const mapRef = useRef<MapView>(null);
   const [locating, setLocating] = useState(false);
   const [selectedPoi, setSelectedPoi] = useState<PoiDetails | null>(null);
@@ -241,14 +243,7 @@ export default function MapScreen() {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso denegado',
-          'Se requieren permisos para acceder a la ubicación. ¿Deseas ir a la configuración para habilitarlos?',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Abrir Configuración', onPress: () => void Linking.openSettings() },
-          ],
-        );
+        await askForSettings('tu ubicación');
         setLocating(false);
         return;
       }
@@ -263,7 +258,9 @@ export default function MapScreen() {
         800,
       );
     } catch {
-      Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
+      // Un fallo puntual del GPS no merece un modal que haya que descartar: el
+      // mapa sigue donde estaba y se puede volver a intentar.
+      toast.notify('No se pudo obtener tu ubicación', 'danger');
     }
     setLocating(false);
   };

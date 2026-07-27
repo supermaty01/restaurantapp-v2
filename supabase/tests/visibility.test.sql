@@ -90,5 +90,38 @@ select expect_eq(
   'SECURITY: pero eso no abre sus filas en default privado');
 reset role;
 
+-- ── Un plato en default llega a los amigos por RLS ───────────────────────────
+-- Esto no lo cubria nada, y por eso paso: la 0014 monto las tres policies de
+-- lectura entre amigos en un bucle que sacaba el nombre de la entidad
+-- recortando la ultima letra, y sobre 'dishes' eso da 'dishe'.
+-- `effective_visibility` no tiene rama para esa entidad, devuelve NULL y el
+-- coalesce lo vuelve 'private': **todo plato en default quedaba ilegible para
+-- tus amigos** por mucho que el ajuste dijera lo contrario. Arreglado en 0019.
+--
+-- Las comprobaciones de arriba no lo veian porque van por `feed_page`, que es
+-- security definer y si escribe 'dish'. Solo se ve leyendo la tabla.
+\set plate '''bbbbbbbb-0000-4000-8000-000000000004'''
+set test.uid = :mateo;
+select set_visibility_defaults('private', 'friends', 'private');
+insert into dishes (uuid, user_id, restaurant_uuid, name, visibility, created_at, updated_at)
+  values (:plate, :mateo, :place, 'Galette', 'default', now(), now());
+
+set test.uid = :irene;
+set role authenticated;
+select expect_eq(
+  (select count(*)::int from dishes where uuid = :plate), 1,
+  'un plato en default con el ajuste en amigos se lee por RLS');
+reset role;
+
+-- Y el ajuste sigue mandando en los dos sentidos.
+set test.uid = :mateo;
+select set_visibility_defaults('private', 'private', 'private');
+set test.uid = :irene;
+set role authenticated;
+select expect_eq(
+  (select count(*)::int from dishes where uuid = :plate), 0,
+  'SECURITY: y con el ajuste en privado deja de leerse');
+reset role;
+
 \echo ''
 \echo 'All visibility checks passed.'

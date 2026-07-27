@@ -143,7 +143,9 @@ export async function applyRemoteRecord(
   if (!local) {
     const inserted = (await db
       .insert(cfg.table)
-      .values(values)
+      // Solo al insertar: lo que es de este dispositivo y no viaja por la red.
+      // Ver `localDefaults` en tables.ts.
+      .values({ ...values, ...(cfg.localDefaults?.({ uuid: record.uuid }) ?? {}) })
       .returning({ id: column(cfg.table, 'id') })) as { id: number }[];
 
     // Mark it as already-synced in the outbox.

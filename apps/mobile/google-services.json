@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "948461330759",
+    "project_id": "complete-welder-452606-k5",
+    "storage_bucket": "complete-welder-452606-k5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:948461330759:android:ce4a40c911e61a5607ec62",
+        "android_client_info": {
+          "package_name": "com.supermaty01.restaurantapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "948461330759-flfjuikaqg1k54m055hqla0gaqid353m.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBTnV2eBirqwEVIkwafF9CbBL8KaZxz1Ac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "948461330759-flfjuikaqg1k54m055hqla0gaqid353m.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

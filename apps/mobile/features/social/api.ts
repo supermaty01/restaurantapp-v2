@@ -54,6 +54,8 @@ export interface FeedEntry {
   /** What was eaten, for a visit. Empty for the other kinds. */
   dishNames: string[];
   companionCount: number;
+  /** Quiénes fueron, sin ti. Un número no contesta la pregunta que se hace uno. */
+  companionNames: string[];
 }
 
 /** Rows come back snake_case from PostgREST; the app speaks camelCase. */
@@ -129,6 +131,7 @@ export async function updateMyProfile(changes: {
   username?: string;
   displayName?: string | null;
   bio?: string | null;
+  avatarUrl?: string | null;
 }): Promise<void> {
   const supabase = client();
   const { data: auth } = await supabase.auth.getUser();
@@ -138,6 +141,7 @@ export async function updateMyProfile(changes: {
   if (changes.username !== undefined) payload['username'] = changes.username.toLowerCase();
   if (changes.displayName !== undefined) payload['display_name'] = changes.displayName;
   if (changes.bio !== undefined) payload['bio'] = changes.bio;
+  if (changes.avatarUrl !== undefined) payload['avatar_url'] = changes.avatarUrl;
 
   const { error } = (await supabase
     .from('profiles')
@@ -192,6 +196,7 @@ function toFeedEntry(row: Record<string, unknown>): FeedEntry {
     imageKey: (row['image_key'] as string | null) ?? null,
     dishNames: (row['dish_names'] as string[] | null) ?? [],
     companionCount: Number(row['companion_count'] ?? 0),
+    companionNames: (row['companion_names'] as string[] | null) ?? [],
   };
 }
 
@@ -375,6 +380,8 @@ export interface TaggedVisit {
   comments: string | null;
   imageKey: string | null;
   companionCount: number;
+  /** Quiénes fueron, sin ti. Un número no contesta la pregunta que se hace uno. */
+  companionNames: string[];
 }
 
 /**
@@ -403,6 +410,7 @@ export async function fetchTaggedVisits(before?: string): Promise<TaggedVisit[]>
     comments: (row['comments'] as string | null) ?? null,
     imageKey: (row['image_key'] as string | null) ?? null,
     companionCount: Number(row['companion_count'] ?? 0),
+    companionNames: (row['companion_names'] as string[] | null) ?? [],
   }));
 }
 
@@ -425,6 +433,76 @@ export async function rejectTag(visitUuid: string): Promise<void> {
 /** Undoes `rejectTag`. Withdrawing is not blocking. */
 export async function restoreTag(visitUuid: string): Promise<void> {
   await callRpc<null>('restore_tag', { visit: visitUuid });
+}
+
+/**
+ * Las clases de aviso que emite el servidor (0016, 0019).
+ *
+ * `friend_published` resume una ráfaga: registrar una comida escribe el sitio,
+ * la visita y los platos, y de ahí sale un aviso y no tres. Por eso llega sin
+ * visita a la que apuntar — la ráfaga no tiene una fila que la represente— y se
+ * abre en el perfil de quien publicó, que es donde están las tres.
+ */
+export type NotificationKind =
+  'tagged_in_visit' | 'friend_published' | 'friend_request' | 'friend_accepted';
+
+export interface AppNotification {
+  id: number;
+  kind: NotificationKind;
+  createdAt: string;
+  readAt: string | null;
+  visitUuid: string | null;
+  actorId: string | null;
+  username: string | null;
+  displayName: string | null;
+  avatarUrl: string | null;
+  /** Dónde fue. Nulo en los avisos que no ocurren en ningún restaurante. */
+  title: string | null;
+  imageKey: string | null;
+}
+
+/**
+ * Novedades: lo que ha pasado mientras no mirabas.
+ *
+ * El servidor ya descarta los avisos de etiquetas que rechazaste o de visitas
+ * borradas (0016), así que lo que llega aquí se puede pintar tal cual. Un aviso
+ * que abre algo que ya no existe es peor que no avisar.
+ */
+export async function fetchNotifications(before?: string): Promise<AppNotification[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('notifications_page', {
+    before: before ?? null,
+    page_size: 30,
+  });
+
+  return (rows ?? []).map((row) => ({
+    id: Number(row['id']),
+    kind: row['kind'] as NotificationKind,
+    createdAt: row['created_at'] as string,
+    readAt: (row['read_at'] as string | null) ?? null,
+    visitUuid: (row['visit_uuid'] as string | null) ?? null,
+    actorId: (row['actor_id'] as string | null) ?? null,
+    username: (row['username'] as string | null) ?? null,
+    displayName: (row['display_name'] as string | null) ?? null,
+    avatarUrl: (row['avatar_url'] as string | null) ?? null,
+    title: (row['title'] as string | null) ?? null,
+    imageKey: (row['image_key'] as string | null) ?? null,
+  }));
+}
+
+/** Cuántas novedades sin leer. Lo que pinta el punto. */
+export async function fetchUnreadCount(): Promise<number> {
+  const count = await callRpc<number>('unread_notifications', {});
+  return Number(count ?? 0);
+}
+
+/**
+ * Marca todo como leído de una vez.
+ *
+ * De uno en uno convertiría una lista de avisos en una lista de tareas: nadie
+ * quiere descartar catorce cosas para que se apague un punto.
+ */
+export async function markNotificationsRead(): Promise<void> {
+  await callRpc<null>('mark_notifications_read', {});
 }
 
 /**

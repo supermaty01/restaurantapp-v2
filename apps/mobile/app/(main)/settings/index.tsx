@@ -1,8 +1,8 @@
 import * as DocumentPicker from 'expo-document-picker';
 import { useContext, useState } from 'react';
-import { Alert } from 'react-native';
 
 import { DBVersionContext } from '@/app/_layout';
+import { useDialog } from '@/components/ui/Dialog';
 import { FormSection } from '@/components/ui/FormScaffold';
 import { Screen } from '@/components/ui/Screen';
 import { PrivacyCard } from '@/features/privacy/PrivacyCard';
@@ -10,6 +10,7 @@ import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
+import NotificationsCard from '@/features/settings/components/NotificationsCard';
 import ThemeCard from '@/features/settings/components/ThemeCard';
 import ThemeSelectionModal from '@/features/settings/components/ThemeSelectionModal';
 import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
@@ -18,6 +19,7 @@ import { reportError } from '@/lib/helpers/report-error';
 export default function SettingsScreen() {
   // Sin cuenta todo es privado y no hay nada que ajustar.
   const sharing = useSharingAvailable();
+  const { ask } = useDialog();
   const bumpDb = useContext(DBVersionContext);
   const [themeModalVisible, setThemeModalVisible] = useState(false);
   const {
@@ -83,45 +85,36 @@ export default function SettingsScreen() {
       const fileUri = asset.uri;
 
       // 2. Verificar que sea un archivo válido
-      Alert.alert(
-        'Importar datos',
-        'Esta acción reemplazará todos los datos actuales. ¿Deseas continuar?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          {
-            text: 'Continuar',
-            style: 'destructive',
-            onPress: () => {
-              void (async () => {
-                try {
-                  setIsImporting(true);
-                  setImportProgress(0);
+      const confirmed = await ask({
+        title: '¿Reemplazar todo tu diario?',
+        message:
+          'Importar sustituye lo que hay ahora en este teléfono por lo del archivo. Se guarda una copia antes, por si acaso.',
+        icon: 'download-outline',
+        confirmLabel: 'Reemplazar',
+        cancelLabel: 'Cancelar',
+        destructive: true,
+      });
+      if (!confirmed) return;
 
-                  // Realizar la importación utilizando el servicio
-                  await backupService.importData(fileUri, (progress) => {
-                    setImportProgress(progress);
-                  });
-                } catch (error) {
-                  reportError('No se pudo completar la importación', error);
-                  try {
-                    await backupService.restoreBackup();
-                  } catch (e) {
-                    console.error('Error al restaurar la copia de seguridad:', e);
-                  }
-                } finally {
-                  setIsImporting(false);
-                  // Both import and restore swap the SQLite file underneath the
-                  // open connection, which leaves it stale ("attempt to write a
-                  // readonly database") until the provider is remounted. Always
-                  // reconnect — not only on success, or a failed import bricks
-                  // every later write.
-                  bumpDb();
-                }
-              })();
-            },
-          },
-        ],
-      );
+      try {
+        setIsImporting(true);
+        setImportProgress(0);
+        await backupService.importData(fileUri, setImportProgress);
+      } catch (error) {
+        reportError('No se pudo completar la importación', error);
+        try {
+          await backupService.restoreBackup();
+        } catch (e) {
+          console.error('Error al restaurar la copia de seguridad:', e);
+        }
+      } finally {
+        setIsImporting(false);
+        // Both import and restore swap the SQLite file underneath the open
+        // connection, which leaves it stale ("attempt to write a readonly
+        // database") until the provider is remounted. Always reconnect — not
+        // only on success, or a failed import bricks every later write.
+        bumpDb();
+      }
     } catch (error) {
       reportError('No se pudo seleccionar el archivo', error);
     }
@@ -157,6 +150,17 @@ export default function SettingsScreen() {
           hint="El punto de partida de cada entrada; siempre puedes cambiarla una a una"
         >
           <PrivacyCard />
+        </FormSection>
+      ) : null}
+
+      {/* Solo con cuenta: sin ella no hay quien te etiquete, así que un
+          interruptor de avisos sería un interruptor de nada. */}
+      {sharing ? (
+        <FormSection
+          title="Avisos"
+          hint="Etiquetas, solicitudes de amistad y lo que comparten tus amigos, aunque no tengas la app abierta"
+        >
+          <NotificationsCard />
         </FormSection>
       ) : null}
 

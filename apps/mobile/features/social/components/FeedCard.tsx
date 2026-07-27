@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import { Text, View } from 'react-native';
 
 import RatingStars from '@/components/RatingStars';
-import { Avatar } from '@/components/ui/Avatar';
 import { PressableScale } from '@/components/ui/Motion';
 import { Card, Chip } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
@@ -12,7 +11,9 @@ import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
 
+import { companionsLabel } from '../companions';
 import { remoteImageUri } from '../remote-image';
+import { AuthorHeader } from './AuthorHeader';
 
 import type { FeedEntry, FeedKind } from '../api';
 
@@ -49,6 +50,7 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
   const author = entry.displayName ?? entry.username;
   const photo = remoteImageUri(entry.authorId, entry.imageKey);
   const dishes = eaten(entry.dishNames);
+  const companions = companionsLabel(entry.companionNames, entry.companionCount);
 
   // Only a visit has a screen of its own to open. A loose dish or restaurant
   // has no shared detail behind it, so the card stays inert rather than
@@ -57,20 +59,25 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
 
   const body = (
     <Card className="gap-3">
-      <View className="flex-row items-center gap-2.5">
-        <Avatar name={author} uri={entry.avatarUrl} size={34} />
-        <View className="flex-1">
-          <Text className="text-[13px] text-ink-muted" numberOfLines={1}>
-            <Text className="font-bold text-ink">{author}</Text> {verb[entry.kind]}{' '}
-            <Text className="font-semi text-ink">{entry.title}</Text>
-          </Text>
-          <Text className="text-[11px] text-ink-subtle">
-            {formatRelativeDate(entry.occurredAt)}
-            {entry.place && entry.place !== entry.title ? ` · ${entry.place}` : ''}
-          </Text>
-        </View>
-        <Ionicons name={icon[entry.kind]} size={16} color={colors.inkSubtle} />
-      </View>
+      <AuthorHeader
+        userId={entry.authorId}
+        name={author}
+        avatarUrl={entry.avatarUrl}
+        trailing={<Ionicons name={icon[entry.kind]} size={16} color={colors.inkSubtle} />}
+      >
+        {/* Dos líneas: es la frase que dice de qué va la tarjeta, y en una
+            sola se cortaba en cuanto el nombre y el sitio pasaban de cortos
+            — "Mateo Álvarez estuvo en L'Atelier Artisan Crê…" deja fuera
+            justo el dato que se venía a leer. */}
+        <Text className="text-[13px] leading-[18px] text-ink-muted" numberOfLines={2}>
+          <Text className="font-bold text-ink">{author}</Text> {verb[entry.kind]}{' '}
+          <Text className="font-semi text-ink">{entry.title}</Text>
+        </Text>
+        <Text className="text-[11px] text-ink-subtle">
+          {formatRelativeDate(entry.occurredAt)}
+          {entry.place && entry.place !== entry.title ? ` · ${entry.place}` : ''}
+        </Text>
+      </AuthorHeader>
 
       {photo ? (
         <Image
@@ -108,13 +115,11 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
 
       <View className="flex-row items-center gap-2">
         {entry.kind === 'dish' && entry.place ? <Chip label={entry.place} tone="sage" /> : null}
-        {entry.companionCount > 0 ? (
-          <View className="flex-row items-center gap-1">
+        {companions ? (
+          <View className="min-w-0 flex-1 flex-row items-center gap-1">
             <Ionicons name="people-outline" size={12} color={colors.inkSubtle} />
-            <Txt variant="caption" tone="subtle">
-              {entry.companionCount === 1
-                ? 'con 1 persona'
-                : `con ${entry.companionCount} personas`}
+            <Txt variant="caption" tone="subtle" numberOfLines={1} className="flex-1">
+              {companions}
             </Txt>
           </View>
         ) : null}

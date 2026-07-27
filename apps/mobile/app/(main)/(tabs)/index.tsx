@@ -10,11 +10,10 @@ import { EmptyState, SectionHeader, Card } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { useHomeSummary } from '@/features/home/hooks/useHomeSummary';
-import type { RecentVisit } from '@/features/home/hooks/useHomeSummary';
+import type { RecentEntry } from '@/features/home/hooks/useHomeSummary';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
-import { formatDate } from '@/lib/helpers/date';
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 
 import type { ComponentProps } from 'react';
@@ -142,10 +141,17 @@ export default function HomeScreen() {
       </FadeInUp>
 
       <FadeInUp index={4}>
+        {/* "Lo último" y no "visitas recientes": quien no registra visitas veía
+            una sección permanentemente vacía, y no registrar visitas es una
+            forma legítima de usar la app — cada quien apunta lo que le sirve. */}
         <SectionHeader
-          title="Visitas recientes"
-          actionLabel={visits > 0 ? 'Ver todas' : undefined}
-          onAction={visits > 0 ? () => router.push('/(main)/(tabs)/journal?tab=visits') : undefined}
+          title="Lo último que añadiste"
+          actionLabel={visits + dishes + restaurants > 0 ? 'Ver diario' : undefined}
+          onAction={
+            visits + dishes + restaurants > 0
+              ? () => router.push('/(main)/(tabs)/journal')
+              : undefined
+          }
           className="mt-8"
         />
       </FadeInUp>
@@ -155,16 +161,16 @@ export default function HomeScreen() {
           <FadeInUp index={6}>
             <EmptyState
               icon="restaurant-outline"
-              title="Aún no hay visitas"
-              message="Cuando registres dónde has comido, aparecerá aquí."
+              title="Tu diario está vacío"
+              message="Registra un sitio, un plato o una comida entera y aparecerá aquí."
             />
           </FadeInUp>
         ) : (
-          recent.map((visit, index) => (
-            <FadeInUp key={visit.id} index={6 + index}>
-              <RecentVisitCard
-                visit={visit}
-                onPress={() => router.push(`/(main)/visits/${visit.id}/view`)}
+          recent.map((entry, index) => (
+            <FadeInUp key={`${entry.kind}:${entry.id}`} index={6 + index}>
+              <RecentEntryCard
+                entry={entry}
+                onPress={() => router.push(ROUTE_FOR[entry.kind](entry.id))}
               />
             </FadeInUp>
           ))
@@ -220,22 +226,35 @@ function StatTile({
   );
 }
 
-function RecentVisitCard({ visit, onPress }: { visit: RecentVisit; onPress: () => void }) {
+/** A dónde lleva cada clase de entrada. */
+const ROUTE_FOR: Record<RecentEntry['kind'], (id: number) => string> = {
+  visit: (id) => `/(main)/visits/${id}/view`,
+  dish: (id) => `/(main)/dishes/${id}/view`,
+  restaurant: (id) => `/(main)/restaurants/${id}/view`,
+};
+
+const ICON_FOR: Record<RecentEntry['kind'], IconName> = {
+  visit: 'restaurant',
+  dish: 'fast-food',
+  restaurant: 'location',
+};
+
+function RecentEntryCard({ entry, onPress }: { entry: RecentEntry; onPress: () => void }) {
   const { colors } = useTheme();
-  const name = visit.restaurantName ?? 'Sin restaurante';
-  const uri = visit.imagePath ? imagePathToUri(visit.imagePath) : undefined;
+  const uri = entry.imagePath ? imagePathToUri(entry.imagePath) : undefined;
 
   return (
     <Card onPress={onPress} className="flex-row items-center gap-3.5">
-      <Thumbnail name={name} uri={uri} size={64} icon="restaurant" />
+      <Thumbnail name={entry.title} uri={uri} size={64} icon={ICON_FOR[entry.kind]} />
       <View className="min-w-0 flex-1">
         <Txt variant="heading" weight="bold" serif={false} numberOfLines={1}>
-          {name}
+          {entry.title}
         </Txt>
-        <Txt variant="caption" tone="subtle" numberOfLines={1} className="mt-0.5">
-          {formatDate(visit.visitedAt)}
-          {visit.comments ? ` · ${visit.comments}` : ''}
-        </Txt>
+        {entry.detail ? (
+          <Txt variant="caption" tone="subtle" numberOfLines={1} className="mt-0.5">
+            {entry.detail}
+          </Txt>
+        ) : null}
       </View>
       <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
     </Card>

@@ -24,6 +24,7 @@ import { getTodayLocalDateString } from '@/lib/helpers/date';
 import { reportError } from '@/lib/helpers/report-error';
 import { uploadImages } from '@/lib/helpers/upload-images';
 import { useDatabase } from '@/lib/hooks/useDatabase';
+import { usePushPrompt } from '@/services/push/usePushPrompt';
 
 import type { SubmitHandler } from 'react-hook-form';
 
@@ -60,6 +61,7 @@ export default function VisitCreateScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const drizzleDb = useDatabase();
+  const askAboutPush = usePushPrompt();
   const restaurantId = watch('restaurantId');
 
   useEffect(() => {
@@ -84,6 +86,12 @@ export default function VisitCreateScreen() {
       }
 
       notify('Visita guardada');
+
+      // Después de guardar y antes de salir: es el momento en que el aviso
+      // ya significa algo, porque acabas de crear el motivo por el que
+      // existiría. Solo pregunta si etiquetaste a alguien con cuenta, y solo
+      // una vez en la vida de la instalación.
+      await askAboutPush(participants);
 
       router.back();
     } catch (error) {

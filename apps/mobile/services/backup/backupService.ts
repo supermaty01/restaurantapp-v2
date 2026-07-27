@@ -8,6 +8,7 @@ import { DATABASE_NAME } from '@/services/db/constants';
 import * as schema from '@/services/db/schema';
 import type { DrizzleDatabase } from '@/services/db/types';
 
+import { EXPORT_PREFIX, SAFETY_PREFIX, archivesToPrune } from './prune';
 import { createZipFromDirectory, extractZipToDirectory } from './zip';
 
 /**
@@ -34,6 +35,22 @@ export interface BackupInfo {
   version: string;
 }
 
+export interface ExportOptions {
+  /**
+   * Si la copia tiene que sobrevivir a la pantalla que la creó.
+   *
+   * Por defecto **no**: la copia que se exporta desde Ajustes existe para salir
+   * de la app —se comparte a Drive, a WhatsApp, a donde sea— y quedarse con
+   * ella dentro es guardar el diario entero dos veces. Va a la caché, que es
+   * exactamente lo que el sistema puede reclamar cuando aprieta.
+   *
+   * `true` solo para la copia previa a «la nube manda» (`sync-choice`): esa es
+   * la red de seguridad de la única pantalla capaz de borrar un diario entero y
+   * tiene que seguir ahí mañana, así que va al directorio de documentos.
+   */
+  keep?: boolean;
+}
+
 export interface ImportInfo {
   date: Date;
   path: string;
@@ -49,11 +66,29 @@ export class BackupService {
   /**
    * Exports database and images to a ZIP file using native compression.
    */
-  async exportData(progressCallback: (progress: number) => void): Promise<BackupInfo> {
+  async exportData(
+    progressCallback: (progress: number) => void,
+    options: ExportOptions = {},
+  ): Promise<BackupInfo> {
     progressCallback(0);
 
+    const keep = options.keep ?? false;
     const tempDir = `${FileSystem.cacheDirectory}export_temp/`;
     const imagesTemp = `${tempDir}images/`;
+
+    // Lo primero de todo, antes incluso de preparar nada.
+    //
+    // Cada zip pesa casi lo que la carpeta de imágenes entera —un zip no
+    // comprime JPEG, que ya vienen comprimidos—, así que hasta ahora cada
+    // exportación dejaba ~200 MB para siempre y con un nombre distinto cada vez.
+    // Cinco o diez son el giga o dos que se veía en el móvil.
+    //
+    // Va aquí y no junto al zip porque el área de preparación ya duplica las
+    // fotos: liberar antes de empezar a ocupar es lo que hace que en un móvil
+    // lleno la exportación quepa. Y si esta falla a medias no se pierde nada
+    // que se pudiera recuperar — a los zips anteriores no llegaba nadie, ni el
+    // código ni la pantalla de Ajustes.
+    await this.pruneArchives(keep ? SAFETY_PREFIX : EXPORT_PREFIX);
 
     // Staging area: the archive mirrors this layout (database.db,
     // metadata.json, images/…), which is also the layout v1 produced, so old
@@ -80,8 +115,8 @@ export class BackupService {
     progressCallback(70);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const zipName = `restaurantapp_backup_${timestamp}.zip`;
-    const zipPath = `${FileSystem.documentDirectory}${zipName}`;
+    const zipName = `${keep ? SAFETY_PREFIX : EXPORT_PREFIX}${timestamp}.zip`;
+    const zipPath = `${keep ? FileSystem.documentDirectory : FileSystem.cacheDirectory}${zipName}`;
 
     // Streams to disk: backups run to hundreds of MB, so nothing is buffered.
     await createZipFromDirectory(tempDir, zipPath);
@@ -98,6 +133,27 @@ export class BackupService {
     progressCallback(100);
 
     return { date: new Date(), path: zipPath, size, version: this.appVersion };
+  }
+
+  /**
+   * Retira los zips que dejó una tanda anterior.
+   *
+   * Mira los **dos** directorios y no solo aquel donde va a escribir: hasta esta
+   * versión las dos clases de copia compartían nombre y todas acababan en
+   * documentos, así que lo que hay que recuperar en un móvil que ya lleva meses
+   * está ahí y no en la caché.
+   *
+   * Nunca lanza. Quedarse sin barrer gasta disco; que reviente la exportación
+   * por no poder listar una carpeta pierde la copia, que es peor.
+   */
+  private async pruneArchives(prefix: string): Promise<void> {
+    for (const dir of [FileSystem.documentDirectory, FileSystem.cacheDirectory]) {
+      if (!dir) continue;
+      const names = await FileSystem.readDirectoryAsync(dir).catch(() => []);
+      for (const name of archivesToPrune(names, prefix)) {
+        await FileSystem.deleteAsync(`${dir}${name}`, { idempotent: true }).catch(() => {});
+      }
+    }
   }
 
   /**
@@ -201,6 +257,22 @@ export class BackupService {
 
     // 6. Cleanup
     await FileSystem.deleteAsync(extractDir, { idempotent: true });
+
+    // Y la copia previa, que ya no protege de nada.
+    //
+    // Es un diario entero —base de datos y todas las fotos— en la caché, y solo
+    // hacía falta mientras esta función podía fallar a medias: quien la
+    // restaura es el `catch` de esta misma importación (`settings/index.tsx`),
+    // no un «deshacer» que se ofrezca después. Si llegamos hasta aquí, ya no
+    // hay a qué volver.
+    //
+    // Antes se dejaba puesta hasta la *siguiente* importación, y como la
+    // migración de la v1 es una importación, en la práctica se quedaba desde el
+    // primer día. Nadie la borraba: el `setTimeout` de veinticuatro horas que
+    // había para eso muere con el proceso.
+    await FileSystem.deleteAsync(backupDir, { idempotent: true }).catch(() => {});
+    await this.forgetBackupInfo();
+
     progressCallback(100);
 
     return { date: new Date(), path: fileUri, backupPath: backupDir };
@@ -247,13 +319,15 @@ export class BackupService {
 
     await this.copyFilesInBatches(imgs, `${backupDir}images/`, IMAGES_DIR);
 
-    // Schedule cleanup after 24 hours
-    setTimeout(
-      () => {
-        FileSystem.deleteAsync(backupDir, { idempotent: true }).catch(() => {});
-      },
-      24 * 60 * 60 * 1000,
-    );
+    // Ya está restaurado: la copia sobra, y se borra ahora.
+    //
+    // Aquí había un `setTimeout` de veinticuatro horas que no llegó a
+    // ejecutarse nunca — el temporizador muere con el proceso de la app, y
+    // ninguna app de móvil vive un día seguido. El efecto era que un diario
+    // entero se quedaba en la caché indefinidamente creyendo que estaba
+    // programada su limpieza.
+    await FileSystem.deleteAsync(backupDir, { idempotent: true }).catch(() => {});
+    await this.forgetBackupInfo();
   }
 
   async getLastExportInfo(): Promise<BackupInfo | null> {
@@ -348,5 +422,16 @@ export class BackupService {
         target: schema.appSettings.key,
         set: { value, updatedAt: new Date().toISOString() },
       });
+  }
+
+  /**
+   * Olvida la copia previa una vez borrada.
+   *
+   * Sin esto `restoreBackup` seguiría encontrando la fila y fallaría con
+   * «Backup files no longer exist», que suena a avería cuando lo que pasa es
+   * que ya no hacía falta.
+   */
+  private async forgetBackupInfo(): Promise<void> {
+    await this.drizzleDb.delete(schema.appSettings).where(eq(schema.appSettings.key, 'lastBackup'));
   }
 }

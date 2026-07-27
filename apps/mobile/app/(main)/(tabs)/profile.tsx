@@ -17,7 +17,8 @@ import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
 import { useSync } from '@/lib/hooks/useSync';
-import { SYNC_LABEL, type SyncStatus } from '@/services/sync/syncStore';
+import type { PhotoProgress } from '@/services/sync/photos';
+import { photoProgressLabel, SYNC_LABEL, type SyncStatus } from '@/services/sync/syncStore';
 
 import type { ComponentProps } from 'react';
 
@@ -114,7 +115,7 @@ function AccountCard({
   profile: Profile | null;
   email: string;
   syncStatus: SyncStatus;
-  syncPhotos: { done: number; remaining: number } | null;
+  syncPhotos: PhotoProgress | null;
   syncError?: string | undefined;
   syncedAt?: string | undefined;
   showSyncError: (detail: string) => void;
@@ -166,11 +167,10 @@ function AccountCard({
             numberOfLines={1}
             className="flex-1"
           >
-            {/* Las fotos son lo lento. Sin decir cuántas faltan, cada tanda
-                de quince parecía el final y volver a "Sincronizando" un
-                segundo después parecía un fallo. */}
-            {syncStatus === 'syncing' && syncPhotos && syncPhotos.remaining > 0
-              ? `Subiendo fotos · quedan ${syncPhotos.remaining}`
+            {/* Las fotos son lo lento, y la frase la escribe el store: aquí se
+                escribía a mano y decía "Subiendo" también mientras bajaba. */}
+            {syncStatus === 'syncing' && syncPhotos && syncPhotos.done < syncPhotos.total
+              ? photoProgressLabel(syncPhotos)
               : syncStatus === 'ok' && syncedAt
                 ? `Al día · ${formatRelativeDate(syncedAt)}`
                 : SYNC_LABEL[syncStatus]}

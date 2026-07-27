@@ -81,6 +81,12 @@ export default {
     },
     package: BUNDLE_ID,
     versionCode: VERSION_CODE,
+    // Registro de la app en Firebase, que es de donde FCM saca a quién entregar
+    // una notificación. Solo lleva identificadores públicos —número de proyecto,
+    // id de app, clave de API restringida por paquete—, así que va al repo; la
+    // que **no** va nunca es la clave de cuenta de servicio, que es la que
+    // firma los envíos y vive en EAS. Ver docs/15.
+    googleServicesFile: './google-services.json',
     // `edgeToEdgeEnabled` no longer exists: Android 16 makes edge-to-edge
     // mandatory, so the option was removed from the Expo config.
     config: {
@@ -125,6 +131,16 @@ export default {
       {
         photosPermission: 'RestaurantApp accede a tus fotos para añadirlas a tus platos y visitas.',
         cameraPermission: 'RestaurantApp usa la cámara para fotografiar tus platos.',
+      },
+    ],
+    // Módulo nativo: el APK instalado no vale, hay que generar uno nuevo. No es
+    // una recarga de JavaScript. El icono y el color son los del sistema si no
+    // se dicen, y el del sistema es un cuadrado blanco.
+    [
+      'expo-notifications',
+      {
+        icon: './assets/burger-logo.png',
+        color: '#C2603C',
       },
     ],
   ],

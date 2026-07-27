@@ -28,18 +28,36 @@ export function createSupabaseTransport(accountUuid: string): SyncTransport {
       if (error) throw new Error(`push ${table}: ${error.message}`);
     },
 
-    async pull(table, since) {
+    async pull(table, since, limit) {
+      // Por `sync_seq` y no por `updated_at`: el segundo lo pone el móvil que
+      // escribió, así que con dos dispositivos y los relojes desfasados había
+      // filas que no se bajaban nunca. Ver 0017.
       let query = requireSupabase()
         .from(table)
         .select('*')
         .eq('user_id', accountUuid)
-        .order('updated_at', { ascending: true });
+        .order('sync_seq', { ascending: true })
+        .limit(limit);
 
-      if (since) query = query.gt('updated_at', since);
+      if (since !== null) query = query.gt('sync_seq', since);
 
       const { data, error } = await query;
       if (error) throw new Error(`pull ${table}: ${error.message}`);
       return (data ?? []) as RemoteRecord[];
+    },
+
+    async counts() {
+      const response = (await requireSupabase().rpc('sync_counts')) as {
+        data: { table_name: string; rows: number }[] | null;
+        error: { message: string } | null;
+      };
+      if (response.error) throw new Error(`counts: ${response.error.message}`);
+
+      const totals: Record<string, number> = {};
+      for (const row of response.data ?? []) {
+        totals[row.table_name] = Number(row.rows ?? 0);
+      }
+      return totals;
     },
 
     async replaceLinks(table, parentColumn, parentUuids, rows) {

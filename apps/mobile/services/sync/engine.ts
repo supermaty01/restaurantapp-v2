@@ -20,6 +20,9 @@ const CURSOR_PREFIX = 'sync_cursor_';
 /** Rows per push request. */
 const PUSH_BATCH = 200;
 
+/** Filas por página de pull. Ver `pull()`. */
+const PULL_PAGE = 500;
+
 /**
  * Ids per `synced = true` statement.
  *
@@ -189,28 +192,51 @@ export class SyncEngine {
     }
   }
 
-  /** Applies remote changes into the local DB, advancing per-table cursors. */
+  /**
+   * Applies remote changes into the local DB, advancing per-table cursors.
+   *
+   * Pagina hasta agotar cada tabla en vez de pedir una sola vez: una
+   * restauración en un móvil nuevo baja el diario entero, y ese caso es
+   * precisamente el que no puede depender de que quepa en una respuesta.
+   *
+   * El cursor solo avanza **después** de aplicar la página. Si el proceso muere
+   * a la mitad, la siguiente pasada repite esa página; aplicar dos veces la
+   * misma fila es inofensivo (se compara por uuid y por fecha), mientras que
+   * adelantar el cursor y morir después se salta filas para siempre.
+   */
   async pull(): Promise<void> {
     const touched = new Map<string, string[]>();
 
     for (const cfg of SYNC_TABLES) {
-      const cursor = await this.getCursor(cfg.name);
-      const records = await this.transport.pull(cfg.name, cursor);
-      if (records.length === 0) continue;
+      let cursor = await this.getCursor(cfg.name);
+      const seen: string[] = [];
 
-      for (const record of records) {
-        await applyRemoteRecord(this.db, cfg, record);
+      for (;;) {
+        const records = await this.transport.pull(cfg.name, cursor, PULL_PAGE);
+        if (records.length === 0) break;
+
+        for (const record of records) {
+          await applyRemoteRecord(this.db, cfg, record);
+        }
+        seen.push(...records.filter((r) => !r.deleted).map((r) => r.uuid));
+
+        const maxSeq = records.reduce(
+          (max, r) => (typeof r.sync_seq === 'number' && r.sync_seq > max ? r.sync_seq : max),
+          cursor ?? 0,
+        );
+
+        // Sin avance no hay página siguiente que pedir, y repetir la misma
+        // consulta sería un bucle infinito. Pasa si el servidor todavía no
+        // tiene la columna (0017 sin aplicar): mejor una pasada de más que la
+        // app colgada.
+        if (cursor !== null && maxSeq <= cursor) break;
+        cursor = maxSeq;
+        await this.setCursor(cfg.name, maxSeq);
+
+        if (records.length < PULL_PAGE) break;
       }
-      touched.set(
-        cfg.name,
-        records.filter((r) => !r.deleted).map((r) => r.uuid),
-      );
 
-      const maxUpdated = records.reduce(
-        (max, r) => (r.updated_at > max ? r.updated_at : max),
-        cursor ?? '',
-      );
-      await this.setCursor(cfg.name, maxUpdated);
+      if (seen.length > 0) touched.set(cfg.name, seen);
     }
 
     await this.pullLinks(touched);
@@ -275,21 +301,39 @@ export class SyncEngine {
     }
   }
 
-  private async getCursor(table: string): Promise<string | null> {
+  /**
+   * El cursor guardado, o null si no hay ninguno utilizable.
+   *
+   * Hasta 0017 aquí vivía un ISO-8601 (`2026-07-25T…`). `Number()` sobre eso da
+   * `NaN`, y devolver `NaN` como cursor haría que `sync_seq > NaN` no
+   * devolviera nada: el dispositivo dejaría de bajar cambios para siempre. Un
+   * valor que no es un número se trata como "no hay cursor", así que un móvil
+   * que venga de la versión anterior hace un pull completo una vez y sigue.
+   * Volver a aplicar filas que ya tiene es inofensivo; no volver a mirar, no.
+   */
+  private async getCursor(table: string): Promise<number | null> {
     const rows = await this.db
       .select({ value: schema.appSettings.value })
       .from(schema.appSettings)
       .where(eq(schema.appSettings.key, CURSOR_PREFIX + table))
       .limit(1);
-    return rows[0]?.value ?? null;
+
+    const stored = rows[0]?.value;
+    if (stored === undefined || stored === null) return null;
+
+    const parsed = Number(stored);
+    return Number.isFinite(parsed) ? parsed : null;
   }
 
-  private async setCursor(table: string, value: string): Promise<void> {
+  private async setCursor(table: string, value: number): Promise<void> {
     const key = CURSOR_PREFIX + table;
     const updatedAt = new Date().toISOString();
     await this.db
       .insert(schema.appSettings)
-      .values({ key, value, updatedAt })
-      .onConflictDoUpdate({ target: schema.appSettings.key, set: { value, updatedAt } });
+      .values({ key, value: String(value), updatedAt })
+      .onConflictDoUpdate({
+        target: schema.appSettings.key,
+        set: { value: String(value), updatedAt },
+      });
   }
 }

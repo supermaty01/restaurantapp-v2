@@ -1,22 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-  Linking,
-  TextInput,
-} from 'react-native';
+import { View, Text, TouchableOpacity, ActivityIndicator, TextInput } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 
 import { Button } from '@/components/ui/Button';
 import { MapPin } from '@/components/ui/MapPin';
+import { useToast } from '@/components/ui/Toast';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { FALLBACK_REGION, useCurrentRegion } from '@/lib/hooks/useCurrentRegion';
+import { usePermissionGate } from '@/lib/hooks/usePermissionGate';
 import { getAutocomplete, getPlaceDetails, reverseGeocode } from '@/services/places';
 
 import type { MapPressEvent, Region } from 'react-native-maps';
@@ -35,12 +29,6 @@ interface PlaceSuggestion {
 
 const GOOGLE_PLACES_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
-const openAppSettings = () => {
-  Linking.openSettings().catch(() => {
-    Alert.alert('Error', 'No se pudo abrir la configuración de la aplicación.');
-  });
-};
-
 // Only reached when the app has no location permission and the entity has no
 // coordinates yet. See lib/hooks/useCurrentRegion.
 const DEFAULT_REGION: Region = FALLBACK_REGION;
@@ -56,6 +44,8 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   editable = true,
 }) => {
   const { colors } = useTheme();
+  const toast = useToast();
+  const askForSettings = usePermissionGate();
   const mapRef = useRef<MapView | null>(null);
 
   const [mapRegion, setMapRegion] = useState<Region>({
@@ -220,7 +210,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
   const selectPlace = async (placeId: string, description: string) => {
     if (!GOOGLE_PLACES_API_KEY) {
       console.warn('Missing EXPO_PUBLIC_GOOGLE_PLACES_API_KEY');
-      Alert.alert('Error', 'No se encontró la configuración de Google Places.');
+      toast.notify('No se pudo buscar: falta la configuración de Google Places', 'danger');
       return;
     }
 
@@ -234,7 +224,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       const placeLocation = data.result?.geometry?.location;
       if (data.status !== 'OK' || !placeLocation) {
         console.warn('Place details error:', data.status, data.error_message);
-        Alert.alert('Error', 'No se pudo obtener la ubicación del lugar.');
+        toast.notify('No se pudo situar ese lugar', 'danger');
         return;
       }
 
@@ -263,7 +253,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       setSuggestions([]);
     } catch (error) {
       console.warn('Error selecting place:', error);
-      Alert.alert('Error', 'No se pudo seleccionar el lugar.');
+      toast.notify('No se pudo elegir ese lugar', 'danger');
     }
   };
 
@@ -294,14 +284,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        Alert.alert(
-          'Permiso denegado',
-          'Se requieren permisos para acceder a la ubicación. ¿Deseas ir a la configuración para habilitarlos?',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Abrir Configuración', onPress: openAppSettings },
-          ],
-        );
+        await askForSettings('tu ubicación');
         return;
       }
 
@@ -327,7 +310,7 @@ const MapLocationPicker: React.FC<MapLocationPickerProps> = ({
       void fetchAddress(coords.latitude, coords.longitude);
       setSuggestions([]);
     } catch {
-      Alert.alert('Error', 'No se pudo obtener la ubicación actual.');
+      toast.notify('No se pudo obtener tu ubicación', 'danger');
     } finally {
       setGettingCurrentLocation(false);
     }

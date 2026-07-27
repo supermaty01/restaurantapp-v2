@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import { useAuth } from '@/lib/context/AuthContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { subscribeToLocalChanges } from '@/services/sync/pending';
+import { needsDivergenceChoice } from '@/services/sync/resolveDivergence';
+import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
 import { getSyncState, requestSync, subscribeToSync } from '@/services/sync/syncStore';
 
 /**
@@ -32,16 +34,55 @@ export function useSync() {
   const db = useDatabase();
   const { accountUuid } = useAuth();
   const { status, lastOutcome, photos } = useSyncExternalStore(subscribeToSync, getSyncState);
+  /**
+   * Hay dos diarios y nadie ha elegido cual manda.
+   *
+   * Se expone en vez de navegar desde aqui: este hook se monta en dos sitios
+   * (SyncRunner y la pantalla de cuenta), asi que un `router.push` aqui dentro
+   * abriria la pantalla dos veces. Navegar es cosa de quien se monta una sola
+   * vez.
+   */
+  const [needsChoice, setNeedsChoice] = useState(false);
 
   const syncNow = useCallback(async () => {
     if (!accountUuid) return;
     await requestSync(db, accountUuid);
   }, [db, accountUuid]);
 
-  // On login (and account change).
+  /*
+   * On login (and account change) — pero antes hay que mirar si hay dos
+   * diarios.
+   *
+   * El orden importa y no es reversible: sincronizar primero **ya combina**, y
+   * preguntar después qué quieres hacer sería preguntar por algo que ya pasó.
+   * Así que si este dispositivo tiene entradas y la cuenta también, y nadie ha
+   * elegido todavía, se para aquí y se manda a elegir.
+   *
+   * Cualquier fallo comprobándolo (sin red, la RPC de conteos que no está)
+   * sincroniza igual: el peor caso de la comprobación es no llegar a preguntar
+   * y combinar, que es lo que hacía siempre. Bloquear el sync porque no se pudo
+   * contar sería cambiar una duda por una avería.
+   */
   useEffect(() => {
-    if (accountUuid) void syncNow();
-  }, [accountUuid, syncNow]);
+    if (!accountUuid) return;
+
+    let cancelled = false;
+    void (async () => {
+      try {
+        if (await needsDivergenceChoice(db, createSupabaseTransport(accountUuid), accountUuid)) {
+          if (!cancelled) setNeedsChoice(true);
+          return;
+        }
+      } catch {
+        // Se sincroniza igual.
+      }
+      if (!cancelled) await syncNow();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountUuid, syncNow, db]);
 
   // Shortly after a local write. Each new change pushes the timer out, so
   // saving three things in a row is one sync and not three.
@@ -70,5 +111,5 @@ export function useSync() {
     return () => sub.remove();
   }, [syncNow]);
 
-  return { status, lastOutcome, photos, syncNow, isSignedIn: accountUuid !== null };
+  return { status, lastOutcome, photos, syncNow, needsChoice, isSignedIn: accountUuid !== null };
 }
