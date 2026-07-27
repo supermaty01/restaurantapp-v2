@@ -1,10 +1,10 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-26 (tarde)
+**Última actualización:** 2026-07-26 (noche)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
-## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (tarde)
+## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (noche)
 
 La v2.0.0 **está instalada y en uso en el móvil del autor**, con datos reales y
 cuenta iniciada. Ya no estamos construyendo: estamos corrigiendo lo que aparece
@@ -12,37 +12,52 @@ al usarla.
 
 ### 👉 Lo siguiente, en orden
 
-0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero, y ahora hay
-   una razón medida: los drawers, el toque en el nombre para abrir el perfil y
-   los textos cortados **se reportaron como rotos y funcionan** en el emulador
-   contra esta rama. Lo que se está probando en el móvil es un APK anterior a la
-   sesión que los arregló. Antes de rehacer nada de eso, `eas build -p android
---profile preview`.
+0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero, con dos
+   razones medidas:
+   - Los drawers, el toque en el nombre para abrir el perfil y los textos
+     cortados **se reportaron como rotos y funcionan** en el emulador contra
+     esta rama. Lo que se prueba en el móvil es un APK anterior a la sesión que
+     los arregló.
+   - El push falla al arrancar con `Default FirebaseApp is not initialized`
+     (visto en el log del emulador). Es lo esperado: el APK instalado se
+     construyó **antes** de que `googleServicesFile` entrara en
+     `app.config.js`. Ninguna recarga de JavaScript lo arregla.
 
-### Pendiente de esta tanda, sin empezar
+   `eas build -p android --profile preview`.
 
-- **Notificaciones nuevas**: un amigo publica (con silencio de 10 min por
-  persona, y que sea el **primer** aviso y no el último) y solicitudes de
-  amistad. La tabla `notifications` de 0016 ya es genérica por `kind`, así que
-  son dos triggers y dos textos, no una migración de fondo.
-- **Eliminar cuenta y datos (GDPR)**: apartado poco visible en Ajustes, con
+### Pendiente, sin empezar
+
+El autor fijó el orden: foto de perfil > scroll > Inicio > **notificaciones** >
+**borrar cuenta**. Los tres primeros están hechos y verificados; quedan estos
+dos, y entran limpios en una sesión propia.
+
+- **Notificaciones nuevas.** Dos clases más sobre la tabla `notifications` de
+  0016, que ya es genérica por `kind`: son dos triggers y dos textos, no una
+  migración de fondo.
+  - `friend_published`: un amigo crea una visita, un plato o un restaurante que
+    puedes ver. Con **silencio de 10 minutos por persona**, y decidido con el
+    autor que el aviso sea **el primero y no el último**: registrar una comida
+    entera crea tres cosas seguidas y solo debe salir una. Se implementa en el
+    trigger mirando la última notificación de ese actor para ese destinatario.
+  - `friend_request` y `friend_accepted`.
+  - **Descartada a propósito** la idea de «un amigo visita un sitio que
+    puntuaste alto»: depende de que dos personas registren el mismo local —
+    misma sede, mismo nombre— y eso no se puede dar por hecho.
+- **Eliminar cuenta y datos (GDPR).** Apartado poco visible en Ajustes, con
   confirmación fuerte —escribir el usuario, no un «sí»—. Tiene que borrar de
   verdad: espejo, fotos en R2, perfil, tokens de push, avisos y la cuenta de
   auth. Y decir qué **no** se borra: lo que otras personas ya guardaron de una
-  visita compartida. Ofrecer exportar antes (`BackupService` ya existe).
-- **Cambiar la foto de perfil**: reemplazar la de Google, o añadir una si la
-  cuenta se creó por correo. Sube a R2 por el Worker como las del diario y
-  actualiza `profiles.avatar_url`.
-- **La vista calendario se vuelve loca al scrollear rápido.** Sospechas en
-  orden: alturas de fila no constantes sin `getItemLayout`, el agrupado por mes
-  recalculándose en cada render, o `removeClippedSubviews`. **Medir antes de
-  tocar.**
-- **Inicio, una entrada por sesión de registro** (prioridad Visita > Plato >
-  Restaurante). Decidido con el autor: «lo último que añadiste» en vez de
-  «últimas visitas», pero agrupando — si en una misma sesión se creó visita,
-  platos y restaurante, sale **una** entrada, la que más información lleva. La
-  visita ya menciona su restaurante y sus platos; el plato ya menciona su
-  restaurante.
+  visita compartida. Ofrecer exportar antes (`BackupService` ya existe). No es
+  urgente porque no hay producción todavía, pero es obligación legal el día que
+  la haya.
+
+### Decidido y sin cerrar del todo
+
+- **El orden de «Lo último que añadiste» es por fecha de registro**, no por la
+  fecha de la comida, así que puede verse «29 jun» encima de «24 jul». Es
+  coherente con el título y con agrupar por sesión, pero está pendiente de que
+  el autor confirme que no le chirría. Cambiarlo es una línea en
+  `useHomeSummary`.
 
 ### Servicios (bloqueado por terceros)
 
@@ -53,9 +68,69 @@ al usarla.
 3. **Probar el sync con dos dispositivos y sesión iniciada.** Sigue sin
    verificarse contra servicios reales. Empezar por Ajustes → «¿Está todo en la
    nube?».
-4. **Fusionar la rama.** `main` no tiene nada de las últimas tres sesiones.
+4. **Fusionar la rama.** `main` no tiene nada de las últimas cuatro sesiones.
 
-### 🟢 Lo cerrado en esta tanda (feedback en dispositivo, ronda 3)
+### 🟢 Lo cerrado en la ronda 4 (todo verificado en el emulador)
+
+Verde: TypeScript en 0, **309 tests**, lint sin avisos, SQL en verde.
+
+El emulador tenía sesión iniciada y datos reales, así que por primera vez se
+pudo comprobar lo social de verdad en vez de estados vacíos.
+
+- **La etiqueta enseñaba la fachada del restaurante** (migración **0018**).
+  `tagged_visits` ordenaba con `(i.visit_uuid = v.uuid) desc` para preferir la
+  foto de la visita — pero para una foto de restaurante `visit_uuid` es NULL, la
+  comparación da NULL, y **Postgres ordena NULLS FIRST en `DESC`**. Iban
+  delante las del restaurante: justo lo contrario de lo que se lee. Por eso la
+  misma comida salía con la fachada en «Contigo» y con la mesa en el feed —
+  `feed_page` nunca mira las del restaurante.
+- **«con 2 personas» → «con Irene y Moni»**, en Amigos y en Contigo. Se prefiere
+  el nombre al @usuario: mezclarlos deja «con caro y Moni», con una en
+  minúscula. Quien mira no se lista a sí misma.
+- **Fuera los quince `Alert` del sistema**, con test estructural que lo sujeta.
+  El diálogo de permisos estaba copiado tres veces → `usePermissionGate`.
+  **Cerrar sesión ahora pregunta** y dice cuántos cambios quedan sin subir.
+- **Foto de perfil.** La clave lleva la hora a propósito: el Worker sirve con
+  `immutable, max-age=31536000` —correcto para el diario, cuyas claves son
+  uuids— y con clave fija la foto nueva quedaría escondida detrás de la vieja un
+  año en cada dispositivo que la hubiera visto.
+- **El scroll del calendario**, en dos pasadas (ver abajo).
+- **Inicio: «Lo último que añadiste»**, una entrada por sesión de registro.
+  Agrupa por **relaciones y no por reloj**: `dish_visit` y el restaurante de
+  cada fila dicen qué se creó como parte de qué, mientras que una ventana de
+  tiempo fundiría dos comidas registradas seguidas y partiría una sesión lenta.
+
+### 🔬 El scroll del calendario, y una lección de medición
+
+Costó dos pasadas y las dos enseñan algo.
+
+**Primera: faltaba `getItemLayout`.** Reproducido antes de tocar nada — tras un
+fling, la cabecera fija decía «Agosto 2025» sobre filas del 4 y el 3 de julio.
+Sin `getItemLayout` la `SectionList` estima posiciones y las corrige al medir;
+al lanzar un fling se saltan decenas de celdas sin medir y
+`stickySectionHeadersEnabled`, que decide qué cabecera pintar a partir de esos
+offsets, acaba enseñando el mes equivocado.
+
+**Segunda: la estimación estaba mal.** Quedaba un hueco por el que se veía el
+fondo. La cabecera se calculaba en 52 dp y **mide 49,1**: el alto de una fila
+`items-baseline` no es el `lineHeight` del texto más alto. Tres dp por sección
+se acumulan hasta despegarla. Medido con `uiautomator dump`: cabecera 129 px,
+fila 607 px a densidad 420 — la fila estaba bien, solo fallaba la cabecera.
+Ahora la estimación es semilla y manda la medida real, **tomada una sola vez**
+con un guard de ref.
+
+> **Dos trampas que casi cuestan una sesión, anotadas para no repetirlas.**
+>
+> 1. El primer intento de medir puso `onLayout` en **cada** cabecera y fila: cada
+>    una que entraba en pantalla disparaba un `setState`, la tabla de offsets se
+>    rehacía a media animación y la lista se quedaba en blanco. Medir una vez, no
+>    continuamente.
+> 2. Ese «se queda en blanco» tras seis flings seguidos **también pasa sin ningún
+>    cambio, y se recupera solo en dos segundos**: es latencia de render, no un
+>    layout roto. Capturar justo al soltar pilla la lista a medias. Estuve a punto
+>    de perseguir un fallo inexistente por sacar la captura demasiado pronto.
+
+### 🟢 Lo cerrado en la ronda 3 (feedback en dispositivo)
 
 Verde: TypeScript en 0, **295 tests** de app + **36 del worker**, lint sin
 avisos. Las aserciones SQL no se pudieron correr —el entorno no tiene Docker—
@@ -371,7 +446,7 @@ Leyenda: 🟢 código completo y testeado · 🟡 código escrito, necesita serv
 
 | Fase                    | Estado                                                                                                                                                                                                   |
 | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Documentación de diseño | ✅ Completa (docs 00–15)                                                                                                                                                                                 |
+| Documentación de diseño | ✅ Completa (docs 00–16)                                                                                                                                                                                 |
 | 0 — Puesta a punto      | ✅                                                                                                                                                                                                       |
 | 1 — Esquema local       | ✅ Migraciones 0007–0010 verificadas contra una base v1 poblada                                                                                                                                          |
 | 2 — Supabase + Auth     | ✅ Google OAuth funcionando en dispositivo                                                                                                                                                               |
@@ -381,7 +456,7 @@ Leyenda: 🟢 código completo y testeado · 🟡 código escrito, necesita serv
 | 6 — UI                  | ✅ Rediseño completo                                                                                                                                                                                     |
 | 7 — Asistente IA        | 🟡 Tools de consulta testeadas · agente/voz/embeddings pendientes · **apagado en la 2.0.0** (`lib/features.ts`)                                                                                          |
 
-**Verificación transversal en cada commit:** TypeScript en 0, **298 tests** (109 app-mobile + 165 node-mobile + 24 worker) más **117 aserciones SQL** (`npm run db:test`), `npm run lint` sin errores ni warnings, bundle Android.
+**Verificación transversal en cada commit:** TypeScript en 0, **345 tests** (109 app-mobile + 200 node-mobile + 36 worker) más **121 aserciones SQL** (`npm run db:test`), `npm run lint` sin errores ni warnings, bundle Android.
 
 ## Primer despliegue — v2.0.0
 
