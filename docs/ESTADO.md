@@ -1,10 +1,119 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-26 (ronda 5)
+**Última actualización:** 2026-07-26 (ronda 6 — auditoría)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
-## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (ronda 5)
+## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (ronda 6)
+
+Rama `fix/auditoria-ronda-6`. Auditoría completa del proyecto y corrección de lo
+encontrado, en orden de gravedad. **Cómo se trabaja a partir de ahora está en
+[AGENTS.md](../AGENTS.md)**, en la raíz: es lo segundo que hay que leer después
+de este documento.
+
+### Lo que se arregló
+
+**Cuatro fallos que se veían en la app o la habrían roto:**
+
+1. **Las pantallas no se enteraban de las etiquetas.** Cinco hooks pasaban a
+   `useLiveTablesQuery` el nombre del export de Drizzle (`dishTags`) en vez del
+   nombre SQL (`dish_tag`). Los dos son cadenas, así que no fallaba: no
+   coincidía. Poner o quitar una etiqueta a un plato, o un acompañante a una
+   visita, no repintaba — y a veces sí, cuando la operación tocaba además una
+   tabla bien escrita, lo que lo hacía parecer intermitente. El hook ahora recibe
+   objetos de tabla y el error no se puede escribir.
+2. **El `android/` commiteado apuntaba a otra app** (`com.restaurantappv2`,
+   `versionCode 1`, sin el intent-filter de `restaurantapp://`, sin permiso de
+   notificaciones) mientras `google-services.json` estaba registrado para
+   `com.supermaty01.restaurantapp` y un `app.json` en la raíz declaraba un tercer
+   nombre. Se coló por accidente en un commit de UI. **Es una causa
+   independiente del mismo síntoma que el punto 0 de abajo.** Fuera, e ignorado
+   desde la raíz.
+3. **`packages/shared` no tenía código.** Es lo que rompía `npm run check`. Ahora
+   contiene lo que le correspondía: el esquema zod del `.restoshare`.
+4. **Revocar un enlace compartido decía que sí pasara lo que pasara.** El
+   `fetch` salía y la respuesta se descartaba.
+
+**Seguridad:**
+
+- Las imágenes guardaban el `content-type` que mandara quien subía y el `GET`
+  público lo devolvía tal cual con `immutable` a un año: subir `text/html` daba
+  una página ejecutándose en el mismo origen que las previsualizaciones de
+  `/s/:id`. Ahora el tipo lo deciden los bytes, con tope de tamaño y `nosniff`.
+- La **bio se leía por la puerta de al lado**: `user_profile()` la escondía a un
+  desconocido y `GET /rest/v1/profiles?select=bio` la devolvía igual
+  (migración `0020`).
+- Marcar un aviso permitía reescribirlo entero pese a decir «solo marcado»
+  (`0020`).
+- Las rutas de IA no tenían ningún tope, y el control que la documentación decía
+  que había —el AI Gateway— viene desactivado por defecto.
+- El JWKS se pedía por red en **cada** petición autenticada.
+- El cron de las 3:00 que `wrangler.toml` documenta no existía: `scheduled` no
+  miraba `event.cron`.
+
+**Las puertas de calidad, que estaban apagadas:** `.husky/` vacío (y con el
+`lint-staged` mal escrito, llamando a eslint desde donde no hay configuración),
+CI comprobando solo `apps/mobile`, lint con `continue-on-error: true`, y
+`format:check` imposible de pasar en Windows por CRLF. Todo eso funciona ahora, y
+`npm run db:test` corre en CI contra un Postgres de verdad.
+
+**Rendimiento:** el sync hacía una consulta a SQLite por cada clave ajena de cada
+fila —del orden de 2.000 por página de 500— y las 27 políticas RLS reevaluaban
+`auth.uid()` fila a fila.
+
+Números: **321 tests** en la app (antes 319, +2 que miden consultas), **57** en
+el Worker (+11), **9** en shared (nuevos), **154 asserts SQL** (antes 146).
+
+### ⏭️ Lo que queda pendiente (por orden)
+
+0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero. Ahora hay una
+   razón más para hacerlo: se ha borrado el `android/` commiteado, así que la
+   build sale de `app.config.js` limpia por primera vez. Ojo — el paquete
+   correcto (`com.supermaty01.restaurantapp`) **no es** el del APK que pudiera
+   haberse construido desde el `android/` viejo, así que puede instalarse al lado
+   en vez de encima.
+
+   `eas build -p android --profile preview`.
+
+1. **Eliminar cuenta y datos (GDPR).** Sin tocar; sigue siendo lo único que
+   queda del plan original. Detalle abajo.
+
+2. **La regla del dinero está rota.** `schema.ts` declara
+   `price: integer('price')` y la app escribe `3.5`; SQLite no lo impide y por
+   eso tumbó un push contra Postgres en su día (ver `0008`). Se arregló **solo el
+   lado servidor** (`numeric(12,2)`). Hay que decidir uno de los dos —céntimos
+   enteros en ambos lados, o `real` en ambos— y migrar el local.
+
+3. **Cero tests de UI.** No hay un solo `.test.tsx`;
+   `@testing-library/react-native` está instalado y no se importa en ninguna
+   parte. docs/12 pide cubrir «lógica no trivial»: el visor de imágenes y los
+   formularios con prefill.
+
+4. **Round-trip export→import.** docs/12 lo exige y no existe. El esquema del
+   `.restoshare` ya está cubierto en `packages/shared`; falta la vuelta entera.
+
+5. **Sync contra Supabase local.** Hoy está cubierto contra un `FakeServer` que
+   modela el trigger LWW y `sync_seq`, que es bastante — pero dos dispositivos de
+   verdad contra un Postgres de verdad es otra cosa.
+
+6. **Aislamiento entre features.** Necesita `eslint-plugin-boundaries` y mover a
+   un sitio común lo que hoy se comparte con razón (el componente `Tag`,
+   `ImageDTO`/`TagDTO`). Explicado en docs/12.
+
+7. **Sin telemetría de errores.** `reportError` hace `console.error` y enseña un
+   diálogo. En cuanto la app esté en manos de alguien más, un fallo que no se
+   reproduzca delante no deja rastro.
+
+8. **`npm audit`: 53 avisos, 3 causas.** Todas transitivas y de la cadena de
+   construcción (`brace-expansion` vía eslint/jest, `esbuild` vía drizzle-kit,
+   `uuid` vía los config-plugins de Expo). **No ejecutar `npm audit fix
+--force`:** propone bajar a expo 46, jest 19 y drizzle-kit 0.18. Lo razonable
+   son `overrides` puntuales de `brace-expansion` y `uuid`. CI ya lo reporta sin
+   bloquear.
+
+### 📌 De la ronda 5, todavía vigente
+
+## 🗄️ Ronda 5 — 26 de julio de 2026
 
 Las **notificaciones nuevas están hechas y probadas contra Postgres de verdad**
 (migración 0019). De la lista que fijó el autor —foto de perfil > scroll >
@@ -36,17 +145,17 @@ las 19 migraciones desde cero en una base desechable por fichero de test.
 
 ### ⚠️ Encontrado de paso, sin arreglar
 
-Los dos son anteriores a esta ronda y están **verificados contra el árbol
-limpio**, así que no son regresiones. El detalle, en [Deuda
-anotada](#deuda-anotada):
+> **Los dos se arreglaron en la ronda 6.** Se dejan escritos porque explican por
+> qué varias rondas pudieron declararse «verdes» sin serlo, que es la lección
+> que interesa conservar.
 
-- **`npm run check` desde la raíz está roto**, y lleva tiempo estándolo:
+- ~~**`npm run check` desde la raíz está roto**~~, y lleva tiempo estándolo:
   `packages/shared` no tiene `src/` y revienta en `typecheck`, `test:ci` y
   `lint`. Las rondas que declararon «verde» corrían los workspaces por separado.
-  **Al verificar esta rama, hazlo con `-w apps/mobile -w apps/api`** hasta que se
-  arregle, o creerás que rompiste algo que ya estaba roto.
-- **Diez ficheros sin formatear** que `format:check` marca y que nadie ha tocado
-  aquí. Se dejan para un commit propio.
+  → Resuelto: el paquete ya tiene contenido y `npm run check` pasa entero.
+- ~~**Diez ficheros sin formatear**~~ que `format:check` marca. Resultaron ser
+  CRLF, no formato: `.gitattributes` decía `eol=lf` y el árbol tenía otra cosa,
+  así que la comprobación era imposible de pasar en Windows. → Renormalizado.
 
 ### Decidido y sin cerrar del todo
 

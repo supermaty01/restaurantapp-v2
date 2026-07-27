@@ -64,27 +64,31 @@ async function seedRemote(server: FakeServer, restaurants: number, dishesEach: n
 
   for (let r = 0; r < restaurants; r++) {
     const uuid = `aaaaaaaa-0000-4000-8000-${String(r).padStart(12, '0')}`;
-    server.upsert('restaurants', [{
-      uuid,
-      user_id: ACCOUNT,
-      name: `Sitio ${String(r)}`,
-      visibility: 'private',
-      deleted: false,
-      created_at: now,
-      updated_at: now,
-    }]);
-
-    for (let d = 0; d < dishesEach; d++) {
-      server.upsert('dishes', [{
-        uuid: `bbbbbbbb-${String(r).padStart(4, '0')}-4000-8000-${String(d).padStart(12, '0')}`,
+    server.upsert('restaurants', [
+      {
+        uuid,
         user_id: ACCOUNT,
-        restaurant_uuid: uuid,
-        name: `Plato ${String(r)}-${String(d)}`,
+        name: `Sitio ${String(r)}`,
         visibility: 'private',
         deleted: false,
         created_at: now,
         updated_at: now,
-      }]);
+      },
+    ]);
+
+    for (let d = 0; d < dishesEach; d++) {
+      server.upsert('dishes', [
+        {
+          uuid: `bbbbbbbb-${String(r).padStart(4, '0')}-4000-8000-${String(d).padStart(12, '0')}`,
+          user_id: ACCOUNT,
+          restaurant_uuid: uuid,
+          name: `Plato ${String(r)}-${String(d)}`,
+          visibility: 'private',
+          deleted: false,
+          created_at: now,
+          updated_at: now,
+        },
+      ]);
     }
   }
 }

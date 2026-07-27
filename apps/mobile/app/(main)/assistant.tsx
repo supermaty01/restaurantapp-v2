@@ -65,11 +65,7 @@ function AssistantChat() {
     setInput('');
     setBusy(true);
     try {
-      const { answer } = await runAssistant(
-        db,
-        { systemPrompt },
-        nextHistory,
-      );
+      const { answer } = await runAssistant(db, { systemPrompt }, nextHistory);
       setHistory([...nextHistory, { role: 'assistant', content: answer }]);
     } catch {
       setHistory([

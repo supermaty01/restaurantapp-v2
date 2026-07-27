@@ -21,6 +21,20 @@
 | [11 — Dependencias](11-dependencias.md)               | Política de dependencias, upgrades de SDK, imágenes sin librerías |
 | [12 — Calidad](12-calidad.md)                         | Lint, formato, tipos, tests, reglas de arquitectura               |
 | [13 — Despliegue](13-despliegue.md)                   | Guía end-to-end: app, Supabase, Worker, R2, AI Gateway            |
+| [14 — Diseño](14-diseno.md)                           | Sistema visual Clay: tokens, tipografía, superficies              |
+| [15 — Notificaciones push](15-notificaciones-push.md) | Avisos, Expo Push, el cron del Worker, credenciales de FCM        |
+| [16 — Memoria e imágenes](16-memoria-e-imagenes.md)   | Fotos en R2, caché local, consumo de memoria del visor            |
+
+> Los tres últimos existían y no estaban en este índice, así que en la práctica
+> no existían para quien llegaba nuevo. Si escribes un documento, entra aquí en
+> el mismo commit.
+
+## Para trabajar en el código
+
+[AGENTS.md](../AGENTS.md) en la raíz recoge cómo se trabaja aquí: las puertas de
+calidad, los errores que más caros salieron y por qué, y las convenciones de
+comentarios, tests y migraciones. Es lo segundo que hay que leer después de
+ESTADO.
 
 ## Convenciones
 
