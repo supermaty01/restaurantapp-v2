@@ -5,6 +5,7 @@ import PeekablePressable from '@/components/PeekablePressable';
 import { EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
+import { type as typeScale } from '@/lib/design/tokens';
 import { formatDate, formatVisitDate } from '@/lib/helpers/date';
 
 import { groupByMonth } from '../utils/groupByMonth';
@@ -16,6 +17,20 @@ const GUTTER = 20;
 const GAP = 10;
 /** Two columns, not three: a photo plus a name and a date needs the width. */
 const COLUMNS = 2;
+
+/*
+ * Las alturas exactas de una fila y de una cabecera, para `getItemLayout`.
+ *
+ * Salen de los tokens y no de números a ojo: si mañana cambia la escala
+ * tipográfica, esto la sigue. Lo que queda a mano son los paddings, que van
+ * anotados junto a la clase que los pone para que se muevan a la vez.
+ *
+ * Debajo del `Thumbnail` van dos líneas de una sola línea cada una
+ * (`numberOfLines={1}`), así que su alto es fijo y la fila entera es medible
+ * sin renderizarla — que es justo lo que `getItemLayout` necesita.
+ */
+const TILE_TEXT_HEIGHT = 6 + typeScale.callout.lineHeight + typeScale.caption.lineHeight; // pt-1.5
+const HEADER_HEIGHT = 16 + typeScale.title.lineHeight + 10 + 1; // pt-4 + pb-2.5 + borde
 
 /**
  * Visits as a photo timeline, grouped by month.
@@ -45,6 +60,48 @@ export function VisitTimeline({
     () => groupByMonth(visits, (visit) => visit.visited_at, COLUMNS, new Date(), order),
     [visits, order],
   );
+
+  /*
+   * Dónde empieza y cuánto mide cada cosa, precalculado.
+   *
+   * Sin esto la `SectionList` **estima** las posiciones y las corrige cuando
+   * cada celda se mide de verdad. Al desplazar despacio no se nota; al lanzar un
+   * fling se saltan decenas de celdas sin medir y las estimaciones se
+   * desvían — y como `stickySectionHeadersEnabled` decide qué cabecera pintar a
+   * partir de esos offsets, acababa enseñando "Agosto 2025" encima de filas de
+   * julio. Reproducido en el emulador antes de tocar nada.
+   *
+   * Se precalcula una tabla en vez de deducir el índice con una fórmula: en una
+   * `SectionList` el índice que llega a `getItemLayout` está aplanado
+   * (cabecera + filas + pie, por sección) y esa aritmética es fácil de escribir
+   * mal y difícil de ver mal. Recorrer las secciones una vez es O(n) y no puede
+   * desalinearse.
+   */
+  const layouts = useMemo(() => {
+    const rowHeight = GAP + tileSize + TILE_TEXT_HEIGHT;
+    const table: { length: number; offset: number; index: number }[] = [];
+    let offset = 0;
+    let index = 0;
+
+    for (const section of sections) {
+      table.push({ length: HEADER_HEIGHT, offset, index });
+      offset += HEADER_HEIGHT;
+      index += 1;
+
+      for (let row = 0; row < section.data.length; row += 1) {
+        table.push({ length: rowHeight, offset, index });
+        offset += rowHeight;
+        index += 1;
+      }
+
+      // La `SectionList` reserva un hueco de pie por sección aunque no se pinte
+      // ninguno. Sin contarlo, todo lo que viene después queda desplazado.
+      table.push({ length: 0, offset, index });
+      index += 1;
+    }
+
+    return table;
+  }, [sections, tileSize]);
 
   if (visits.length === 0) {
     return (
@@ -77,6 +134,9 @@ export function VisitTimeline({
       // fotos, que ya son caras de montar, se nota como un parpadeo en un punto
       // fijo del recorrido.
       removeClippedSubviews={false}
+      getItemLayout={(_, index) =>
+        layouts[index] ?? { length: GAP + tileSize + TILE_TEXT_HEIGHT, offset: 0, index }
+      }
       renderSectionHeader={({ section }) => (
         // Full-bleed and opaque: the padding used to live on the content
         // container, which inset the pinned header and let photos scroll
