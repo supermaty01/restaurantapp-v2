@@ -9,7 +9,7 @@ import { Chip } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VISIBILITIES, VISIBILITY_META, type Visibility } from '@/features/privacy/visibility';
-import Tag from '@/features/tags/components/Tag';
+import { TagChip } from '@/features/tags/components/TagChip';
 import { useTagsList } from '@/features/tags/hooks/useTagsList';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -267,29 +267,18 @@ export function FilterSheet({
             title="Etiquetas"
             hint={draft.selectedTags.length > 0 ? `${draft.selectedTags.length} elegidas` : 'Todas'}
           >
+            {/* El mismo control que el drawer de añadir etiquetas, y no un
+                radio button con la etiqueta al lado: la pregunta es la misma y
+                la respuesta tiene que verse igual en los dos sitios. */}
             <View className="flex-row flex-wrap gap-2">
-              {tags.map((tag) => {
-                const selected = draft.selectedTags.some((t) => t.id === tag.id);
-                return (
-                  <Pressable
-                    key={tag.id}
-                    accessibilityRole="checkbox"
-                    accessibilityState={{ checked: selected }}
-                    accessibilityLabel={tag.name}
-                    onPress={() => toggleTag(tag)}
-                    className={`flex-row items-center gap-1.5 rounded-pill border p-0.5 pr-2 ${
-                      selected ? 'border-primary bg-primary/8' : 'border-transparent'
-                    }`}
-                  >
-                    <Tag name={tag.name} color={tag.color} />
-                    <Ionicons
-                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
-                      size={15}
-                      color={selected ? colors.primary : colors.lineStrong}
-                    />
-                  </Pressable>
-                );
-              })}
+              {tags.map((tag) => (
+                <TagChip
+                  key={tag.id}
+                  tag={tag}
+                  selected={draft.selectedTags.some((t) => t.id === tag.id)}
+                  onPress={() => toggleTag(tag)}
+                />
+              ))}
             </View>
           </Section>
         ) : null}
