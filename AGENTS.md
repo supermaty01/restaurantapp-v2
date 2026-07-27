@@ -1,201 +1,280 @@
-# Cómo se trabaja en este proyecto
+# AGENTS.md
 
-Para quien retome esto —persona o agente— después de la auditoría de julio de 2026. No repite [docs/12](docs/12-calidad.md), que es el estándar; esto es lo que
-se aprendió aplicándolo, que es distinto y no estaba escrito en ninguna parte.
+Instrucciones operativas para un agente que trabaja en este repositorio. Léelo
+entero antes de tocar nada; está escrito para ahorrarte los errores que ya se
+cometieron una vez.
 
-Lo primero sigue siendo [docs/ESTADO.md](docs/ESTADO.md).
-
----
-
-## La regla que resume el resto
-
-**Una regla que no se ejecuta no existe, y una que no se puede cumplir es peor
-que no tenerla.**
-
-La auditoría encontró el estándar de calidad completo, bien argumentado, y
-casi entero sin aplicar:
-
-- `.husky/` tenía el directorio `_` y ningún hook. `lint-staged` llevaba meses
-  configurado en `package.json` sin que nada lo ejecutara — y **estaba mal
-  escrito**: llamaba a `eslint` desde la raíz del monorepo, donde no hay
-  configuración. Habría fallado la primera vez que corriera. Nadie lo supo
-  porque nunca corrió.
-- CI comprobaba `apps/mobile` y nada más. Los 57 tests del Worker y los 154
-  asserts SQL existían y no los ejecutaba nadie.
-- El lint estaba en un job con `continue-on-error: true` y un comentario que
-  decía «quitar cuando aterrice la fase 1». La fase 1 había aterrizado hacía
-  mucho.
-- `npm run check` no podía pasar en Windows: varios ficheros tenían CRLF pese al
-  `eol=lf` de `.gitattributes`, así que `format:check` fallaba por ruido.
-
-Ese último es el más instructivo. Una puerta que falla por motivos ajenos al
-código es la que se acaba saltando con `--no-verify`, y a partir de ahí ya no
-hay puerta. **Si una comprobación molesta sin aportar, se arregla la
-comprobación; no se rodea.**
-
-### Qué hacer con esto
-
-- Antes de empujar: `npm run check`. El hook de pre-push ya lo hace.
-- Antes de tocar la base de datos: `npm run db:test`. Necesita `supabase start`
-  o `DATABASE_URL`.
-- Si una regla nueva produce cien avisos, **no la pongas en `warn`**. O bloquea,
-  o va a un script aparte que se lanza a propósito. Está explicado en docs/12 a
-  cuenta de las reglas de React Compiler, y es la decisión correcta.
+**Antes de cualquier tarea, lee [docs/ESTADO.md](docs/ESTADO.md).** Dice en qué
+punto está el trabajo y qué está roto ahora mismo. Está mantenido al día y es la
+única fuente fiable de "qué pasa hoy".
 
 ---
 
-## Los cinco errores que más caros salieron
+## 1. Qué es esto
 
-Vale la pena conocerlos porque los cinco tienen la misma forma: **algo que
-parecía comprobado y no lo estaba.**
+Diario gastronómico personal. **Local-first con nube opcional**: la app funciona
+al 100% sin cuenta y sin conexión; cuenta y sincronización son una capa que se
+añade encima y que el usuario puede no activar nunca.
 
-### 1. Cadenas donde debería haber tipos
+Ese principio (docs/00) no es un eslogan, es una restricción de diseño que ya ha
+rechazado propuestas. Si tu cambio hace que algo deje de funcionar sin sesión o
+sin red, **el cambio está mal**, no el principio.
 
-Cinco hooks pasaban `'dishTags'` a `useLiveTablesQuery`, que compara con el
-nombre SQL de la tabla — `dish_tag`. Los dos son `string`, así que la
-comparación no fallaba: no coincidía nunca. Poner una etiqueta a un plato no
-refrescaba la pantalla, y a veces sí (cuando la operación tocaba además una
-tabla bien escrita), lo que lo hacía parecer intermitente.
+Segunda restricción: **todo tiene que caber en capas gratuitas**. Descarta
+alternativas de pago sin discusión.
 
-Dos hooks lo tenían bien y cinco mal, conviviendo en el mismo repo.
-
-> **Regla:** si una API acepta el nombre de algo que ya existe como objeto, que
-> acepte el objeto. `useLiveTablesQuery` ahora recibe tablas y saca el nombre con
-> `getTableName`. El error dejó de poder escribirse.
-
-### 2. `as` sobre entrada que viene de fuera
-
-`JSON.parse(content) as ShareFileData` en la importación de `.restoshare`. Un
-`as` no comprueba: afirma. Era la única entrada verdaderamente no confiable de
-la app —la abre el sistema desde un adjunto— y la única sin zod, mientras cada
-formulario propio sí pasaba por zod.
-
-> **Regla:** `as` nunca sobre algo que no escribió este código. En el borde va
-> `unknown` y un esquema. El del fichero compartido vive en
-> `packages/shared/src/share-file.ts`.
-
-### 3. Respuestas que no se miran
-
-`shareStore.revoke` lanzaba el `fetch` y descartaba la respuesta; la ruta
-contestaba `{ok:true}` pasara lo que pasara. Un 4xx de Supabase se veía en la app
-como «enlace revocado» con el enlace todavía sirviendo el contenido.
-
-> **Regla:** toda respuesta se comprueba, y con más razón las de las acciones de
-> seguridad. `no-floating-promises` está activo en los tres workspaces; es la
-> regla que encuentra la mitad de estos.
-
-### 4. Comentarios que describen lo que se quiso hacer
-
-Tres casos, todos con el mismo patrón: el comentario decía la intención y el
-código hacía otra cosa.
-
-- `0002` decía «solo username/display_name/avatar se exponen». La policy era
-  `for select using (auth.role() = 'authenticated')` sobre la tabla entera, sin
-  columnas: `GET /rest/v1/profiles?select=bio` devolvía la bio de cualquiera,
-  saltándose la comprobación cuidadosa de `user_profile()`.
-- `0016` decía «solo de lectura y marcado». Era un `for update` sin restricción
-  de columnas.
-- `ai.ts` decía «siempre a través del AI Gateway (rate limiting)». `AI_GATEWAY`
-  viene vacío en `wrangler.toml`, así que el único control de coste era opcional
-  y venía apagado.
-
-> **Regla:** cuando escribas un comentario que afirme una garantía, pregúntate
-> qué la sujeta. Si la respuesta es «el código de al lado», escribe el test. Los
-> `.test.sql` de `supabase/tests/` existen para esto: comprueban las políticas
-> como Postgres las ejecuta, no como creemos que las escribimos.
-
-### 5. Artefactos generados dentro del repo
-
-Un `android/` de `expo prebuild` se coló en un commit de UI y se quedó congelado
-en `com.restaurantappv2` con `versionCode 1`, sin el intent-filter de
-`restaurantapp://` y sin permiso de notificaciones — mientras
-`google-services.json` estaba registrado para `com.supermaty01.restaurantapp` y
-un `app.json` en la raíz declaraba un tercer nombre.
-
-Cualquier build hecha desde ahí llevaba el paquete equivocado: Firebase no
-arranca y el redirect de OAuth no vuelve a la app.
-
-> **Regla:** el proyecto es **CNG**. `android/` y `ios/` los genera EAS desde
-> `app.config.js`, están en `.gitignore` desde la raíz, y no se commitean nunca.
-> `app.config.js` es la única fuente de verdad de la configuración nativa.
+```
+apps/mobile     Expo / React Native, expo-router, Drizzle + SQLite, NativeWind
+apps/api        Cloudflare Worker (Hono): enlaces compartidos, proxy de IA, imágenes R2, cron
+packages/shared Lo que comparten app y Worker (hoy: el esquema del .restoshare)
+supabase/       Migraciones, RLS, RPCs y tests SQL contra Postgres de verdad
+docs/           Diseño y plan. ESTADO.md es el que se actualiza siempre
+```
 
 ---
 
-## Cómo se escribe aquí
+## 2. Comandos
 
-El estilo del proyecto es bueno y conviene mantenerlo. No es decoración: es lo
-que hace que el código se pueda retomar a los seis meses.
+```bash
+npm run check      # formato + lint + tipos + tests de los tres workspaces. La puerta.
+npm run db:test    # los .test.sql (necesita `supabase start` o DATABASE_URL)
+npm run mobile     # arrancar la app
+```
 
-### Comentarios
+**`npm run check` tiene que pasar antes de dar nada por terminado.** El hook de
+pre-push lo ejecuta. No lo rodees con `--no-verify`: si molesta sin aportar,
+arregla la comprobación y explica por qué en el commit.
 
-Se explica **por qué**, nunca **qué**. Y en particular se explica _qué se
-intentó antes y por qué no valía_ — el repo está lleno de comentarios así y son
-lo más útil que tiene. Ejemplo real, en `tables.ts`:
+Si tocas SQL, `npm run db:test` **además**. No lo cubre `npm run check` porque
+necesita una base de datos, y es lo único que comprueba que las políticas RLS
+hacen lo que crees.
+
+---
+
+## 3. Invariantes: romper esto causa daños silenciosos
+
+Ordenados por lo caro que sale equivocarse. Los cinco primeros ya fallaron una
+vez y ninguno dio un error: todos produjeron datos incorrectos o pantallas que no
+se enteraban.
+
+### 3.1 `useLiveTablesQuery` recibe tablas, nunca nombres
+
+```ts
+useLiveTablesQuery(query, [schema.dishes, schema.dishTags], [deps]); // ✅
+useLiveTablesQuery(query, ['dishes', 'dishTags'], [deps]); // ❌
+```
+
+`addDatabaseChangeListener` informa del **nombre SQL** (`dish_tag`), no del
+nombre del export (`dishTags`). Como los dos son `string`, la comparación no
+falla: no coincide nunca, y la pantalla deja de refrescarse. Estuvo así en cinco
+hooks. Hoy los tipos lo impiden y
+`lib/hooks/__tests__/live-tables-contract.node.test.ts` vigila que siga siendo
+así.
+
+### 3.2 Nunca `as` sobre datos que no escribió este código
+
+Ficheros importados, respuestas de red, payloads de deep links: `unknown` y un
+esquema zod. `JSON.parse(x) as T` no comprueba nada, **afirma**, y de ahí se va
+derecho a un `insert()`.
+
+El esquema del fichero compartido está en `packages/shared/src/share-file.ts`.
+
+### 3.3 Toda respuesta se mira
+
+Un `fetch` cuyo resultado se descarta es un fallo que se reporta como éxito. Pasó
+con la revocación de enlaces compartidos: contestaba `{ok:true}` con el enlace
+todavía sirviendo el contenido. `no-floating-promises` está activo en los tres
+workspaces y encuentra buena parte de estos.
+
+### 3.4 En Postgres, la policy manda sobre el comentario
+
+Postgres **no sabe restringir columnas dentro de una policy**. Un `for select`
+sobre una tabla expone la tabla entera, por mucho que una RPC cuidadosa filtre
+por su lado — PostgREST expone las tablas directamente y el cliente puede
+saltarse la RPC. Si hace falta filtrar columnas, es una **vista**.
+
+Cuando escribas una policy, escribe también su `.test.sql`. Los 154 asserts de
+`supabase/tests/` existen porque este error ya se cometió dos veces.
+
+### 3.5 `android/` y `ios/` no se commitean
+
+El proyecto es **CNG**: los genera EAS desde `apps/mobile/app.config.js`, que es
+la única fuente de verdad de la configuración nativa. Un `android/` commiteado se
+congela y acaba apuntando a otro paquete que el `google-services.json` — Firebase
+no arranca y el redirect de OAuth no vuelve a la app. Están en `.gitignore` desde
+la raíz; que siga así.
+
+### 3.6 El sync es la parte peligrosa
+
+Toca `services/sync/` con cuidado. Lo que hay que saber:
+
+- **La identidad está partida**: local usa `id` entero, remoto usa `uuid`. La
+  traducción vive en `records.ts` y `identityMap.ts`. Ningún `id` local sale del
+  dispositivo.
+- **`IdentityMap` vive una sola pasada y se tira.** No lo hagas persistente: una
+  entrada obsoleta no da error, da una clave ajena apuntando a otra fila, en
+  disco y en silencio.
+- **RLS no es un filtro.** Dice qué te dejan leer, y te dejan leer la visita
+  compartida de un amigo. Un `select *` sin `eq('user_id', …)` mete filas ajenas
+  en el diario local. Ya pasó.
+- **`SYNC_TABLES` está en orden de dependencia.** Los padres antes que los hijos.
+  Reordenar rompe el pull.
+- **Las uniones (`dish_tag`, etc.) no tienen uuid ni timestamps**, así que no se
+  reconcilian por last-write-wins: viajan con su padre y lo reemplazan entero.
+
+### 3.7 Lo que la app hace sin cuenta tiene que seguir funcionando
+
+`getSupabase()` devuelve `null` cuando no hay configuración, y todo el código que
+lo usa lo contempla. Si añades una llamada a la nube, la ruta sin nube tiene que
+seguir viva.
+
+---
+
+## 4. Cómo se escribe aquí
+
+### Comentarios: el _porqué_, y sobre todo _qué se intentó antes_
+
+Esta es la característica más valiosa del repositorio y la más fácil de perder.
+Los comentarios no describen lo que hace la línea de al lado —eso ya lo dice el
+código—: describen **qué alternativa se descartó y por qué**, de modo que nadie
+la reintroduzca dentro de seis meses creyendo que mejora algo.
+
+Ejemplo real, en `tables.ts`:
 
 > `images.path` es la ruta del fichero _en este teléfono_: no se sincroniza a
 > propósito —la ruta de otro dispositivo no significa nada aquí— pero la columna
 > es `not null`, así que sin esto insertar una foto que llega del servidor
 > reventaba con `NOT NULL constraint failed`.
 
-Eso evita que alguien «arregle» la excepción dentro de seis meses.
+Cuando arregles un bug, el comentario cuenta **qué se veía cuando estaba roto**.
+«Se marca `pushed_at` con la respuesta en la mano, nunca antes» vale poco; «…
+marcarlo antes y que la petición falle deja un aviso que no se envía nunca y del
+que nadie se entera» vale mucho.
 
-**Idioma:** docs/12 decía «comentarios en inglés» y el código real está mitad y
-mitad. La regla se ha cambiado para reflejar lo que se hace: **comentarios
-nuevos en español**, como el resto de la documentación y la UI. No se reescriben
-los que ya están en inglés; mezclar es feo, pero reescribir comentarios buenos
-para uniformar el idioma es cambiar algo que funciona por algo que se lee igual.
+Si escribes un comentario que **afirma una garantía**, pregúntate qué la sujeta.
+Si la respuesta es «el código de al lado», escribe el test. Tres fugas de
+seguridad de este proyecto eran comentarios que decían la intención mientras el
+código hacía otra cosa.
+
+### Idioma
+
+Identificadores en inglés. **Comentarios, documentación y textos de UI en
+español.** Lo que ya está en inglés se queda: reescribir comentarios buenos para
+uniformar el idioma cambia algo que funciona por algo que se lee igual.
 
 ### Tests
 
-No se persigue cobertura global. Se cubre donde el fallo es caro, y sobre todo:
-**todo bug corregido entra con su test**. Además, cuando el test es sobre una
-propiedad no funcional, hay que verificar que falla con el código anterior — un
-guardián que no caza el bug que dice cazar es peor que ninguno, porque da
-tranquilidad falsa.
+- **Todo bug corregido entra con su test.**
+- **Un test de propiedad no funcional tiene que fallar con el código anterior.**
+  Si mide consultas, tiempo o tamaño, compruébalo revirtiendo el cambio y
+  viéndolo caer. Un guardián que no caza lo que dice cazar da tranquilidad falsa.
+- No se persigue cobertura global. Se cubre donde el fallo es caro (docs/12).
 
-Dos idiomas de test que ya existen y conviene reutilizar:
+Tres idiomas de test que ya existen y conviene reutilizar:
 
-- **Guardianes sobre el código fuente** (`no-native-alerts.node.test.ts`,
-  `live-tables-contract.node.test.ts`): leen los ficheros y comprueban que no
-  reaparece un patrón. Llevan siempre un «guardián sobre el guardián» que
-  comprueba que la prueba encontró ficheros que revisar.
-- **Medición, no suposición** (`query-count.node.test.ts`): cuenta las
-  sentencias que llegan a SQLite. Fija órdenes de magnitud, no números exactos,
-  para que un refactor honesto no lo rompa.
+| Cuándo                           | Ejemplo                                                                                                                                                                                               |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Impedir que un patrón reaparezca | `no-native-alerts.node.test.ts`, `live-tables-contract.node.test.ts` — leen el código fuente. Llevan siempre un «guardián sobre el guardián» que verifica que la prueba encontró ficheros que revisar |
+| Medir, no suponer                | `query-count.node.test.ts` — cuenta sentencias que llegan a SQLite. Fija órdenes de magnitud, no números exactos                                                                                      |
+| Comportamiento real de Postgres  | `supabase/tests/*.test.sql` — cada fichero sobre una base construida desde cero con las 21 migraciones                                                                                                |
 
 ### Migraciones
 
-Cada una lleva una cabecera que explica qué problema resuelve y qué se
-consideró. Cuando una migración hace lo contrario que otra anterior, **dilo y
-explica por qué**: `0020` crea una vista con derechos de definidor justo después
-de que `0005` arreglara una vista quitándoselos, y sin el párrafo que distingue
-«filtro de filas» de «filtro de columnas» eso parece el mismo fallo repetido.
+Numeradas, y **las ya aplicadas no se editan nunca**: se añade otra.
 
-Si son muchas y mecánicas, genera desde el catálogo (`pg_policies`) en vez de
+La cabecera explica qué problema resuelve y qué se consideró. **Cuando una
+migración hace lo contrario que otra anterior, dilo y explica la diferencia**:
+`0020` crea una vista con derechos de definidor justo después de que `0005`
+arreglara una vista quitándoselos, y sin el párrafo que distingue «filtro de
+filas» de «filtro de columnas» parece el mismo fallo repetido.
+
+Si son muchas y mecánicas, **genera desde el catálogo** (`pg_policies`) en vez de
 copiar a mano: `0021` reescribe 27 políticas así. Veintisiete transcripciones
-manuales son veintisiete formas de aflojar una condición sin darse cuenta, y
-**una política mal copiada no falla, deja pasar.**
+manuales son veintisiete formas de aflojar una condición sin darse cuenta, y una
+policy mal copiada no falla — deja pasar.
+
+### Commits
+
+Conventional Commits. El cuerpo explica **qué se veía roto**, no qué ficheros se
+tocaron: eso está en el diff. Un commit, un cambio coherente.
 
 ---
 
-## Mapa rápido
+## 5. Dónde vive cada cosa
 
-| Dónde                             | Qué vive ahí                                                                      |
-| --------------------------------- | --------------------------------------------------------------------------------- |
-| `apps/mobile/app/`                | Rutas (expo-router). Sin SQL, sin red.                                            |
-| `apps/mobile/features/<dominio>/` | `components/`, `hooks/`, `repositories/`, `schemas/`, `mappers/`, `types/`        |
-| `apps/mobile/services/`           | Lo transversal: `db/`, `sync/`, `api/`, `push/`, `share/`, `backup/`, `supabase/` |
-| `apps/mobile/services/api/`       | **Todo lo que habla con el Worker.** El linter prohíbe `fetch` fuera.             |
-| `apps/api/`                       | Cloudflare Worker (Hono): enlaces, proxy de IA, imágenes R2, cron                 |
-| `packages/shared/`                | Lo que comparten app y Worker. Hoy: el esquema del `.restoshare`.                 |
-| `supabase/migrations/`            | El espejo, RLS, RPCs. Numeradas, nunca se editan las ya aplicadas.                |
-| `supabase/tests/`                 | `.test.sql` contra Postgres de verdad.                                            |
+| Necesitas…                | Ve a                                                                                   |
+| ------------------------- | -------------------------------------------------------------------------------------- |
+| Una pantalla              | `apps/mobile/app/` (expo-router). **Sin SQL, sin `fetch`** — el linter lo bloquea      |
+| Lógica de un dominio      | `apps/mobile/features/<dominio>/{components,hooks,repositories,schemas,mappers,types}` |
+| Hablar con el Worker      | `apps/mobile/services/api/`. **Único sitio con `fetch`**                               |
+| Esquema local             | `apps/mobile/services/db/schema.ts` + `drizzle/` (generado con `db:generate`)          |
+| Sincronización            | `apps/mobile/services/sync/` — `engine`, `records`, `tables`, `identityMap`            |
+| Rutas del servidor        | `apps/api/src/routes/`                                                                 |
+| Esquema remoto, RLS, RPCs | `supabase/migrations/`                                                                 |
 
-## Comandos
+**Antes de crear un fichero, busca si ya existe algo parecido.** Este repo tiene
+poca duplicación y conviene mantenerlo: `Sheet`, `Dialog`, `Toast`, `Screen`,
+`FormScaffold`, `Avatar`, `Txt` cubren casi toda la UI. Si vas a añadir un
+`Alert.alert`, un test lo va a rechazar — usa `Toast` (resultado) o `Dialog`
+(decisión).
 
-```bash
-npm run check      # formato + lint + tipos + tests de los tres workspaces
-npm run db:test    # los .test.sql (necesita `supabase start` o DATABASE_URL)
-npm run mobile     # arrancar la app
-npm run -w apps/mobile lint:compiler   # la pregunta de React Compiler, aparte
-```
+---
+
+## 6. Trampas concretas de este stack
+
+Cosas que ya costaron una sesión cada una:
+
+- **`Alert.alert` está prohibido** salvo en `report-error.ts` como último
+  recurso. Hay un test que lo vigila.
+- **Las tablas de unión tienen nombres SQL en `snake_case`** distintos de su
+  export. Ver 3.1.
+- **SQLite no aplica tipos.** Una columna `integer` acepta `3.5` sin rechistar, y
+  el error aparece más tarde, al sincronizar contra Postgres. Hay un caso vivo de
+  esto ahora mismo (el precio, ver docs/12).
+- **`exactOptionalPropertyTypes` está activo**: `{ foo?: string }` no acepta
+  `undefined` explícito. Se declara `foo?: string | undefined`.
+- **`noUncheckedIndexedAccess` está activo**: `array[0]` es `T | undefined`.
+- **Los tests de node necesitan `.node.test.ts`** en el nombre: hay dos proyectos
+  de jest y el de node es el que puede usar `better-sqlite3`.
+- **En el Worker, `res.json<T>()`**, no `(await res.json()) as T` — el lint marca
+  la segunda como aserción innecesaria.
+- **`lint-staged` se ejecuta desde cada workspace**, no desde la raíz: ESLint 9
+  busca la configuración desde el directorio de trabajo y en la raíz no hay.
+
+---
+
+## 7. Cómo abordar una tarea
+
+1. **Lee ESTADO.md.** Puede que lo que vas a hacer ya esté investigado, o que
+   dependa de algo bloqueado.
+2. **Reproduce o localiza antes de cambiar.** La mayoría de los bugs de este
+   proyecto tenían una causa raíz distinta del síntoma: «no se refresca la
+   pantalla» era una cadena que no coincidía; «las fotos no cargan» era una ruta
+   escrita antes de descargar el fichero.
+3. **Arregla la causa, no el síntoma.** Si dos bugs comparten raíz —pasa a
+   menudo—, arréglala una vez. Dilo en el commit.
+4. **`npm run check`**, y `db:test` si tocaste SQL.
+5. **Actualiza los docs en el mismo cambio.** Si tu cambio contradice algo escrito
+   en `docs/`, corrige el documento o corrige el código; lo que no vale es dejar
+   la frase puesta. Una documentación que miente es peor que no tenerla, porque
+   se cree.
+6. **Actualiza ESTADO.md** al cerrar el bloque.
+
+### Cuando algo no encaje
+
+Si el estándar escrito no describe lo que hace el código, **no lo asumas roto**.
+Puede que la regla esté mal. Pasó con «solo `repositories/` toca Drizzle»: los
+hooks de lista también lo hacen, y no es deuda — `useLiveTablesQuery` necesita el
+_objeto consulta_ para relanzarlo, y un repositorio que devuelve un query-builder
+no esconde Drizzle, lo reexporta con más pasos. Se cambió la regla.
+
+Decide y **deja escrito por qué**. Lo que no vale es dejar las dos versiones
+conviviendo sin que nadie sepa cuál manda.
+
+### Qué no hacer sin preguntar
+
+- Cambiar el modelo de datos local sin una migración drizzle (`db:generate`).
+- Ejecutar `npm audit fix --force`: propone bajar a expo 46, jest 19 y
+  drizzle-kit 0.18. El remedio destruye el proyecto; los avisos, no.
+- Introducir una dependencia de pago o que no quepa en capa gratuita.
+- Convertir una capa opcional (cuenta, red) en obligatoria.

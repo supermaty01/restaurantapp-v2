@@ -64,6 +64,251 @@ fila —del orden de 2.000 por página de 500— y las 27 políticas RLS reevalu
 Números: **321 tests** en la app (antes 319, +2 que miden consultas), **57** en
 el Worker (+11), **9** en shared (nuevos), **154 asserts SQL** (antes 146).
 
+---
+
+## 🐛 Hallazgos del autor probando la app — 26 de julio de 2026
+
+Catorce cosas encontradas usando la app, **anteriores a la auditoría** y ninguna
+corregida todavía. Cada una está investigada contra el código: aquí va la causa
+raíz, no el síntoma. El orden es por (impacto × certeza) ÷ coste.
+
+> Nota: ninguna la arregló la ronda 6. La auditoría miró el código; esto salió de
+> usar la app, que es otra cosa y encuentra otras cosas.
+
+### 🔴 A — Baratas y muy visibles (una sesión las tres)
+
+#### A1. La foto de perfil nunca sale en Inicio
+
+**Causa raíz encontrada.** [`index.tsx:74`](<../apps/mobile/app/(main)/(tabs)/index.tsx>)
+pinta `<Avatar name={displayName ?? 'Tú'} size={38} />` — **sin pasar `uri`**.
+El componente sí lo admite (`Avatar` tiene la prop y `profile.tsx:131` la usa
+bien), así que siempre cae a las iniciales.
+
+No es un cambio de una línea: Inicio saca `displayName` de `useAuth()`, que es la
+sesión, y **nunca pide el perfil**, así que no tiene `avatarUrl` que pasar.
+
+**Comparte causa con A2** — ver abajo.
+
+#### A2. Editar el perfil y volver no actualiza la pestaña Perfil
+
+**Causa raíz encontrada.** `profile-edit` termina con `router.back()`
+([línea 138](<../apps/mobile/app/(main)/profile-edit.tsx>)). La pestaña Perfil
+**ya estaba montada** —expo-router mantiene las tabs vivas— y
+[`useAsyncResource`](../apps/mobile/features/social/hooks/useAsyncResource.ts)
+solo carga en el montaje: su `useEffect` depende de `load`, que solo depende de
+`enabled`. Nadie llama a `reload` al volver a enfocar.
+
+**A1 y A2 son el mismo problema de fondo: no hay una fuente única para "mi
+perfil".** Cada pantalla lo pide por su cuenta y se queda con su copia. La
+solución que arregla las dos —y previene las siguientes— es un contexto o store
+de perfil, poblado una vez y actualizado al guardar. Parchear cada pantalla con
+`useFocusEffect` arregla el síntoma y deja el patrón puesto para el próximo.
+
+#### A3. Errores de login en inglés
+
+**Causa raíz encontrada, y son dos capas:**
+
+1. `describeAuthError` existe, tiene su tabla de traducciones y **solo se usa en
+   el camino de OAuth** (`AuthContext` líneas 155 y 179). `signInWithEmail` y
+   `signUpWithEmail` devuelven `error.message` **en crudo**.
+2. `account.tsx` no valida nada antes de llamar: el formulario vacío va derecho a
+   Supabase, que contesta `missing email or phone`. El resto de la app usa zod +
+   react-hook-form; esta pantalla no.
+
+Arreglar (1) es pasar dos llamadas por `describeAuthError` y añadir las entradas
+que faltan. Arreglar (2) es que el formulario valide antes de salir a la red,
+que además ahorra el viaje.
+
+### 🟠 B — Arquitectura y bloqueos reales
+
+#### B1. La app se congela en el primer sync
+
+**Confirmado estructuralmente.** `runSync` es una función `async` normal que corre
+**en el hilo de JavaScript**: SQLite, red y traducción, todo ahí. React Native
+pinta desde ese mismo hilo, así que mientras dura no hay frames. En un diario
+importado son miles de filas.
+
+La ronda 6 recortó mucho trabajo (de ~2.000 consultas por página a menos de 10,
+ver `query-count.node.test.ts`), lo cual **alivia pero no arregla**: sigue siendo
+trabajo largo en el hilo que pinta.
+
+Opciones, de menos a más:
+
+1. **Un loader honesto** con progreso real. `photos.ts` ya emite `PhotoProgress`;
+   el motor de filas no emite nada todavía. Es lo que el autor propone y es
+   defendible: el sync inicial ocurre una vez.
+2. **Ceder el hilo entre lotes** (`await new Promise(r => setTimeout(r, 0))` cada
+   N filas). Barato, y convierte el bloqueo en lentitud con la UI viva.
+3. `react-native-worklets` / hilo aparte. Es lo correcto y es caro: expo-sqlite
+   no es accesible desde un worklet, así que habría que mover el acceso a datos.
+
+Recomendación: **2 + 1**. La 3 no compensa hoy.
+
+#### B2. Dos cuentas en el mismo móvil
+
+**Hoy no es posible, y la razón es de esquema.** Investigado:
+
+- Las tablas locales tienen `userId: integer` — pero apunta a la **tabla `users`
+  local vestigial** de la auth vieja, que docs/12 ya marca para eliminar. **No
+  existe ninguna columna con el uuid de la cuenta de Supabase.**
+- Las consultas no filtran por cuenta: todo lo local se ve siempre.
+- `linkLocalData` encola **toda** fila sin entrada en `change_log`, sin mirar de
+  quién es. Iniciar sesión con la cuenta B en un móvil con datos de A los
+  encolaría como de B.
+- `signOut` a propósito no toca lo local (docs/04).
+
+Hoy el servidor **falla de forma segura** —RLS rechaza las filas ajenas y
+`pushBatch` las absorbe, cambio de la ronda anterior—, pero en el móvil se sigue
+viendo todo mezclado.
+
+Los cinco casos que planteó el autor se reducen a **una columna y un filtro**:
+
+| Caso                                 | Qué hace falta                                                                                                 |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| 1. Sin cuenta → inicio sesión        | `account_uuid IS NULL` → sellar con la cuenta y sincronizar. Es lo que `linkLocalData` ya hace, más el sellado |
+| 2. Con cuenta → misma cuenta         | Ya funciona                                                                                                    |
+| 3. Con cuenta → otra cuenta          | **Lo que falta.** Guardar las dos, mostrar solo la activa                                                      |
+| 4. Siempre sin cuenta                | Ya funciona (`account_uuid` nulo)                                                                              |
+| 5. Cerrar sesión con datos asociados | Sale del mismo filtro: sin sesión solo se ve lo que tiene `account_uuid` nulo                                  |
+
+**Alcance real:** migración local que añade `account_uuid` (nullable) a las seis
+tablas sincronizables, más filtro en **todas** las lecturas —los 13 hooks de
+`useLiveTablesQuery` y los repositorios—, más `linkLocalData` reclamando solo las
+filas huérfanas. Es la tarea más grande de esta lista y la que más se beneficia
+de hacerse **antes** de que haya usuarios reales, porque después es una migración
+de datos de verdad.
+
+**Y hay que decirlo en la UI**, que es la mitad que se olvida: al iniciar sesión
+por primera vez con datos locales, avisar de que van a quedar asociados a esa
+cuenta y de que al cerrar sesión dejarán de verse. Sin ese aviso, el caso 5 se
+vive como pérdida de datos.
+
+#### B3. Las notificaciones push no llegan
+
+**No es un bug de código; es una cadena de despliegue con varios eslabones
+sueltos.** El código está y está probado (57 tests en el Worker, 16 solo de
+reparto). Lo que falta, en orden, y **todo tiene que estar**:
+
+1. **Credenciales de FCM en EAS.** `docs/15` ya lo marca como bloqueado por
+   terceros. Sin esto no hay entrega, punto.
+2. **El Worker desplegado.** El reparto vive en un cron; un cron sin desplegar no
+   se dispara. Comprobar que el panel de Cloudflare lista **dos** triggers.
+3. **APK construido con `googleServicesFile`**, que entró en `app.config.js`
+   después del APK instalado (ronda 4).
+4. **El `android/` que la ronda 6 borró** estaba congelado en
+   `com.restaurantappv2` mientras `google-services.json` es de
+   `com.supermaty01.restaurantapp`. Era una causa **independiente** del mismo
+   síntoma. Ya no está, pero por eso el APK nuevo es el paso cero.
+
+Antes de tocar código, verificar los cuatro. Es muy probable que el código esté
+bien y el diagnóstico haya sido siempre de infraestructura.
+
+#### B4. La barra de navegación del sistema se come la interfaz
+
+**Causa raíz encontrada.** `Sheet` y `FloatingTabBar` usan `useSafeAreaInsets` y
+respetan `insets.bottom`. **`Screen`, que es la base de casi todas las pantallas,
+no tiene ni una línea de safe area.** Así que en un móvil con barra de tres
+botones —en vez de gestos— el contenido queda debajo.
+
+Se arregla en un sitio: que `Screen` aplique el inset inferior, con una salida
+para las pantallas que ya lo gestionan (las que llevan `FloatingTabBar`, o
+tendrían el hueco dos veces).
+
+### 🟡 C — Interfaz
+
+#### C1. La transición del Diario, y quitar los previews
+
+**Investigado, y el diagnóstico es más simple de lo que parecía.**
+[`SegmentedTabs`](../apps/mobile/components/ui/SegmentedTabs.tsx) hoy:
+
+- **Renderiza solo la pestaña activa**: `<View className="flex-1">{activeTab?.render()}</View>`.
+  No hay tres páginas ni desplazamiento: hay un intercambio. Por eso se siente
+  como una redirección — **es** una redirección.
+- El gesto Pan **no mueve nada mientras arrastras**: solo mira al soltar y llama
+  a `go(±1)`. No hay `translateX` seguido al dedo.
+- El indicador anima con `withSpring` **por segmento** (cada uno su opacidad), no
+  una pastilla compartida que se desliza. El «efecto gota» no existe.
+
+Para lo que pide el autor hace falta: un pager con las tres páginas montadas y un
+`translateX` compartido, y que la posición y anchura de la pastilla se interpolen
+**desde el desplazamiento del pager**, no desde el estado. Así el indicador
+sigue al dedo y el efecto fluido sale solo. Para la «gota» de verdad —que se
+estire al pasar— la anchura interpola con un pico en el punto medio.
+
+**Y por eso quitar los previews va en la misma tarea, no en otra.** El peek es un
+gesto largo/Pan sobre los ítems de lista, y el pager necesita el Pan horizontal:
+convivir exige coordinar dos reconocedores, que es de donde salían los problemas.
+Quitándolos, el pager es directo.
+
+Los previews tocan **10 ficheros**: `PeekablePressable`, `GridPeekItem`,
+`components/peek/*` (3), `PeekContext`, y los `*Item`/`*List` de platos, visitas
+y lugares, más `VisitTimeline`. Quitar de verdad —no dejar el componente
+huérfano— incluye borrar el contexto y el proveedor del layout.
+
+#### C2. Los filtros de etiquetas
+
+`FilterSheet.tsx:286` usa `checkmark-circle` / `ellipse-outline` con
+`accessibilityRole="radio"`: es literalmente un radio button a la derecha. El
+diseño que el autor quiere ya existe en `features/tags/components/TagField.tsx`
+(el drawer de añadir etiquetas). **La solución no es rediseñar: es extraer el
+componente de TagField y usarlo en los dos sitios**, que además elimina una
+duplicación real.
+
+#### C3. El teclado tapa «Sobre ti»
+
+`KeyboardAvoidingView` existe **en un solo sitio de toda la app**:
+`components/ui/FormScaffold.tsx`. Y `profile-edit.tsx` **no usa FormScaffold** —
+tiene su propio layout. El campo de bio es `multiline` y está al final de un
+formulario largo, así que el teclado se le sienta encima.
+
+Lo barato es pasar `profile-edit` por `FormScaffold`. Conviene comprobar si hay
+más pantallas fuera de él con el mismo problema latente.
+
+#### C4. Las fotos de «Lo último que añadiste» no siempre cargan
+
+**Causa raíz encontrada, y es interesante.** `useHomeSummary` selecciona de
+`images` solo `path` — **nunca `remoteKey`**. Y cuando una foto llega por sync,
+`localDefaults` en `tables.ts` le pone `path = '{uuid}.jpg'` **antes de que el
+fichero se haya descargado**: `downloadMissingPhotos` va después y puede tardar o
+fallar.
+
+Así que la fila dice que hay una foto en una ruta local que todavía no existe, y
+`imagePathToUri` devuelve ese `file://` sin alternativa: solo cae a una URL si la
+_propia ruta_ ya era `http`. Resultado: hueco en blanco hasta que la descarga
+termine, y para siempre si falló.
+
+**Arreglo correcto:** que la resolución de imagen sepa caer a
+`{API_URL}/images/{cuenta}/{uuid}` cuando el fichero local no está y hay
+`remoteKey`. Beneficia a toda la app, no solo a Inicio.
+
+#### C5. El drawer «¿Quién puede ver esto?» va pegado a los lados
+
+`VisibilityControl.tsx` abre con `<View className="gap-3 pb-2">`: vertical sí,
+horizontal nada. Faltan los `px-` que el resto de hojas sí tienen.
+
+### 🔵 D — Producto e infraestructura
+
+#### D1. Pantalla de bienvenida
+
+Hoy `app/index.tsx` es un `Redirect` a las tabs, y el comentario explica por qué:
+_«no hay puerta de login; las cuentas son una capa opcional, nunca una barrera de
+entrada»_ (docs/00, docs/04).
+
+**Eso no se puede romper para meter la bienvenida.** Lo que pide el autor es
+compatible si es: primera ejecución **solamente**, con «Continuar sin cuenta»
+como opción de igual peso —no un enlace pequeño debajo— y una marca en
+`app_settings` para no repetirla. Y es el sitio natural para explicar la regla de
+B2: _si luego creas una cuenta, lo que hayas guardado se asocia a ella_.
+
+#### D2. El archivo de EAS pesa 334 MB
+
+**No hay `.easignore`** en el repo. Sin él, EAS sube todo lo que no esté en
+`.gitignore`, y eso incluye `.git` entero con su historia.
+
+Es el arreglo más barato de toda la lista: un `.easignore` con `.git`, `docs`,
+`supabase`, `apps/api`, `packages`, `coverage`, `*.md` y los tests. Nada de eso
+participa en construir el APK. Minutos de subida en cada build.
+
 ### ⏭️ Lo que queda pendiente (por orden)
 
 0. **Generar un APK nuevo y probarlo.** Sigue siendo el paso cero. Ahora hay una
