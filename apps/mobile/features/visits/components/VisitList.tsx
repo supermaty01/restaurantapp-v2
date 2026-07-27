@@ -8,8 +8,7 @@ import { ListHeader } from '@/components/ui/ListHeader';
 import VisitItem from '@/features/visits/components/VisitItem';
 import { useVisitList } from '@/features/visits/hooks/useVisitList';
 import type { VisitListDTO } from '@/features/visits/types/visit-dto';
-import { usePeekState } from '@/lib/context/PeekContext';
-import { formatDate, formatVisitDate } from '@/lib/helpers/date';
+import { formatDate } from '@/lib/helpers/date';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 import { VisitTimeline } from './VisitTimeline';
@@ -18,7 +17,6 @@ const keyExtractor = (item: VisitListDTO) => item.id.toString();
 
 export function VisitList() {
   const router = useRouter();
-  const { isPeeking } = usePeekState();
 
   const visits = useVisitList(false);
   const prefs = useListPreferences('visit');
@@ -43,17 +41,6 @@ export function VisitList() {
       }));
     }
   }, [prefs.loaded, prefs.sortField, prefs.sortOrder]);
-
-  const buildPreviewData = useCallback((item: VisitListDTO) => {
-    return {
-      type: 'visit',
-      id: item.id,
-      date: formatVisitDate(item.visited_at),
-      restaurantName: item.restaurant.name,
-      comments: item.comments,
-      imageUrl: item.images?.[0]?.uri,
-    } as const;
-  }, []);
 
   const restaurantOptions = useMemo(() => {
     const uniqueRestaurants = new Map<number, { id: number; name: string }>();
@@ -134,7 +121,6 @@ export function VisitList() {
   const renderListItem = useCallback(
     ({ item }: { item: VisitListDTO }) => {
       const image = item.images?.[0];
-      const previewData = buildPreviewData(item);
       const formattedVisitDate = formatDate(item.visited_at);
 
       return (
@@ -146,12 +132,11 @@ export function VisitList() {
           comments={item.comments}
           deleted={item.deleted}
           restaurantDeleted={item.restaurant.deleted}
-          previewData={previewData}
           onPress={() => navigateToVisit(item.id)}
         />
       );
     },
-    [buildPreviewData, navigateToVisit],
+    [navigateToVisit],
   );
 
   const listEmptyComponent = useMemo(
@@ -202,7 +187,6 @@ export function VisitList() {
           showsVerticalScrollIndicator={false}
           contentContainerClassName="pb-28"
           ListEmptyComponent={listEmptyComponent}
-          scrollEnabled={!isPeeking}
           initialNumToRender={8}
           maxToRenderPerBatch={6}
           windowSize={5}

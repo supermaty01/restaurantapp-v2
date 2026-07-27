@@ -1,8 +1,7 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
-import type { PeekPreviewData } from '@/components/peek/types';
-import PeekablePressable from '@/components/PeekablePressable';
+import { PressableScale } from '@/components/ui/Motion';
 import { Chip } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 
@@ -13,7 +12,6 @@ interface VisitItemProps {
   date: string;
   title: string;
   comments: string | null;
-  previewData: PeekPreviewData;
   onPress?: (() => void) | undefined;
   deleted?: boolean | undefined;
   restaurantDeleted?: boolean | undefined;
@@ -27,23 +25,12 @@ interface VisitItemProps {
  * only part you actually scan for.
  */
 const VisitItem = React.memo<VisitItemProps>(
-  ({
-    imageUrl,
-    imageRemoteKey,
-    date,
-    title,
-    comments,
-    previewData,
-    onPress,
-    deleted,
-    restaurantDeleted,
-  }) => {
+  ({ imageUrl, imageRemoteKey, date, title, comments, onPress, deleted, restaurantDeleted }) => {
     return (
-      <PeekablePressable
-        previewData={previewData}
+      <PressableScale
         onPress={onPress}
-        scaleValue={1.02}
-        baseOpacity={deleted || restaurantDeleted ? 0.6 : 1}
+        scaleTo={0.98}
+        style={{ opacity: deleted || restaurantDeleted ? 0.6 : 1 }}
         className="mb-3 flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5"
       >
         <Thumbnail
@@ -70,7 +57,7 @@ const VisitItem = React.memo<VisitItemProps>(
             </View>
           ) : null}
         </View>
-      </PeekablePressable>
+      </PressableScale>
     );
   },
 );

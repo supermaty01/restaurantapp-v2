@@ -4,33 +4,19 @@ import { FlatList, View, Text, useWindowDimensions } from 'react-native';
 
 import type { FilterSortOptions } from '@/components/filters/FilterSheet';
 import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/FilterSheet';
-import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
 import { ListHeader } from '@/components/ui/ListHeader';
+import { PressableScale } from '@/components/ui/Motion';
 import { Photo } from '@/components/ui/Photo';
 import DishItem from '@/features/dishes/components/DishItem';
 import { useDishList } from '@/features/dishes/hooks/useDishList';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
-import { usePeekState } from '@/lib/context/PeekContext';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 const keyExtractor = (item: DishListDTO) => item.id.toString();
 
-const buildPreviewData = (item: DishListDTO) => {
-  return {
-    type: 'dish',
-    id: item.id,
-    name: item.name,
-    comments: item.comments,
-    rating: item.rating,
-    tags: item.tags || [],
-    imageUrl: item.images?.[0]?.uri,
-  } as const;
-};
-
 export function DishList() {
   const router = useRouter();
-  const { isPeeking } = usePeekState();
 
   const dishes = useDishList(false);
   const prefs = useListPreferences('dish');
@@ -129,8 +115,6 @@ export function DishList() {
 
   const renderListItem = useCallback(
     ({ item }: { item: DishListDTO }) => {
-      const previewData = buildPreviewData(item);
-
       return (
         <DishItem
           name={item.name}
@@ -138,7 +122,6 @@ export function DishList() {
           rating={item.rating}
           tags={item.tags}
           images={item.images}
-          previewData={previewData}
           onPress={() => navigateToDish(item.id)}
         />
       );
@@ -149,12 +132,12 @@ export function DishList() {
   const renderGridItem = useCallback(
     ({ item }: { item: DishListDTO }) => {
       const image = item.images?.[0];
-      const previewData = buildPreviewData(item);
 
       return (
-        <GridPeekItem
+        <PressableScale
           style={{ flex: 1 / numColumns }}
-          previewData={previewData}
+          scaleTo={0.97}
+          className="mb-2 overflow-hidden rounded-xl bg-surface"
           onPress={() => navigateToDish(item.id)}
         >
           {image ? (
@@ -177,7 +160,7 @@ export function DishList() {
               <RatingStars value={item.rating} size={12} gap={1} readOnly />
             </View>
           </View>
-        </GridPeekItem>
+        </PressableScale>
       );
     },
     [navigateToDish, numColumns],
@@ -227,7 +210,6 @@ export function DishList() {
         showsVerticalScrollIndicator={false}
         contentContainerClassName="pb-28"
         ListEmptyComponent={listEmptyComponent}
-        scrollEnabled={!isPeeking}
         initialNumToRender={8}
         maxToRenderPerBatch={6}
         windowSize={5}
