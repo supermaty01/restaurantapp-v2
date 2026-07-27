@@ -377,11 +377,22 @@ y la pantalla de conflictos necesitan sesión y Worker, y el emulador está en
 
 ### Bugs pendientes, del uso real
 
-1. **Memoria: 1–2 GB en caché.** Diagnosticado y **documentado entero en
-   [docs/16](16-memoria-e-imagenes.md)**: la causa, el plan en orden de
-   rentabilidad, cómo medirlo con `dumpsys meminfo` antes y después, y las tres
-   cosas que _parecen_ la causa y no lo son. Aparcado a propósito para una
-   sesión propia.
+1. **Memoria: 1–2 GB.** Resultó ser **dos problemas**, y el diagnóstico original
+   estaba equivocado. [docs/16](16-memoria-e-imagenes.md) se reescribió entero.
+   - **El disco: arreglado.** No era el tamaño de las fotos: eran **copias del
+     diario entero que nadie borraba**. Cada exportación dejaba un zip de ~200 MB
+     con un nombre distinto —un zip no comprime JPEG— y ningún `deleteAsync` del
+     repo apuntaba a él; la app olvidaba incluso dónde los había dejado. Más la
+     copia previa a importar, un diario completo en caché que solo se borraba al
+     empezar la _siguiente_ importación (y la migración de la v1 es una
+     importación, así que llevaba ahí desde el primer día). El `setTimeout` de 24
+     horas que debía limpiarla no se ejecutó nunca: el temporizador muere con el
+     proceso.
+   - **La RAM: abierta.** Medido **1,0 GB de `TOTAL PSS`** con 500 MB de native
+     heap y ya tirando de swap. Real, pero es otro asunto. El plan está en
+     docs/16 §2, ordenado por coste y **con el aviso de medir antes de construir
+     miniaturas**: la cuenta de los «48 MB por foto» solo vale si nadie
+     submuestrea, y Glide submuestrea al tamaño de la vista.
 2. ~~**«con 1 persona»** en Amigos y Contigo~~ — **cerrado en la ronda 4**, ahora
    dice «con Irene y Moni».
 3. ~~**Cambiar la foto de perfil**~~ — **cerrado en la ronda 4**.

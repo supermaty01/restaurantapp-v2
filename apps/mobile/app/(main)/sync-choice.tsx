@@ -89,7 +89,10 @@ export default function SyncChoiceScreen() {
       // diferencia entre un susto y una pérdida. docs/09 lo pedía desde el
       // principio para las migraciones y nunca se hizo; aquí sí.
       if (choice === 'cloud-wins') {
-        const backup = await backups.exportData(() => {});
+        // `keep`: esta es la única copia que tiene que seguir ahí mañana, así
+        // que va al directorio de documentos y no a la caché. La de Ajustes es
+        // al revés — nace para salir de la app.
+        const backup = await backups.exportData(() => {}, { keep: true });
         toast.notify(`Copia guardada: ${backup.path.split('/').pop() ?? 'copia.zip'}`);
       }
 
