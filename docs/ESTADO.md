@@ -47,14 +47,33 @@ fuente**. Marcar aquí al cerrar algo.
 
 **Producto**
 
-- [ ] D1 · Pantalla de bienvenida (primera ejecución, sin convertirse en puerta de login)
+- [x] ~~D1 · Pantalla de bienvenida~~ — solo la primera ejecución, con los dos botones del mismo peso y «Empezar sin cuenta» primero. Con test que vigila que no se convierta en puerta de login. **Verificada en el emulador**
+
+### 🎯 Lo grande que queda, en orden
+
+Nada de esto está empezado, y los dos primeros son los que se abaratan haciéndose
+**ahora**, antes de que haya usuarios reales.
+
+1. **B2 · Dos cuentas en el mismo móvil.** El plan está entero abajo, en su
+   apartado. Alcance: migración local que añade `account_uuid` (nullable) a las
+   seis tablas sincronizables, filtro en **todas** las lecturas —los 13 hooks de
+   `useLiveTablesQuery` y los repositorios—, `linkLocalData` reclamando solo las
+   filas huérfanas, y el aviso en la interfaz al iniciar sesión con datos
+   locales. **Es la tarea donde media implementación es peor que ninguna**: un
+   filtro que falte en uno de los trece sitios no da error, enseña el diario de
+   otra cuenta.
+2. **Eliminar cuenta y datos (GDPR).** Necesita una migración de Supabase, una
+   ruta `DELETE` en el Worker para el prefijo de R2, y la pantalla con
+   confirmación fuerte. **Y necesita Docker corriendo**: toca SQL, así que
+   `npm run db:test` es obligatorio (AGENTS §2) y en esta ronda Docker Desktop no
+   estaba levantado.
 
 ### 🔍 De la auditoría (ronda 6) — detalle en [Lo que queda pendiente](#-lo-que-queda-pendiente-por-orden)
 
 - [ ] Eliminar cuenta y datos (**GDPR**) — obligación legal el día que haya producción
 - [x] ~~La **regla del dinero**~~ — `price real` en local (migración 0011), que es lo que ya era el `numeric(12,2)` del espejo. Sin conversión de valores: ya estaban guardados como REAL
 - [ ] **Tests de UI**: ya no son cero (8), pero falta lo que pide docs/12 — el visor de imágenes y los formularios con prefill. **Ojo: reanimated no se puede importar en jest** (`react-native-worklets` busca su módulo nativo), así que lo que lo use hay que probarlo sacando la lógica fuera
-- [ ] Round-trip export→import idempotente (docs/12 lo exige)
+- [x] ~~Round-trip export→import~~ — `services/share/round-trip.node.test.ts`, escribiendo el fichero de verdad. «Idempotente» resultó querer decir otra cosa de la que parecía: ver el commit
 - [ ] Sync contra Supabase local con dos dispositivos de verdad
 - [ ] Aislamiento entre features (`eslint-plugin-boundaries` + mover lo compartido)
 - [ ] Telemetría de errores — hoy un fallo que no se reproduzca delante no deja rastro
@@ -64,7 +83,7 @@ fuente**. Marcar aquí al cerrar algo.
 
 - [ ] **RAM: ~1 GB medido** (`TOTAL PSS`), con swap. Plan en [docs/16 §2](16-memoria-e-imagenes.md), **midiendo antes de construir miniaturas**
 - [ ] Tarea #32 · Copia de seguridad automática **antes de migrar** — la pieza existe (`BackupService`), falta engancharla
-- [ ] Persona etiquetada en una visita no se muestra tras crearla
+- [x] ~~Persona etiquetada en una visita no se muestra tras crearla~~ — **ya estaba arreglado y nadie lo tachó**: era uno de los cinco hooks de la ronda 6 que pasaban `'visitParticipants'` (el nombre del export) en vez de `visit_participant` (el SQL), así que la pantalla no se enteraba de la tabla de unión. Comprobado en el histórico; hoy lo impide el tipo y lo vigila `live-tables-contract`
 - [x] ~~La moneda está fijada a COP~~ — ajuste en Ajustes, con el valor inicial deducido de la región del móvil. **No convierte lo ya escrito**, y la propia fila lo dice
 - [x] ~~`jszip` sigue en `dependencies`~~ — a `devDependencies`; solo lo usa `zip.node.test.ts`
 - [ ] «Armonía» en formularios de detalle y creación — idea concreta: **empezar por la foto**
@@ -72,18 +91,31 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] `lint:compiler`: 83 avisos de React Compiler readiness (fuera de la puerta a propósito)
 - [ ] Confirmar si el orden de «Lo último que añadiste» (por fecha de registro) chirría — una línea en `useHomeSummary`
 
-### 📱 Verificar en dispositivo (con el APK nuevo)
+### 📱 Verificar en dispositivo
 
-**Todo lo de la ronda 7 está aquí**, y esta vez el APK no es opcional: entra un
-módulo nativo (`react-native-keyboard-controller`), así que recargar el
-JavaScript no vale.
+**Se puede correr en local: `npx expo run:android` con un emulador arrancado.**
+No hace falta esperar a EAS para casi nada, y es como se verificó media ronda 7.
+Lo que sí necesita el APK de EAS es el push (credenciales de FCM) y cualquier
+cosa que dependa del paquete firmado.
 
-- [ ] Que el teclado no tape «Sobre ti» — el arreglo anterior no funcionó, este
-      hay que verlo
-- [ ] Que nada quede bajo la barra de navegación, en las pantallas con carril de
-      pestañas y en las que no
-- [ ] El Diario: que el arrastre mueva la página bajo el dedo y la pastilla lo
-      siga, y que las listas verticales sigan haciendo scroll
+Ya verificado en el emulador (Android 15, tres botones y gestos):
+
+- [x] ~~El teclado no tapa el último campo~~ — el pie sube pegado al teclado y
+      el campo enfocado queda visible
+- [x] ~~Nada queda bajo la barra de navegación~~ — comprobado con carril de
+      pestañas y con pie de formulario, en los dos modos de navegación
+- [x] ~~El Diario se desliza~~ — arrastrar cambia de página y la pastilla sigue
+      al gesto
+- [x] ~~La bienvenida sale una vez y no vuelve~~
+
+> **Trampa del emulador, anotada para no perder otra media hora:** con
+> `hw.keyboard = yes` en el AVD, Gboard sale como una barrita flotante que **no
+> empuja los insets de la IME**, así que cualquier prueba de teclado da un falso
+> negativo. Hay que poner `hw.keyboard = no` en
+> `~/.android/avd/<nombre>.avd/config.ini` y reiniciar el emulador.
+
+Sigue sin verificarse, y esto sí necesita cuenta o dos dispositivos:
+
 - [ ] Que la app no se congele en el primer sync, y que el recuento avance
 - [ ] La foto de perfil en Inicio, y que editar el perfil se vea al volver
 - [ ] Sync con **dos dispositivos** — el caso que antes fallaba en silencio
@@ -201,7 +233,34 @@ detalle está en [docs/11](11-dependencias.md#segunda-excepción-el-teclado-en-a
   **no convierte lo ya escrito** —eso necesitaría un tipo de cambio por fecha,
   que es una API de pago—.
 
-Números: **369 tests** en la app (antes 332), 57 en el Worker, 9 en shared.
+Números: **375 tests** en la app (antes 332), 57 en el Worker, 9 en shared.
+
+### 🔬 La segunda mitad: correr la app de verdad
+
+`npx expo run:android` sobre un emulador Android 15. **Es la primera vez en
+siete rondas que se comprueba algo en pantalla sin esperar a EAS**, y conviene
+que quede escrito porque cambia cómo se trabaja: la build nativa local tarda
+cinco minutos y sirve para todo menos el push.
+
+Tres cosas salieron solo por arrancarla:
+
+- **Las banderas del `KeyboardProvider` no hacían nada.** Se le pasaba
+  `statusBarTranslucent`, `navigationBarTranslucent` y `preserveEdgeToEdge`
+  razonando que son las de una app edge-to-edge. La librería las **ignora**
+  cuando detecta `react-native-edge-to-edge` —lo que pone el edge-to-edge desde
+  el SDK 57— y lo dice en un aviso de dev que apareció en el primer arranque.
+  Unas props que no hacen nada son peores que ninguna: parecen la explicación de
+  por qué funciona.
+- **El ciclo de imports `syncStore` ↔ `syncManager`**, que Metro avisa en cada
+  arranque. Anterior a esta ronda; ahora `runSync` recibe los reporteros en vez
+  de importarlos de vuelta.
+- **`npm run check` fallaba justo después de correr la app**, por
+  `expo-env.d.ts`: lo genera Expo, está en `.gitignore` y no estaba en
+  `.prettierignore`. O sea que la puerta se quejaba de un fichero que no está en
+  el repositorio.
+
+Y una cosa **no** se pudo verificar por culpa del entorno hasta cambiarlo: el
+teclado. Ver la nota del AVD en la lista de arriba.
 
 ### ⚠️ Lo que se intentó y no salió
 
