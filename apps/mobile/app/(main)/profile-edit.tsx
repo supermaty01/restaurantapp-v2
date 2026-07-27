@@ -6,6 +6,7 @@ import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-nativ
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { FormScaffold } from '@/components/ui/FormScaffold';
 import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
@@ -181,124 +182,131 @@ export default function ProfileEditScreen() {
   const preview = displayName.trim() || normalised || 'Tú';
 
   return (
-    <Screen scroll contentClassName="pt-3">
-      <Card className="items-center gap-2 py-5">
-        {/* La foto es lo primero que se toca al entrar aquí — es lo único de
+    /*
+     * Por FormScaffold como el resto de formularios: es el único sitio de la app
+     * con KeyboardAvoidingView, y sin él el teclado se sentaba encima de «Sobre
+     * ti», que es multilínea y va al final. De paso Guardar pasa al pie fijo.
+     *
+     * El cuerpo va en un solo hijo a propósito: el `gap-6` del scaffold separa
+     * hijos, y aquí uno de ellos es un Sheet que no ocupa sitio.
+     */
+    <FormScaffold
+      submitLabel="Guardar"
+      onSubmit={() => void save()}
+      loading={saving}
+      disabled={!dirty || Boolean(usernameError)}
+      {...(usernameError ? { hint: usernameError } : {})}
+    >
+      <View className="gap-6 pt-2">
+        <Card className="items-center gap-2 py-5">
+          {/* La foto es lo primero que se toca al entrar aquí — es lo único de
             esta pantalla que se ve desde fuera. Con la cámara encima para que
             se lea como un botón y no como una decoración. */}
-        <PressableScale
-          accessibilityLabel={avatarUrl ? 'Cambiar tu foto' : 'Añadir una foto'}
-          onPress={() => setPickerOpen(true)}
-          disabled={uploading}
-          scaleTo={0.94}
-        >
-          <View>
-            <Avatar name={preview} uri={avatarUrl} size={72} />
-            <View
-              className="absolute -bottom-0.5 -right-0.5 h-7 w-7 items-center justify-center rounded-pill border-2 border-surface bg-primary"
-              style={elevation.low}
-            >
-              {uploading ? (
-                <ActivityIndicator size="small" color={colors.onPrimary} />
-              ) : (
-                <Ionicons name="camera" size={14} color={colors.onPrimary} />
-              )}
+          <PressableScale
+            accessibilityLabel={avatarUrl ? 'Cambiar tu foto' : 'Añadir una foto'}
+            onPress={() => setPickerOpen(true)}
+            disabled={uploading}
+            scaleTo={0.94}
+          >
+            <View>
+              <Avatar name={preview} uri={avatarUrl} size={72} />
+              <View
+                className="absolute -bottom-0.5 -right-0.5 h-7 w-7 items-center justify-center rounded-pill border-2 border-surface bg-primary"
+                style={elevation.low}
+              >
+                {uploading ? (
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
+                ) : (
+                  <Ionicons name="camera" size={14} color={colors.onPrimary} />
+                )}
+              </View>
             </View>
+          </PressableScale>
+
+          <Text className="font-display text-[20px] text-ink">{preview}</Text>
+          <Text className="text-[13px] text-ink-subtle">@{normalised || data.username}</Text>
+
+          {avatarUrl ? (
+            <Pressable onPress={() => void chooseAvatar('remove')} disabled={uploading} hitSlop={8}>
+              <Text className="text-[13px] text-ink-subtle">Quitar la foto</Text>
+            </Pressable>
+          ) : null}
+        </Card>
+
+        <Sheet
+          visible={pickerOpen}
+          onClose={() => setPickerOpen(false)}
+          title={avatarUrl ? 'Cambiar tu foto' : 'Tu foto'}
+        >
+          <View className="gap-2.5 px-5 pb-4 pt-1">
+            <Button
+              label="Hacer una foto"
+              icon="camera-outline"
+              variant="secondary"
+              block
+              onPress={() => void chooseAvatar('camera')}
+            />
+            <Button
+              label="Elegir de la galería"
+              icon="images-outline"
+              variant="secondary"
+              block
+              onPress={() => void chooseAvatar('gallery')}
+            />
           </View>
-        </PressableScale>
+        </Sheet>
 
-        <Text className="font-display text-[20px] text-ink">{preview}</Text>
-        <Text className="text-[13px] text-ink-subtle">@{normalised || data.username}</Text>
+        <View className="gap-5">
+          <View className="gap-2">
+            <FieldLabel>Nombre de usuario</FieldLabel>
+            <TextInput
+              value={username}
+              onChangeText={setUsername}
+              autoCapitalize="none"
+              autoCorrect={false}
+              maxLength={30}
+              placeholder="tu_usuario"
+              placeholderTextColor={colors.inkSubtle}
+              className={`rounded-lg border bg-surface px-4 py-3.5 text-[15px] text-ink ${
+                usernameError ? 'border-danger' : 'border-line-strong'
+              }`}
+            />
+            <Text className={`text-[12px] ${usernameError ? 'text-danger' : 'text-ink-subtle'}`}>
+              {usernameError ?? 'Así te encontrarán tus amigos.'}
+            </Text>
+          </View>
 
-        {avatarUrl ? (
-          <Pressable onPress={() => void chooseAvatar('remove')} disabled={uploading} hitSlop={8}>
-            <Text className="text-[13px] text-ink-subtle">Quitar la foto</Text>
-          </Pressable>
-        ) : null}
-      </Card>
+          <View className="gap-2">
+            <FieldLabel>Nombre</FieldLabel>
+            <TextInput
+              value={displayName}
+              onChangeText={setDisplayName}
+              maxLength={60}
+              placeholder="Cómo quieres que te vean"
+              placeholderTextColor={colors.inkSubtle}
+              className="rounded-lg border border-line-strong bg-surface px-4 py-3.5 text-[15px] text-ink"
+            />
+          </View>
 
-      <Sheet
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
-        title={avatarUrl ? 'Cambiar tu foto' : 'Tu foto'}
-      >
-        <View className="gap-2.5 px-5 pb-4 pt-1">
-          <Button
-            label="Hacer una foto"
-            icon="camera-outline"
-            variant="secondary"
-            block
-            onPress={() => void chooseAvatar('camera')}
-          />
-          <Button
-            label="Elegir de la galería"
-            icon="images-outline"
-            variant="secondary"
-            block
-            onPress={() => void chooseAvatar('gallery')}
-          />
-        </View>
-      </Sheet>
-
-      <View className="mt-6 gap-5">
-        <View className="gap-2">
-          <FieldLabel>Nombre de usuario</FieldLabel>
-          <TextInput
-            value={username}
-            onChangeText={setUsername}
-            autoCapitalize="none"
-            autoCorrect={false}
-            maxLength={30}
-            placeholder="tu_usuario"
-            placeholderTextColor={colors.inkSubtle}
-            className={`rounded-lg border bg-surface px-4 py-3.5 text-[15px] text-ink ${
-              usernameError ? 'border-danger' : 'border-line-strong'
-            }`}
-          />
-          <Text className={`text-[12px] ${usernameError ? 'text-danger' : 'text-ink-subtle'}`}>
-            {usernameError ?? 'Así te encontrarán tus amigos.'}
-          </Text>
-        </View>
-
-        <View className="gap-2">
-          <FieldLabel>Nombre</FieldLabel>
-          <TextInput
-            value={displayName}
-            onChangeText={setDisplayName}
-            maxLength={60}
-            placeholder="Cómo quieres que te vean"
-            placeholderTextColor={colors.inkSubtle}
-            className="rounded-lg border border-line-strong bg-surface px-4 py-3.5 text-[15px] text-ink"
-          />
-        </View>
-
-        <View className="gap-2">
-          <FieldLabel>Sobre ti</FieldLabel>
-          <TextInput
-            value={bio}
-            onChangeText={setBio}
-            multiline
-            numberOfLines={4}
-            maxLength={280}
-            placeholder="Lo que quieras contar"
-            placeholderTextColor={colors.inkSubtle}
-            textAlignVertical="top"
-            className="min-h-24 rounded-lg border border-line-strong bg-surface px-4 py-3.5 text-[15px] text-ink"
-          />
-          <Text className="text-[12px] text-ink-subtle">
-            Solo la ven tus amigos. {280 - bio.length} caracteres restantes.
-          </Text>
+          <View className="gap-2">
+            <FieldLabel>Sobre ti</FieldLabel>
+            <TextInput
+              value={bio}
+              onChangeText={setBio}
+              multiline
+              numberOfLines={4}
+              maxLength={280}
+              placeholder="Lo que quieras contar"
+              placeholderTextColor={colors.inkSubtle}
+              textAlignVertical="top"
+              className="min-h-24 rounded-lg border border-line-strong bg-surface px-4 py-3.5 text-[15px] text-ink"
+            />
+            <Text className="text-[12px] text-ink-subtle">
+              Solo la ven tus amigos. {280 - bio.length} caracteres restantes.
+            </Text>
+          </View>
         </View>
       </View>
-
-      <Button
-        label="Guardar"
-        block
-        className="mt-7"
-        loading={saving}
-        disabled={!dirty || Boolean(usernameError)}
-        onPress={save}
-      />
-    </Screen>
+    </FormScaffold>
   );
 }

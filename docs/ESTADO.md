@@ -18,7 +18,7 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
 - [ ] Aplicar migraciones pendientes a Supabase (`supabase db push`): **0019, 0020, 0021**
 - [ ] Confirmar la clave FCM subida a EAS (`eas credentials`)
-- [ ] Añadir `.easignore` — el archivo de build pesa 334 MB porque sube `.git` · [D2](#d2-el-archivo-de-eas-pesa-334-mb)
+- [x] ~~Añadir `.easignore`~~ — hecho. Ojo: **no** excluye `packages/`, que era lo que decía [D2](#d2-el-archivo-de-eas-pesa-334-mb): `packages/shared` lo importa la app en runtime (`services/share/importService.ts`). Se excluyen sus tests, no el paquete
 - [ ] Fusionar la rama a `main`: no tiene nada de las últimas seis sesiones
 
 ### 🐛 De probar la app (26 jul) — detalle en [Hallazgos](#-hallazgos-del-autor-probando-la-app--26-de-julio-de-2026)
@@ -27,7 +27,7 @@ fuente**. Marcar aquí al cerrar algo.
 
 - [ ] A1 · Foto de perfil no sale en Inicio (`Avatar` sin `uri`)
 - [ ] A2 · Editar perfil no refresca la pestaña Perfil — _misma raíz que A1: no hay fuente única de «mi perfil»_
-- [ ] A3 · Errores de login en inglés (`describeAuthError` solo se usa en OAuth) + el formulario no valida
+- [x] ~~A3 · Errores de login en inglés~~ — las dos capas: `signInWithEmail`/`signUpWithEmail` pasan por `describeAuthError` (+7 entradas de correo/contraseña) y `account.tsx` valida con zod + react-hook-form antes de salir a la red, como el resto de la app
 
 **Arquitectura**
 
@@ -40,9 +40,9 @@ fuente**. Marcar aquí al cerrar algo.
 
 - [ ] C1 · Transición del Diario fluida + «efecto gota» **y quitar los previews** (10 ficheros, va todo junto)
 - [ ] C2 · Filtros de etiquetas: extraer el componente de `TagField` y reutilizarlo
-- [ ] C3 · El teclado tapa «Sobre ti» (`profile-edit` no usa `FormScaffold`)
+- [x] ~~C3 · El teclado tapa «Sobre ti»~~ — `profile-edit` pasa por `FormScaffold`; Guardar va al pie fijo. **Sin verificar en dispositivo**
 - [ ] C4 · Fotos de «Lo último que añadiste»: falta caer a la URL remota si el fichero local no está
-- [ ] C5 · Márgenes laterales del drawer «¿Quién puede ver esto?»
+- [x] ~~C5 · Márgenes laterales del drawer «¿Quién puede ver esto?»~~ — `px-5`, como el resto de hojas
 
 **Producto**
 
@@ -65,7 +65,7 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] Tarea #32 · Copia de seguridad automática **antes de migrar** — la pieza existe (`BackupService`), falta engancharla
 - [ ] Persona etiquetada en una visita no se muestra tras crearla
 - [ ] La moneda está fijada a COP en el detalle de plato
-- [ ] `jszip` sigue en `dependencies` y solo lo usa un test
+- [x] ~~`jszip` sigue en `dependencies`~~ — a `devDependencies`; solo lo usa `zip.node.test.ts`
 - [ ] «Armonía» en formularios de detalle y creación — idea concreta: **empezar por la foto**
 - [ ] Repasar docs sin revisar: **00, 01, 04, 07, 08, 10**
 - [ ] `lint:compiler`: 83 avisos de React Compiler readiness (fuera de la puerta a propósito)

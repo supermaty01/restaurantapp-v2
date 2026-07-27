@@ -43,6 +43,20 @@ describe('describeAuthError', () => {
     expect(describeAuthError('invalid_grant')).toContain('caducado');
   });
 
+  // El camino de correo y contraseña no pasaba por aquí: signInWithEmail y
+  // signUpWithEmail devolvían error.message en crudo, así que la pantalla de
+  // cuenta era el único sitio de la app que hablaba en inglés.
+  it.each([
+    ['Invalid login credentials', 'correo o la contraseña'],
+    ['missing email or phone', 'Escribe tu correo'],
+    ['Password should be at least 6 characters', '6 caracteres'],
+    ['User already registered', 'Ya hay una cuenta'],
+    ['Unable to validate email address: invalid format', 'formato válido'],
+    ['For security purposes, you can only request this after 47 seconds', 'Espera un momento'],
+  ])('translates the email/password failure %p', (raw, expected) => {
+    expect(describeAuthError(raw)).toContain(expected);
+  });
+
   it('passes an unknown error through rather than swallowing it', () => {
     expect(describeAuthError('algo raro que nadie ha visto')).toBe('algo raro que nadie ha visto');
   });

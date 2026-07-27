@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string): Promise<AuthResult> => {
       if (!supabase) return { error: 'not-configured' };
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error?.message ?? null };
+      return { error: error ? describeAuthError(error.message) : null };
     },
     [supabase],
   );
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string): Promise<AuthResult> => {
       if (!supabase) return { error: 'not-configured' };
       const { error } = await supabase.auth.signUp({ email, password });
-      return { error: error?.message ?? null };
+      return { error: error ? describeAuthError(error.message) : null };
     },
     [supabase],
   );

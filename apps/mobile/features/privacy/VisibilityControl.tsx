@@ -50,7 +50,7 @@ export function VisibilityControl({
         title="¿Quién puede ver esto?"
         subtitle={ENTITY_LABEL[entity]}
       >
-        <View className="gap-3 pb-2">
+        <View className="gap-3 px-5 pb-2">
           <VisibilityField
             resolvesTo={fallsBackTo}
             value={value}
