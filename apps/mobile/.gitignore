@@ -1,9 +1,13 @@
 .expo/
-expo-env.d.ts
-android/
-ios/
-*-firebase-adminsdk-*.json
 
 # Generado por Expo al arrancar; sin él, un clon recién hecho no compila
 # (el tipado de process.env.EXPO_PUBLIC_* y de los imports de CSS sale de aquí).
 expo-env.d.ts
+
+# Los proyectos nativos también se ignoran desde la raíz, porque ahí es donde
+# aterrizan cuando alguien lanza `expo prebuild` en el sitio equivocado.
+android/
+ios/
+
+# La clave que firma los envíos de FCM. Vive en EAS, nunca en el repo.
+*-firebase-adminsdk-*.json

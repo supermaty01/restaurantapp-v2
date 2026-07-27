@@ -1,8 +1,12 @@
 /**
- * Import service for handling shared files
+ * Importar un fichero compartido (.restoshare) al diario local.
+ *
+ * La lectura pasa por el esquema zod de `@restaurantapp/shared`: es la única
+ * entrada de la app que llega de fuera y no la escribe un formulario propio.
  */
 
-import { eq } from 'drizzle-orm';
+import { parseShareFile as parseShareFileContents } from '@restaurantapp/shared';
+import { and, eq, sql } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system/legacy';
 
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
@@ -10,18 +14,16 @@ import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange } from '@/services/db/sync-write';
 import type { AppDatabase } from '@/services/db/types';
 
-import { CURRENT_SHARE_VERSION } from './types';
-
 import type {
   ShareFileData,
   ShareableRestaurant,
   ShareableDish,
   ShareableImage,
   ShareableTag,
-  ConflictResult,
-  ConflictResolution,
-  ImportResult,
-} from './types';
+} from '@restaurantapp/shared';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+
+import type { ConflictResult, ConflictResolution, ImportResult } from './types';
 
 type DrizzleDb = AppDatabase;
 
@@ -43,98 +45,128 @@ async function insertImageRow(
   if (row) await recordChange(db, 'images', row.id, sync.uuid, 'insert');
 }
 
-// Copy content:// URI to a local file for reading
+/**
+ * Copia un `content://` a un fichero que se pueda leer.
+ *
+ * Android entrega los adjuntos por el Storage Access Framework, y esas URIs no
+ * se abren directamente.
+ */
 async function copyToLocalFile(uri: string): Promise<string | null> {
   try {
     const cacheDir = FileSystem.cacheDirectory;
     if (!cacheDir) return null;
 
     const localPath = `${cacheDir}temp_import_${Date.now()}.restoshare`;
-
-    // For content:// URIs, we need to use copyAsync (SAF - Storage Access Framework)
-    await FileSystem.copyAsync({
-      from: uri,
-      to: localPath,
-    });
-
+    await FileSystem.copyAsync({ from: uri, to: localPath });
     return localPath;
   } catch {
     return null;
   }
 }
 
-// Parse a share file
-export async function parseShareFile(fileUri: string): Promise<ShareFileData | null> {
-  try {
-    let localUri = fileUri;
+/**
+ * Lee y **valida** un `.restoshare`.
+ *
+ * Antes esto era `JSON.parse(content) as ShareFileData`. El `as` no comprueba
+ * nada: afirma. Un fichero con `rating: "cinco"` o con `tags: 5` pasaba de largo
+ * y sus campos entraban derechos a un `insert()`. Y es la única entrada de la
+ * app que viene de fuera de verdad — la abre el sistema desde un adjunto o una
+ * descarga— mientras cada formulario de la app sí pasa por zod.
+ *
+ * El esquema vive en `@restaurantapp/shared` porque el Worker guarda este mismo
+ * payload como contenido de un enlace compartido.
+ *
+ * Devuelve el motivo además del fallo: «no se pudo abrir» no distingue un
+ * fichero corrupto de uno escrito por una versión más nueva de la app, y son
+ * dos cosas distintas para quien lo está intentando.
+ */
+export async function readShareFile(
+  fileUri: string,
+): Promise<{ ok: true; data: ShareFileData } | { ok: false; reason: string }> {
+  let localUri = fileUri;
+  let temporary = false;
 
-    // If it's a content:// URI, we need to copy it locally first
+  try {
     if (fileUri.startsWith('content://')) {
       const copiedPath = await copyToLocalFile(fileUri);
-      if (!copiedPath) {
-        return null;
-      }
+      if (!copiedPath) return { ok: false, reason: 'No se pudo leer el fichero' };
       localUri = copiedPath;
+      temporary = true;
     }
 
     const content = await FileSystem.readAsStringAsync(localUri, {
       encoding: FileSystem.EncodingType.UTF8,
     });
 
-    const data = JSON.parse(content) as ShareFileData;
-
-    // Validate version
-    if (!data.version || data.version > CURRENT_SHARE_VERSION) {
-      return null;
+    let raw: unknown;
+    try {
+      raw = JSON.parse(content);
+    } catch {
+      return { ok: false, reason: 'El fichero no es un .restoshare válido' };
     }
 
-    // Clean up temp file if we created one
-    if (localUri !== fileUri) {
-      FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {});
-    }
-
-    return data;
+    return parseShareFileContents(raw);
   } catch {
-    return null;
+    return { ok: false, reason: 'No se pudo leer el fichero' };
+  } finally {
+    // En `finally` y no en el camino feliz: antes la copia temporal solo se
+    // borraba cuando todo iba bien, así que cada fichero que fallaba dejaba su
+    // basura en la caché para siempre — y los que fallan traen fotos dentro.
+    if (temporary) {
+      void FileSystem.deleteAsync(localUri, { idempotent: true }).catch(() => {
+        // Un temporal que no se borra no puede tumbar una importación correcta.
+      });
+    }
   }
 }
 
-// Find similar restaurants by name (case-insensitive)
+/**
+ * El mismo nombre, ignorando mayúsculas y espacios de sobra.
+ *
+ * En SQL y no filtrando en JavaScript. Las dos búsquedas se traían la tabla
+ * **entera** a memoria y comparaban una a una — y se llaman una vez por cada
+ * elemento importado, así que un diario grande recorrido para cada plato de un
+ * fichero es O(n·m) sin que nadie lo pidiera.
+ *
+ * `trim` va también en SQL: sin él, un nombre guardado con un espacio final
+ * dejaba de parecerse a sí mismo y la importación creaba un duplicado.
+ */
+const sameName = (column: SQLiteColumn, name: string) =>
+  sql`lower(trim(${column})) = ${name.toLowerCase().trim()}`;
+
 export async function findSimilarRestaurants(
   db: DrizzleDb,
   name: string,
 ): Promise<{ id: number; name: string }[]> {
-  try {
-    const normalizedName = name.toLowerCase().trim();
-    const allRestaurants = await db
-      .select({ id: schema.restaurants.id, name: schema.restaurants.name })
-      .from(schema.restaurants)
-      .where(eq(schema.restaurants.deleted, false));
-
-    return allRestaurants.filter((r) => r.name.toLowerCase().trim() === normalizedName);
-  } catch {
-    return [];
-  }
+  return db
+    .select({ id: schema.restaurants.id, name: schema.restaurants.name })
+    .from(schema.restaurants)
+    .where(and(eq(schema.restaurants.deleted, false), sameName(schema.restaurants.name, name)));
 }
 
-// Find similar dishes by name (case-insensitive)
+/**
+ * Igual, pero acotado al restaurante cuando se sabe cuál es.
+ *
+ * El parámetro existía, se llamaba `_restaurantId` y **no se usaba**: la función
+ * comparaba solo por nombre. Dos restaurantes con un «Ramen» cada uno se
+ * detectaban como el mismo plato, así que importar el segundo ofrecía reutilizar
+ * el del primero. Un plato pertenece a su restaurante; el nombre solo no lo
+ * identifica.
+ */
 export async function findSimilarDishes(
   db: DrizzleDb,
   name: string,
-  _restaurantId?: number,
+  restaurantId?: number,
 ): Promise<{ id: number; name: string }[]> {
-  try {
-    const normalizedName = name.toLowerCase().trim();
-    let query = db
-      .select({ id: schema.dishes.id, name: schema.dishes.name })
-      .from(schema.dishes)
-      .where(eq(schema.dishes.deleted, false));
-
-    const allDishes = await query;
-    return allDishes.filter((d) => d.name.toLowerCase().trim() === normalizedName);
-  } catch {
-    return [];
+  const conditions = [eq(schema.dishes.deleted, false), sameName(schema.dishes.name, name)];
+  if (restaurantId !== undefined) {
+    conditions.push(eq(schema.dishes.restaurantId, restaurantId));
   }
+
+  return db
+    .select({ id: schema.dishes.id, name: schema.dishes.name })
+    .from(schema.dishes)
+    .where(and(...conditions));
 }
 
 // Check for restaurant conflicts

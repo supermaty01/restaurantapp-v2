@@ -8,13 +8,14 @@ import { useToast } from '@/components/ui/Toast';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import {
-  parseShareFile,
+  readShareFile,
   checkRestaurantConflict,
   importRestaurantFile,
   importDishFile,
   importVisitFile,
 } from '@/services/share/importService';
-import type { ShareFileData, ConflictResult, ConflictResolution } from '@/services/share/types';
+import type { ShareFileData } from '@/services/share/types';
+import type { ConflictResult, ConflictResolution } from '@/services/share/types';
 
 import type { ComponentProps } from 'react';
 
@@ -91,15 +92,16 @@ export default function ImportScreen() {
         setLoading(true);
         setError(null);
 
-        const data = await parseShareFile(fileUri);
-        if (!data) {
-          setError(
-            'No se pudo leer el archivo. Puede estar corrupto o ser de una versión incompatible.',
-          );
+        const parsed = await readShareFile(fileUri);
+        if (!parsed.ok) {
+          // El motivo que da el esquema, no una frase que sirva para todo: «está
+          // corrupto o es de otra versión» obligaba a adivinar cuál de las dos.
+          setError(parsed.reason);
           setLoading(false);
           return;
         }
 
+        const data = parsed.data;
         setShareData(data);
 
         const restaurantName =

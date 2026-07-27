@@ -49,7 +49,7 @@ export const useDishById = (id: number, includeDeleted: boolean = true) => {
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['dishes', 'dishTags', 'tags', 'images', 'restaurants'],
+    [schema.dishes, schema.dishTags, schema.tags, schema.images, schema.restaurants],
     [id, includeDeleted],
   );
 

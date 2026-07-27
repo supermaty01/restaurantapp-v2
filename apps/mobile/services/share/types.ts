@@ -1,69 +1,38 @@
 /**
- * Types for the share file format (.restoshare)
- * These types define the structure of data that can be shared between users
+ * Los tipos del formato `.restoshare`.
+ *
+ * El formato en sí ya no se define aquí: vive en `@restaurantapp/shared` como
+ * esquema zod, porque lo escriben y lo leen dos procesos distintos —la app y el
+ * Worker, que guarda el mismo payload como contenido de un enlace compartido— y
+ * un formato definido dos veces es un formato que acaba divergiendo.
+ *
+ * Se reexporta desde aquí para que el resto de la app siga pidiéndole el tipo a
+ * `services/share`, que es donde corresponde preguntarlo, y no a un paquete del
+ * monorepo.
+ *
+ * Lo que sigue siendo propio de este fichero es lo que solo existe durante una
+ * importación: conflictos y resultados. Nada de eso viaja dentro del fichero.
  */
 
-// Type of entity being shared
-export type ShareEntityType = 'restaurant' | 'dish' | 'visit';
+export type {
+  ShareEntityType,
+  ShareableTag,
+  ShareableImage,
+  ShareableRestaurant,
+  ShareableDish,
+  ShareableVisit,
+  ShareFileData,
+} from '@restaurantapp/shared';
 
-// Tag data (without IDs since they need to be matched/created on import)
-export interface ShareableTag {
-  name: string;
-  color: string;
-}
+export {
+  CURRENT_SHARE_VERSION,
+  SHARE_FILE_EXTENSION,
+  SHARE_FILE_MIME_TYPE,
+} from '@restaurantapp/shared';
 
-// Image as base64 (since we can't share file paths)
-export interface ShareableImage {
-  base64: string;
-  filename: string;
-}
+import type { ShareEntityType } from '@restaurantapp/shared';
 
-// Restaurant data for sharing
-export interface ShareableRestaurant {
-  name: string;
-  latitude: number | null;
-  longitude: number | null;
-  comments: string | null;
-  rating: number | null;
-  tags: ShareableTag[];
-  images: ShareableImage[];
-}
-
-// Dish data for sharing
-export interface ShareableDish {
-  name: string;
-  price: number | null;
-  rating: number | null;
-  comments: string | null;
-  tags: ShareableTag[];
-  images: ShareableImage[];
-}
-
-// Visit data for sharing
-export interface ShareableVisit {
-  visitedAt: string;
-  comments: string | null;
-  images: ShareableImage[];
-}
-
-// Complete share file structure
-export interface ShareFileData {
-  version: number;
-  type: ShareEntityType;
-  createdAt: string;
-
-  // Main entity data (only one will be present based on type)
-  restaurant?: ShareableRestaurant | undefined;
-  dish?: ShareableDish | undefined;
-  visit?: ShareableVisit | undefined;
-
-  // For dish: includes the restaurant
-  // For visit: includes the restaurant and all dishes associated
-  includedRestaurant?: ShareableRestaurant | undefined;
-  includedDishes?: ShareableDish[] | undefined;
-}
-
-// Conflict detection result
+/** Un nombre que ya existe en el diario, detectado antes de importar. */
 export interface ConflictResult {
   hasConflict: boolean;
   existingEntity?:
@@ -75,11 +44,10 @@ export interface ConflictResult {
   incomingName: string;
 }
 
-// Import options when conflict is found
+/** Qué hacer con él: reutilizar lo que hay o crear una entrada aparte. */
 export type ConflictResolution =
   { type: 'use_existing'; existingId: number } | { type: 'create_new' };
 
-// Import result
 export interface ImportResult {
   success: boolean;
   entityType: ShareEntityType;
@@ -87,8 +55,3 @@ export interface ImportResult {
   entityName?: string | undefined;
   error?: string | undefined;
 }
-
-// File extension and MIME type
-export const SHARE_FILE_EXTENSION = '.restoshare';
-export const SHARE_FILE_MIME_TYPE = 'application/x-restoshare';
-export const CURRENT_SHARE_VERSION = 1;

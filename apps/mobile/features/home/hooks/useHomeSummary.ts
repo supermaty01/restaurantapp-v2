@@ -140,14 +140,22 @@ export function useHomeSummary(recentLimit = 3) {
     [drizzleDb],
   );
 
-  const { data: restaurantRows } = useLiveTablesQuery(countsQuery, ['restaurants']);
-  const { data: dishRows } = useLiveTablesQuery(dishCountQuery, ['dishes']);
-  const { data: visitRows } = useLiveTablesQuery(visitCountQuery, ['visits']);
-  const { data: recentVisits } = useLiveTablesQuery(recentVisitsQuery, ['visits', 'restaurants']);
-  const { data: recentDishes } = useLiveTablesQuery(recentDishesQuery, ['dishes', 'restaurants']);
-  const { data: recentRestaurants } = useLiveTablesQuery(recentRestaurantsQuery, ['restaurants']);
-  const { data: dishLinks } = useLiveTablesQuery(dishLinksQuery, ['dish_visit']);
-  const { data: imageRows } = useLiveTablesQuery(imagesQuery, ['images']);
+  const { data: restaurantRows } = useLiveTablesQuery(countsQuery, [schema.restaurants]);
+  const { data: dishRows } = useLiveTablesQuery(dishCountQuery, [schema.dishes]);
+  const { data: visitRows } = useLiveTablesQuery(visitCountQuery, [schema.visits]);
+  const { data: recentVisits } = useLiveTablesQuery(recentVisitsQuery, [
+    schema.visits,
+    schema.restaurants,
+  ]);
+  const { data: recentDishes } = useLiveTablesQuery(recentDishesQuery, [
+    schema.dishes,
+    schema.restaurants,
+  ]);
+  const { data: recentRestaurants } = useLiveTablesQuery(recentRestaurantsQuery, [
+    schema.restaurants,
+  ]);
+  const { data: dishLinks } = useLiveTablesQuery(dishLinksQuery, [schema.dishVisits]);
+  const { data: imageRows } = useLiveTablesQuery(imagesQuery, [schema.images]);
 
   const recent = useMemo(() => {
     const firstImage = (key: 'visitId' | 'dishId' | 'restaurantId', id: number) =>

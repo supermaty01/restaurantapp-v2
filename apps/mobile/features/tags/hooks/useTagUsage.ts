@@ -52,10 +52,10 @@ export function useTagUsage(): Map<number, TagUsage> {
   );
 
   const { data: restaurantRows } = useLiveTablesQuery(restaurantCounts, [
-    'restaurant_tag',
-    'restaurants',
+    schema.restaurantTags,
+    schema.restaurants,
   ]);
-  const { data: dishRows } = useLiveTablesQuery(dishCounts, ['dish_tag', 'dishes']);
+  const { data: dishRows } = useLiveTablesQuery(dishCounts, [schema.dishTags, schema.dishes]);
 
   return useMemo(() => {
     const usage = new Map<number, TagUsage>();

@@ -11,11 +11,27 @@ node_modules/
 .expo/
 dist/
 web-build/
-android/app/build/
-ios/build/
 *.apk
 *.aab
 *.ipa
+
+# Proyectos nativos generados (CNG). No se commitean: los genera `expo prebuild`
+# a partir de app.config.js, y EAS los regenera en cada build.
+#
+# Estuvieron en el repo por accidente —un `expo` lanzado desde la raíz en vez de
+# desde apps/mobile— y el que quedó commiteado se congeló en `com.restaurantappv2`
+# con versionCode 1, sin el intent-filter de `restaurantapp://` y sin permiso de
+# notificaciones. Cualquier build hecha desde él llevaba el paquete equivocado,
+# que es exactamente lo que hace que Firebase no arranque y que el redirect de
+# OAuth no vuelva a la app.
+/android/
+/ios/
+apps/mobile/android/
+apps/mobile/ios/
+
+# Igual: app.json en la raíz lo escribe un `expo` mal lanzado, y compite con
+# apps/mobile/app.config.js por ser la configuración.
+/app.json
 
 # Cloudflare
 .wrangler/

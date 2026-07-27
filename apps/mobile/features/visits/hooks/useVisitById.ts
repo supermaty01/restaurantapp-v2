@@ -52,7 +52,15 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['visits', 'restaurants', 'images', 'dishVisits', 'dishes', 'visitParticipants', 'people'],
+    [
+      schema.visits,
+      schema.restaurants,
+      schema.images,
+      schema.dishVisits,
+      schema.dishes,
+      schema.visitParticipants,
+      schema.people,
+    ],
     [id, includeDeleted],
   );
 

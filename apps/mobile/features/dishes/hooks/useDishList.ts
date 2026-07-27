@@ -39,7 +39,7 @@ export const useDishList = (includeDeleted: boolean = false) => {
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['dishes', 'dishTags', 'tags', 'images'],
+    [schema.dishes, schema.dishTags, schema.tags, schema.images],
     [includeDeleted],
   );
 

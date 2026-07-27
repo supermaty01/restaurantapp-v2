@@ -25,9 +25,55 @@ export interface ShareStore {
   revoke(id: string, ownerId: string): Promise<void>;
 }
 
+/**
+ * Retira los enlaces que ya no sirven a nadie.
+ *
+ * `wrangler.toml` declara un cron de madrugada para esto desde el principio y
+ * **no había nada que lo atendiera**: `scheduled` no miraba qué cron lo había
+ * disparado, así que a las 3:00 se repartían push otra vez y los enlaces
+ * caducados se quedaban en la tabla para siempre.
+ *
+ * Borra en vez de marcar: un enlace caducado no tiene historia que conservar, y
+ * su `content` es el payload entero de una visita con sus fotos en base64.
+ * Guardarlos es pagar almacenamiento por filas que ya devuelven 404.
+ */
+export async function purgeExpiredShares(env: Env): Promise<number> {
+  const cutoff = new Date().toISOString();
+  const url =
+    `${env.SUPABASE_URL}/rest/v1/share_links` +
+    `?or=(and(expires_at.not.is.null,expires_at.lt.${encodeURIComponent(cutoff)}),revoked.is.true)`;
+
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      apikey: env.SUPABASE_SECRET_KEY,
+      'content-type': 'application/json',
+      prefer: 'return=representation',
+    },
+  });
+
+  if (!res.ok) throw new Error(`share purge failed: ${String(res.status)}`);
+  const rows = await res.json<unknown[]>();
+  return rows.length;
+}
+
+/**
+ * ¿Sigue sirviendo este enlace?
+ *
+ * Una fecha de caducidad que no se entiende cuenta como **caducada**, no como
+ * eterna. `new Date('mañana').getTime()` es `NaN`, y `NaN < Date.now()` es
+ * `false`: con la comprobación escrita al derecho, cualquier cadena que no fuera
+ * una fecha producía un enlace que no caducaba nunca. El fallo seguro es el
+ * contrario — un enlace de menos se vuelve a crear; uno de más sigue publicado.
+ */
 export function isLive(record: ShareRecord): boolean {
   if (record.revoked) return false;
-  if (record.expiresAt && new Date(record.expiresAt).getTime() < Date.now()) return false;
+
+  if (record.expiresAt) {
+    const expiry = new Date(record.expiresAt).getTime();
+    if (!Number.isFinite(expiry) || expiry < Date.now()) return false;
+  }
+
   return true;
 }
 
@@ -68,7 +114,7 @@ export function createSupabaseShareStore(env: Env): ShareStore {
     async get(id) {
       const res = await fetch(`${base}?id=eq.${encodeURIComponent(id)}&select=*`, { headers });
       if (!res.ok) return null;
-      const rows = (await res.json()) as Record<string, unknown>[];
+      const rows = await res.json<Record<string, unknown>[]>();
       const row = rows[0];
       if (!row) return null;
       return {
@@ -83,12 +129,36 @@ export function createSupabaseShareStore(env: Env): ShareStore {
       };
     },
 
+    /**
+     * Retira un enlace.
+     *
+     * Comprueba la respuesta, que es lo que no hacía: el `fetch` salía, se
+     * descartaba el resultado y la ruta contestaba `{ok:true}` pasara lo que
+     * pasara. Un 4xx de Supabase —clave caducada, tabla movida— se veía en la
+     * app como «enlace revocado» mientras el enlace seguía sirviendo el
+     * contenido. Revocar es justo donde un fallo silencioso no vale.
+     *
+     * `owner_id` también va escapado. Hoy viene del `sub` de un JWT y es un
+     * uuid, pero el que se escapaba y el que no estaban en la misma línea, y esa
+     * asimetría es lo que hace que un día alguien meta ahí otra cosa.
+     */
     async revoke(id, ownerId) {
-      await fetch(`${base}?id=eq.${encodeURIComponent(id)}&owner_id=eq.${ownerId}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ revoked: true }),
-      });
+      const res = await fetch(
+        `${base}?id=eq.${encodeURIComponent(id)}&owner_id=eq.${encodeURIComponent(ownerId)}`,
+        {
+          method: 'PATCH',
+          headers: { ...headers, prefer: 'return=representation' },
+          body: JSON.stringify({ revoked: true }),
+        },
+      );
+
+      if (!res.ok) throw new Error(`share revoke failed: ${String(res.status)}`);
+
+      // PostgREST devuelve 200 con una lista vacía cuando el filtro no encuentra
+      // nada. Sin esto, revocar el enlace de otra persona —o uno que ya no
+      // existe— se reportaría como hecho.
+      const rows = await res.json<unknown[]>();
+      if (rows.length === 0) throw new Error('share revoke: no existe o no es tuyo');
     },
   };
 }

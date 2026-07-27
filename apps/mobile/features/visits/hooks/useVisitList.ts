@@ -37,7 +37,7 @@ export const useVisitList = (includeDeleted: boolean = false) => {
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['visits', 'restaurants', 'images'],
+    [schema.visits, schema.restaurants, schema.images],
     [includeDeleted],
   );
 
