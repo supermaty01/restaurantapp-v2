@@ -17,7 +17,17 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] **APK nuevo** (`eas build -p android --profile preview`). Paso cero de las últimas tres rondas
 - [ ] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
 - [ ] Aplicar migraciones pendientes a Supabase (`supabase db push`): **0018, 0019, 0020 y 0021 — cuatro, no tres**. Medido el 27 de julio con `supabase migration list --linked`: el proyecto remoto está en **0017**. La 0018 se daba por aplicada desde la ronda 4 y nunca se subió
-- [ ] Desplegar el Worker: el último despliegue de **código** es del **25 de julio**, y desde entonces hay **cinco commits** que lo tocan — incluido el que añade `scheduled`. O sea que los crons están configurados y disparan contra un Worker que no sabe atenderlos: **el push no puede funcionar hoy**, y no es un problema de credenciales
+- [x] ~~Desplegar el Worker~~ — **desplegado el 27 de julio a las 21:57 UTC**, con el código actual (el `scheduled` incluido). Confirmado por el push llegando de verdad al dispositivo
+
+> **Y una corrección, porque el error de método es lo que interesa.** Esa misma
+> tarde este documento afirmó que el último despliegue era del 25 de julio y que
+> «el push no puede funcionar hoy». Era falso: la comprobación se hizo con
+> `wrangler deployments list | tail`, y **esa lista no sale en orden
+> cronológico**, así que el `tail` cortó justo el despliegue más reciente. Lo
+> que lo destapó fue el autor diciendo que había recibido un aviso — un dato de
+> la realidad contra una deducción de una lista mal leída. Para mirarlo hay que
+> ordenar: `wrangler deployments list | grep '^Created:' | sort | tail -1`.
+
 - [ ] Confirmar la clave FCM subida a EAS (`eas credentials`)
 - [x] ~~Añadir `.easignore`~~ — en `apps/mobile/`, junto a `eas.json`. **El diagnóstico de [D2](#d2-el-archivo-de-eas-pesa-334-mb) era falso**: `.git` son 8,7 MB, no 334. Lo pesado era `apps/mobile/android/` (1,4 GB). Y no excluye `packages/`: `packages/shared` lo importa la app en runtime
 - [x] ~~Borrar el `android/` regenerado~~ — había vuelto a aparecer en disco (ignorado por git, así que invisible en `git status`). Es lo que tumbó la build del 27 de julio
