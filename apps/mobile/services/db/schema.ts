@@ -75,7 +75,11 @@ export const visits = sqliteTable('visits', {
 export const dishes = sqliteTable('dishes', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
-  price: integer('price'),
+  // `real` y no `integer`: un plato cuesta 3,50. Lo declaraba entero mientras
+  // la app escribia decimales, y SQLite no lo impide -- el fallo aparecia mucho
+  // despues, al empujar contra Postgres, que si aplica tipos. El espejo usa
+  // `numeric(12,2)`. Ver la migracion 0011.
+  price: real('price'),
   rating: integer('rating'),
   comments: text('comments'),
   restaurantId: integer('restaurant_id').references(() => restaurants.id),
