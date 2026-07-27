@@ -18,7 +18,8 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
 - [ ] Aplicar migraciones pendientes a Supabase (`supabase db push`): **0019, 0020, 0021**
 - [ ] Confirmar la clave FCM subida a EAS (`eas credentials`)
-- [x] ~~Añadir `.easignore`~~ — hecho. Ojo: **no** excluye `packages/`, que era lo que decía [D2](#d2-el-archivo-de-eas-pesa-334-mb): `packages/shared` lo importa la app en runtime (`services/share/importService.ts`). Se excluyen sus tests, no el paquete
+- [x] ~~Añadir `.easignore`~~ — en `apps/mobile/`, junto a `eas.json`. **El diagnóstico de [D2](#d2-el-archivo-de-eas-pesa-334-mb) era falso**: `.git` son 8,7 MB, no 334. Lo pesado era `apps/mobile/android/` (1,4 GB). Y no excluye `packages/`: `packages/shared` lo importa la app en runtime
+- [x] ~~Borrar el `android/` regenerado~~ — había vuelto a aparecer en disco (ignorado por git, así que invisible en `git status`). Es lo que tumbó la build del 27 de julio
 - [ ] Fusionar la rama a `main`: no tiene nada de las últimas seis sesiones
 
 ### 🐛 De probar la app (26 jul) — detalle en [Hallazgos](#-hallazgos-del-autor-probando-la-app--26-de-julio-de-2026)
@@ -386,14 +387,40 @@ como opción de igual peso —no un enlace pequeño debajo— y una marca en
 `app_settings` para no repetirla. Y es el sitio natural para explicar la regla de
 B2: _si luego creas una cuenta, lo que hayas guardado se asocia a ella_.
 
-#### D2. El archivo de EAS pesa 334 MB
+#### D2. El archivo de EAS pesa 334 MB — ✅ resuelto, y el diagnóstico era falso
 
-**No hay `.easignore`** en el repo. Sin él, EAS sube todo lo que no esté en
-`.gitignore`, y eso incluye `.git` entero con su historia.
+> **Corregido el 27 de julio, midiendo.** Lo que sigue en tachado es lo que este
+> documento afirmaba sin haberlo medido, y es un buen ejemplo de por qué las
+> notas de esta lista tienen que llevar el número al lado.
 
-Es el arreglo más barato de toda la lista: un `.easignore` con `.git`, `docs`,
-`supabase`, `apps/api`, `packages`, `coverage`, `*.md` y los tests. Nada de eso
-participa en construir el APK. Minutos de subida en cada build.
+~~Sin `.easignore`, EAS sube todo lo que no esté en `.gitignore`, y eso incluye
+`.git` entero con su historia.~~ **`.git` son 8,7 MB.** Nunca fueron los 334.
+
+Lo que pesaba era **`apps/mobile/android/`: 1,4 GB**, de los cuales 1,2 GB son
+`app/build` — salida de Gradle de un `expo prebuild` local. Y ese directorio es
+además lo que **tumbó la build del 27 de julio**, por dos caminos a la vez:
+
+- EAS lo detecta y pasa a **workflow bare**, donde `runtimeVersion: { policy:
+'appVersion' }` (`app.config.js:152`) no está soportado → `CommandError`.
+- En bare, `app.config.js` deja de mandar: _«Specified value for
+  "android.package" is ignored»_. Manda el `applicationId` del Gradle.
+
+**`.easignore` no puede arreglar eso**, y conviene entender por qué: la
+detección es una comprobación del CLI **sobre el disco**, anterior al archivo.
+En el log el aviso del paquete sale _antes_ de «Compressing project files».
+`.easignore` solo decide qué se comprime. El arreglo es que el directorio no
+exista.
+
+Dos cosas más que salieron de aquí:
+
+- **El fichero va en `apps/mobile/`**, junto a `eas.json`, que es desde donde se
+  lanza el comando. Sus patrones van sin anclar para que valgan igual si EAS
+  resuelve desde la raíz del workspace (en monorepo comprime desde arriba).
+- **En cuanto existe un `.easignore`, EAS deja de leer `.gitignore`.** Así que
+  todo lo que solo protegía `.gitignore` empezaría a viajar en el archivo — y en
+  `apps/mobile` hay una **clave privada de service account de Firebase**
+  (`*-firebase-adminsdk-*.json`, sin trackear) que era exactamente ese caso.
+  Está repetida en `.easignore` junto a `.env` y `node_modules`.
 
 ### ⏭️ Lo que queda pendiente (por orden)
 
