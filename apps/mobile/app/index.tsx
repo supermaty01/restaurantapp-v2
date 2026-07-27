@@ -1,4 +1,7 @@
-import { Redirect } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
+
+import { useFirstRun } from '@/features/onboarding/useFirstRun';
+import { WelcomeScreen } from '@/features/onboarding/WelcomeScreen';
 
 /**
  * The app is local-first: there is no login gate. Accounts become an opt-in
@@ -8,7 +11,31 @@ import { Redirect } from 'expo-router';
  * the app opening on "página no encontrada" — the route had become a segment of
  * Diario rather than a screen. Landing on the tab group instead of a specific
  * route means a future reshuffle cannot break the entry point the same way.
+ *
+ * La bienvenida entra **solo en la primera ejecución** y no cambia nada de lo
+ * anterior: quien ya usaba la app sigue cayendo directo en las pestañas, y
+ * quien la abre por primera vez elige, con las dos opciones del mismo peso. El
+ * razonamiento de por qué el orden de los botones importa está en
+ * `WelcomeScreen`.
  */
 export default function Index() {
-  return <Redirect href="/(main)/(tabs)" />;
+  const router = useRouter();
+  const { firstRun, markSeen } = useFirstRun();
+
+  // Mientras se lee la marca no se pinta nada: un fotograma de bienvenida en
+  // cada arranque sería peor que un instante en blanco.
+  if (firstRun === null) return null;
+  if (!firstRun) return <Redirect href="/(main)/(tabs)" />;
+
+  return (
+    <WelcomeScreen
+      onContinue={() => void markSeen()}
+      onSignIn={() => {
+        // Marcar primero: si la persona vuelve atrás desde la pantalla de
+        // cuenta sin registrarse, ha entrado igual y la bienvenida ya cumplió.
+        void markSeen();
+        router.push('/(main)/account');
+      }}
+    />
+  );
 }
