@@ -33,7 +33,7 @@ export type { SyncStatus } from '@/services/sync/syncStore';
 export function useSync() {
   const db = useDatabase();
   const { accountUuid } = useAuth();
-  const { status, lastOutcome, photos } = useSyncExternalStore(subscribeToSync, getSyncState);
+  const { status, lastOutcome, rows, photos } = useSyncExternalStore(subscribeToSync, getSyncState);
   /**
    * Hay dos diarios y nadie ha elegido cual manda.
    *
@@ -111,5 +111,13 @@ export function useSync() {
     return () => sub.remove();
   }, [syncNow]);
 
-  return { status, lastOutcome, photos, syncNow, needsChoice, isSignedIn: accountUuid !== null };
+  return {
+    status,
+    lastOutcome,
+    rows,
+    photos,
+    syncNow,
+    needsChoice,
+    isSignedIn: accountUuid !== null,
+  };
 }

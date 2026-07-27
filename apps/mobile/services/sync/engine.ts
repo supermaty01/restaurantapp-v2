@@ -8,8 +8,25 @@ import { applyLinks, collectLinks, parentIdsByUuid } from '@/services/sync/links
 import { applyRemoteRecord, toRemoteRecord, toTombstoneRecord } from '@/services/sync/records';
 import { column, linksOf, SYNC_TABLES } from '@/services/sync/tables';
 import type { LinkRow, RemoteRecord, SyncTransport } from '@/services/sync/transport';
+import { yieldToUI, YIELD_EVERY } from '@/services/sync/yield';
 
 const CURSOR_PREFIX = 'sync_cursor_';
+
+/**
+ * Por dónde va la pasada, para que la interfaz pueda decirlo.
+ *
+ * `total` es null en el pull: no se sabe cuántas filas hay al otro lado hasta
+ * que se acaban las páginas, y fingir un total que luego crece es peor que no
+ * darlo. La pantalla enseña un recuento que sube, que ya distingue «avanzando»
+ * de «colgado», que es la pregunta que se hace quien mira.
+ */
+export interface RowProgress {
+  phase: 'push' | 'pull';
+  /** La tabla en curso, con su nombre SQL. */
+  table: string;
+  done: number;
+  total: number | null;
+}
 
 /**
  * The sync engine (docs/03). Reconciles the local SQLite with a remote store
@@ -60,6 +77,8 @@ export class SyncEngine {
     private readonly transport: SyncTransport,
     /** The logged-in account's uuid; stamped on every pushed record. */
     private readonly accountUuid: string,
+    /** Se llama mientras se mueven filas. Ver `RowProgress`. */
+    private readonly onProgress?: (progress: RowProgress) => void,
   ) {}
 
   async sync(): Promise<void> {
@@ -81,6 +100,7 @@ export class SyncEngine {
 
     if (pending.length === 0) return;
 
+    let pushed = 0;
     const pushedIds: number[] = [];
     /** Parents that moved this pass, per table: whose links need resending. */
     const touched = new Map<string, { id: number; uuid: string }[]>();
@@ -134,6 +154,20 @@ export class SyncEngine {
         } else {
           // Hard-deleted locally: push a tombstone so the deletion propagates.
           records.push(toTombstoneRecord(cfg, uuid, this.accountUuid));
+        }
+
+        // Armar cada registro lee SQLite, y SQLite aquí es síncrono: sin ceder,
+        // un diario importado construye miles de registros sin soltar el hilo
+        // que pinta. Ver `yield.ts`.
+        pushed += 1;
+        if (pushed % YIELD_EVERY === 0) {
+          this.onProgress?.({
+            phase: 'push',
+            table: cfg.name,
+            done: pushed,
+            total: pending.length,
+          });
+          await yieldToUI();
         }
       }
 
@@ -223,6 +257,7 @@ export class SyncEngine {
    * adelantar el cursor y morir después se salta filas para siempre.
    */
   async pull(): Promise<void> {
+    let applied = 0;
     const touched = new Map<string, string[]>();
     /** La traducción id↔uuid de esta pasada. Ver `identityMap.ts`. */
     const identity = new IdentityMap(this.db);
@@ -241,9 +276,23 @@ export class SyncEngine {
         // pocos cientos de uuids distintos.
         await identity.primeRemoteForeignKeys(cfg, records);
 
-        for (const record of records) {
+        for (const [index, record] of records.entries()) {
           await applyRemoteRecord(this.db, cfg, record, identity);
+
+          // Igual que en el push, y aquí es donde de verdad se notaba: aplicar
+          // una página entera son cientos de escrituras síncronas seguidas.
+          if ((index + 1) % YIELD_EVERY === 0) {
+            this.onProgress?.({
+              phase: 'pull',
+              table: cfg.name,
+              done: applied + index + 1,
+              total: null,
+            });
+            await yieldToUI();
+          }
         }
+        applied += records.length;
+        this.onProgress?.({ phase: 'pull', table: cfg.name, done: applied, total: null });
         seen.push(...records.filter((r) => !r.deleted).map((r) => r.uuid));
 
         const maxSeq = records.reduce(

@@ -4,7 +4,7 @@ import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
 import { downloadMissingPhotos, uploadPendingPhotos } from '@/services/sync/photos';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
-import { reportPhotoProgress } from '@/services/sync/syncStore';
+import { reportPhotoProgress, reportRowProgress } from '@/services/sync/syncStore';
 
 export interface SyncOutcome {
   ok: boolean;
@@ -17,7 +17,12 @@ export interface SyncOutcome {
  * the app (docs/03); it reports the outcome so the UI can show it.
  */
 export async function runSync(db: AppDatabase, accountUuid: string): Promise<SyncOutcome> {
-  const engine = new SyncEngine(db, createSupabaseTransport(accountUuid), accountUuid);
+  const engine = new SyncEngine(
+    db,
+    createSupabaseTransport(accountUuid),
+    accountUuid,
+    reportRowProgress,
+  );
   try {
     // Before the rows, because every row stored as `default` is meaningless to
     // the server until it knows what this account's default *is*. Pushing them
