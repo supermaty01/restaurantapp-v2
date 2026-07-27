@@ -76,6 +76,20 @@ export class BackupService {
     const tempDir = `${FileSystem.cacheDirectory}export_temp/`;
     const imagesTemp = `${tempDir}images/`;
 
+    // Lo primero de todo, antes incluso de preparar nada.
+    //
+    // Cada zip pesa casi lo que la carpeta de imágenes entera —un zip no
+    // comprime JPEG, que ya vienen comprimidos—, así que hasta ahora cada
+    // exportación dejaba ~200 MB para siempre y con un nombre distinto cada vez.
+    // Cinco o diez son el giga o dos que se veía en el móvil.
+    //
+    // Va aquí y no junto al zip porque el área de preparación ya duplica las
+    // fotos: liberar antes de empezar a ocupar es lo que hace que en un móvil
+    // lleno la exportación quepa. Y si esta falla a medias no se pierde nada
+    // que se pudiera recuperar — a los zips anteriores no llegaba nadie, ni el
+    // código ni la pantalla de Ajustes.
+    await this.pruneArchives(keep ? SAFETY_PREFIX : EXPORT_PREFIX);
+
     // Staging area: the archive mirrors this layout (database.db,
     // metadata.json, images/…), which is also the layout v1 produced, so old
     // and new backups stay interchangeable.
@@ -99,16 +113,6 @@ export class BackupService {
       progressCallback(20 + Math.floor(p * 50)),
     );
     progressCallback(70);
-
-    // Barrer **antes** de escribir la nueva: si se hiciera después habría un
-    // momento con dos diarios enteros en disco, que en un móvil lleno es la
-    // diferencia entre exportar y no poder.
-    //
-    // Cada zip pesa casi lo que la carpeta de imágenes entera —un zip no
-    // comprime JPEG, que ya vienen comprimidos—, así que sin esto cada
-    // exportación dejaba ~200 MB para siempre y con un nombre distinto cada vez.
-    // Cinco o diez exportaciones son el giga o dos que se veía en el móvil.
-    await this.pruneArchives(keep ? SAFETY_PREFIX : EXPORT_PREFIX);
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const zipName = `${keep ? SAFETY_PREFIX : EXPORT_PREFIX}${timestamp}.zip`;
