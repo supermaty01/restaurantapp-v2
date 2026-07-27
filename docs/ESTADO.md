@@ -54,19 +54,71 @@ fuente**. Marcar aquí al cerrar algo.
 Nada de esto está empezado, y los dos primeros son los que se abaratan haciéndose
 **ahora**, antes de que haya usuarios reales.
 
-1. **B2 · Dos cuentas en el mismo móvil.** El plan está entero abajo, en su
-   apartado. Alcance: migración local que añade `account_uuid` (nullable) a las
-   seis tablas sincronizables, filtro en **todas** las lecturas —los 13 hooks de
-   `useLiveTablesQuery` y los repositorios—, `linkLocalData` reclamando solo las
-   filas huérfanas, y el aviso en la interfaz al iniciar sesión con datos
-   locales. **Es la tarea donde media implementación es peor que ninguna**: un
-   filtro que falte en uno de los trece sitios no da error, enseña el diario de
-   otra cuenta.
+1. **B2 · Dos cuentas en el mismo móvil — la mitad de escritura está hecha.**
+   Ver [B2: lo que falta](#-b2-la-segunda-mitad-el-filtro-de-lectura), que ahora
+   es un plan concreto y no un alcance estimado.
 2. **Eliminar cuenta y datos (GDPR).** Necesita una migración de Supabase, una
    ruta `DELETE` en el Worker para el prefijo de R2, y la pantalla con
    confirmación fuerte. **Y necesita Docker corriendo**: toca SQL, así que
    `npm run db:test` es obligatorio (AGENTS §2) y en esta ronda Docker Desktop no
    estaba levantado.
+
+## 🔓 B2: la segunda mitad, el filtro de lectura
+
+**Hecho** (commit `feat(cuentas): de quién es cada fila`): la columna
+`account_uuid` en las seis tablas sincronizables (migración 0012), el sello
+automático de cada fila nueva, el sello de lo que baja por sync, y
+`linkLocalData` reclamando **solo** las filas huérfanas. Nada de eso cambia lo
+que se ve, a propósito.
+
+**Falta** el filtro de lectura, y va aparte porque es donde media implementación
+es peor que ninguna: un filtro que falte en un sitio no da ningún error, enseña
+el diario de otra cuenta.
+
+### La regla
+
+| Estado          | Se ve                         |
+| --------------- | ----------------------------- |
+| Sin sesión      | `account_uuid IS NULL`        |
+| Con la cuenta A | `account_uuid = A OR IS NULL` |
+
+El `IS NULL` del segundo caso no es laxitud: son las filas escritas mientras la
+sesión se recuperaba al arrancar, y las que `linkLocalData` va a reclamar en el
+siguiente push. Sin él desaparecerían de la pantalla durante unos segundos.
+
+### Los sitios, contados
+
+**13 hooks** con `useLiveTablesQuery`: `useDishById`, `useDishList`,
+`useDishesByRestaurant`, `useDishesDetails`, `useHomeSummary`,
+`useRestaurantById`, `useRestaurantList`, `useRestaurantMapList`, `useTagUsage`,
+`useTagsList`, `useVisitById`, `useVisitList`, `useVisitsByRestaurant`. Y **7
+ficheros de repositorio** con `select`, más `services/backup` y
+`services/share`.
+
+**No son mecánicos**, y eso es lo que hace que haya que hacerlo con calma: cada
+hook tiene una forma distinta. `useRestaurantList` llama a `.where()` solo si
+`!includeDeleted`; otros lo llaman siempre; otros no lo llaman. Un
+`find`/`replace` no vale.
+
+### Dos cosas que aprendí montando la primera mitad
+
+1. **`getCurrentAccount()` no sirve para leer.** Es un módulo, no es reactivo:
+   iniciar o cerrar sesión no repintaría nada. El filtro necesita un
+   `useCurrentAccount()` sobre `useSyncExternalStore` —hay que hacer
+   `account-store` suscribible— y la cuenta tiene que entrar en las `deps` de
+   `useLiveTablesQuery`, o la consulta no se relanza.
+2. **Cerrar sesión pasa a vaciar la pantalla**, y hoy no lo hace. Es la
+   semántica correcta —las filas quedaron selladas con la cuenta— pero es un
+   cambio brusco. Por eso el aviso al iniciar sesión con datos locales no es un
+   extra: sin él, el caso 5 se vive como pérdida de datos. El texto ya está en
+   la bienvenida («si creas una cuenta más adelante, lo que hayas guardado se
+   asocia a ella»); falta el aviso en el momento de entrar.
+
+### El guardián, antes que el código
+
+Antes de tocar los veinte sitios conviene escribir el test que los enumera —el
+idioma de `live-tables-contract`— y verlo fallar. Es la única forma de que
+«falta uno» sea un error y no un diario ajeno en pantalla.
 
 ## 📦 Actualizar desde la v1 sin desinstalar — ✅ diagnosticado, y no era la firma
 
