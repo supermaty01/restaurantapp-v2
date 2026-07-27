@@ -32,15 +32,15 @@ fuente**. Marcar aquí al cerrar algo.
 
 **Arquitectura**
 
-- [ ] B1 · La app se congela en el primer sync — ceder el hilo entre lotes + loader con progreso
+- [x] ~~B1 · La app se congela en el primer sync~~ — la causa no era «hay mucho trabajo»: **el driver de SQLite es síncrono**, así que el motor lleno de `await` era en la práctica un bloque síncrono. Se cede el hilo cada 50 filas y se cuenta por dónde va
 - [ ] B2 · **Dos cuentas en el mismo móvil** — necesita columna `account_uuid` + filtro en todas las lecturas. La más grande
 - [ ] B3 · Push no llega — verificar los 4 eslabones de despliegue **antes** de tocar código
 - [x] ~~B4 · La barra de navegación del sistema tapa la interfaz~~ — el `edge` inferior entra en el `SafeAreaView` de `(main)/_layout`, **no en `Screen`** como decía el plan: siete pantallas no usan `Screen`. **Sin verificar en dispositivo**
 
 **Interfaz**
 
-- [ ] C1 · Transición del Diario fluida + «efecto gota» **y quitar los previews** (10 ficheros, va todo junto)
-- [ ] C2 · Filtros de etiquetas: extraer el componente de `TagField` y reutilizarlo
+- [x] ~~C1 · Transición del Diario + «efecto gota» + quitar los previews~~ — pager con las páginas montadas y la pastilla interpolada desde el desplazamiento. **Sin verificar en dispositivo**
+- [x] ~~C2 · Filtros de etiquetas~~ — `TagChip` sale de `TagField` y lo usan los dos; fuera el radio button
 - [x] ~~C3 · El teclado tapa «Sobre ti»~~ — **el primer arreglo no funcionó y el porqué está abajo**: el `KeyboardAvoidingView` del core no hace nada en Android edge-to-edge. Ahora va con `react-native-keyboard-controller`. **Sin verificar en dispositivo**
 - [x] ~~C4 · Fotos de «Lo último que añadiste»~~ — `Photo` cae a la copia de R2 cuando el fichero local no está; `remote_key` viaja hasta el componente, así que vale para toda la app
 - [x] ~~C5 · Márgenes laterales del drawer «¿Quién puede ver esto?»~~ — `px-5`, como el resto de hojas
@@ -52,8 +52,8 @@ fuente**. Marcar aquí al cerrar algo.
 ### 🔍 De la auditoría (ronda 6) — detalle en [Lo que queda pendiente](#-lo-que-queda-pendiente-por-orden)
 
 - [ ] Eliminar cuenta y datos (**GDPR**) — obligación legal el día que haya producción
-- [ ] La **regla del dinero** está rota: `price: integer` guardando `3.5`; se arregló solo el lado servidor
-- [ ] **Tests de UI**: ya no son cero (8: `MyProfileContext` y `Photo`), pero falta lo que pide docs/12 — el visor de imágenes y los formularios con prefill
+- [x] ~~La **regla del dinero**~~ — `price real` en local (migración 0011), que es lo que ya era el `numeric(12,2)` del espejo. Sin conversión de valores: ya estaban guardados como REAL
+- [ ] **Tests de UI**: ya no son cero (8), pero falta lo que pide docs/12 — el visor de imágenes y los formularios con prefill. **Ojo: reanimated no se puede importar en jest** (`react-native-worklets` busca su módulo nativo), así que lo que lo use hay que probarlo sacando la lógica fuera
 - [ ] Round-trip export→import idempotente (docs/12 lo exige)
 - [ ] Sync contra Supabase local con dos dispositivos de verdad
 - [ ] Aislamiento entre features (`eslint-plugin-boundaries` + mover lo compartido)
@@ -65,7 +65,7 @@ fuente**. Marcar aquí al cerrar algo.
 - [ ] **RAM: ~1 GB medido** (`TOTAL PSS`), con swap. Plan en [docs/16 §2](16-memoria-e-imagenes.md), **midiendo antes de construir miniaturas**
 - [ ] Tarea #32 · Copia de seguridad automática **antes de migrar** — la pieza existe (`BackupService`), falta engancharla
 - [ ] Persona etiquetada en una visita no se muestra tras crearla
-- [ ] La moneda está fijada a COP en el detalle de plato
+- [x] ~~La moneda está fijada a COP~~ — ajuste en Ajustes, con el valor inicial deducido de la región del móvil. **No convierte lo ya escrito**, y la propia fila lo dice
 - [x] ~~`jszip` sigue en `dependencies`~~ — a `devDependencies`; solo lo usa `zip.node.test.ts`
 - [ ] «Armonía» en formularios de detalle y creación — idea concreta: **empezar por la foto**
 - [ ] Repasar docs sin revisar: **00, 01, 04, 07, 08, 10**
@@ -74,6 +74,18 @@ fuente**. Marcar aquí al cerrar algo.
 
 ### 📱 Verificar en dispositivo (con el APK nuevo)
 
+**Todo lo de la ronda 7 está aquí**, y esta vez el APK no es opcional: entra un
+módulo nativo (`react-native-keyboard-controller`), así que recargar el
+JavaScript no vale.
+
+- [ ] Que el teclado no tape «Sobre ti» — el arreglo anterior no funcionó, este
+      hay que verlo
+- [ ] Que nada quede bajo la barra de navegación, en las pantallas con carril de
+      pestañas y en las que no
+- [ ] El Diario: que el arrastre mueva la página bajo el dedo y la pastilla lo
+      siga, y que las listas verticales sigan haciendo scroll
+- [ ] Que la app no se congele en el primer sync, y que el recuento avance
+- [ ] La foto de perfil en Inicio, y que editar el perfil se vea al volver
 - [ ] Sync con **dos dispositivos** — el caso que antes fallaba en silencio
 - [ ] Descarga de fotos y `sync-status` con sesión y Worker reales
 - [ ] Novedades con datos de verdad: que llegue el aviso al etiquetar y que el punto se apague
@@ -162,7 +174,44 @@ detalle está en [docs/11](11-dependencias.md#segunda-excepción-el-teclado-en-a
   son asíncronos**, y sin `await` el error que se lee es «Cannot read properties
   of undefined», que no señala a ninguna parte.
 
-Números: **347 tests** en la app (antes 332), 57 en el Worker, 9 en shared.
+### Y lo que salió de tirar del hilo
+
+- **La app se congelaba en el primer sync (B1), y no por lo que parecía.**
+  `drizzle-orm/expo-sqlite` usa `prepareSync` / `executeSync` / `getAllSync`, o
+  sea que un `await db.select()…` no espera a nada: la consulta ya se ejecutó, y
+  el `await` solo cede una **microtarea**. Las microtareas se vacían enteras
+  antes de volver al bucle de eventos, así que React no llega a pintar entre una
+  fila y la siguiente. El motor, lleno de `await`, era en la práctica un bloque
+  síncrono. Ahora cede el hilo cada 50 filas —un `setTimeout(…, 0)`, que sí es
+  macrotarea— y va contando por dónde va: «Bajando visitas · 1.200».
+
+- **El Diario ya no se cambia de pestaña, se desliza (C1).** La versión anterior
+  pintaba solo la activa, así que la sensación de redirección era literal.
+  Ahora las páginas están montadas y la pastilla se interpola desde el
+  desplazamiento del pager, no desde el estado. Los previews de pulsación larga
+  se borran en el mismo bloque, que es lo que el diagnóstico ya decía: el peek y
+  el pager se pelean por el mismo gesto.
+
+- **Los filtros de etiquetas usan el control que ya existía (C2)**, en vez de un
+  radio button con la etiqueta al lado. No había nada que rediseñar.
+
+- **El precio.** `price real` en el esquema local (migración 0011), que es lo que
+  el espejo ya era. Y la moneda deja de estar escrita a mano en el detalle de
+  plato: es un ajuste, con el valor inicial deducido de la región del móvil, y
+  **no convierte lo ya escrito** —eso necesitaría un tipo de cambio por fecha,
+  que es una API de pago—.
+
+Números: **369 tests** en la app (antes 332), 57 en el Worker, 9 en shared.
+
+### ⚠️ Lo que se intentó y no salió
+
+- **`overrides` de `npm audit`.** Se probó `brace-expansion: ^5.0.8` en la raíz
+  y **npm lo ignoró**: el lock siguió resolviendo 1.1.16 y 5.0.7. No se ha
+  averiguado por qué (workspaces, probablemente). Se revirtió en vez de dejar un
+  `overrides` que no hace nada y da la sensación de estar arreglado. Los 53
+  avisos son todos de la cadena de construcción y CI los reporta sin bloquear;
+  merece la pena volver **después** del APK, no antes: tocar la resolución de
+  dependencias con la build ya frágil es cambiar un aviso por un riesgo.
 
 ---
 
