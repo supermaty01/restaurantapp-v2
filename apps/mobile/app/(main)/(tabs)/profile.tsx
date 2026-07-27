@@ -9,9 +9,8 @@ import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Card, SectionHeader } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
-import { fetchMyProfile } from '@/features/social/api';
 import type { Profile } from '@/features/social/api';
-import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
+import { useMyProfile } from '@/features/social/context/MyProfileContext';
 import { useFriends } from '@/features/social/hooks/useFriends';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -31,10 +30,7 @@ export default function ProfileScreen() {
   const { tell } = useDialog();
   const { incoming } = useFriends();
 
-  const { data: profile } = useAsyncResource<Profile>(fetchMyProfile, {
-    enabled: Boolean(session),
-    deps: [session?.user.id],
-  });
+  const { profile } = useMyProfile();
 
   return (
     <Screen scroll tabBar contentClassName="pt-3">

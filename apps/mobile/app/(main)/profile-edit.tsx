@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/ui/Avatar';
@@ -12,10 +12,9 @@ import { Screen } from '@/components/ui/Screen';
 import { Sheet } from '@/components/ui/Sheet';
 import { Card, EmptyState, FieldLabel } from '@/components/ui/Surface';
 import { useToast } from '@/components/ui/Toast';
-import { fetchMyProfile, updateMyProfile } from '@/features/social/api';
-import type { Profile } from '@/features/social/api';
+import { updateMyProfile } from '@/features/social/api';
 import { deletePreviousAvatar, uploadAvatar } from '@/features/social/avatar';
-import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
+import { useMyProfile } from '@/features/social/context/MyProfileContext';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
@@ -30,10 +29,7 @@ export default function ProfileEditScreen() {
   const { colors } = useTheme();
   const { session, accountUuid } = useAuth();
 
-  const { data, loading, error } = useAsyncResource<Profile>(fetchMyProfile, {
-    enabled: Boolean(session),
-    deps: [session?.user.id],
-  });
+  const { profile: data, loading, error, apply } = useMyProfile();
 
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -64,6 +60,7 @@ export default function ProfileEditScreen() {
       setAvatarUrl(null);
       try {
         await updateMyProfile({ avatarUrl: null });
+        apply({ avatarUrl: null });
         void deletePreviousAvatar(previous);
       } catch (cause) {
         setAvatarUrl(previous);
@@ -98,6 +95,7 @@ export default function ProfileEditScreen() {
       const url = await uploadAvatar(picked, accountUuid);
       await updateMyProfile({ avatarUrl: url });
       setAvatarUrl(url);
+      apply({ avatarUrl: url });
       void deletePreviousAvatar(previous);
       toast.notify('Foto actualizada');
     } catch (cause) {
@@ -107,8 +105,19 @@ export default function ProfileEditScreen() {
     }
   };
 
+  /*
+   * Rellenar los campos una sola vez, cuando el perfil llega.
+   *
+   * Antes esto dependía de `data` a secas y daba igual porque `data` era una
+   * copia privada de esta pantalla que no cambiaba nunca. Ahora es la copia
+   * compartida: cambiar la foto la actualiza, y sin este guard el efecto
+   * volvería a escribir los campos de texto con los valores del servidor —
+   * borrando lo que se estuviera escribiendo en «Sobre ti».
+   */
+  const prefilledFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!data) return;
+    if (!data || prefilledFor.current === data.userId) return;
+    prefilledFor.current = data.userId;
     setUsername(data.username);
     setDisplayName(data.displayName ?? '');
     setBio(data.bio ?? '');
@@ -131,11 +140,15 @@ export default function ProfileEditScreen() {
     if (!data || usernameError) return;
     setSaving(true);
     try {
-      await updateMyProfile({
+      const saved = {
         username: normalised,
         displayName: displayName.trim() || null,
         bio: bio.trim() || null,
-      });
+      };
+      await updateMyProfile(saved);
+      // Antes de volver: la pestaña Perfil sigue montada detrás y no se entera
+      // de un `router.back()`. Este es el motivo por el que existe el contexto.
+      apply(saved);
       router.back();
     } catch (cause) {
       // updateMyProfile already phrases its failures for a person ("ese nombre

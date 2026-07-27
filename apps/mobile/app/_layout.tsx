@@ -24,6 +24,7 @@ import { CrashScreen } from '@/components/ui/CrashScreen';
 import { DialogProvider } from '@/components/ui/Dialog';
 import { ToastProvider } from '@/components/ui/Toast';
 import migrations from '@/drizzle/migrations';
+import { MyProfileProvider } from '@/features/social/context/MyProfileContext';
 import '../global.css';
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { NewDishProvider } from '@/lib/context/NewDishContext';
@@ -144,20 +145,24 @@ export default function RootLayout() {
               >
                 <MigrationsRunner>
                   <AuthProvider>
-                    <ThemeProvider>
-                      <DialogProvider>
-                        <ToastProvider>
-                          <NewRestaurantProvider>
-                            <NewDishProvider>
-                              <IntentHandler />
-                              <SyncRunner />
-                              <PushRunner />
-                              <Slot />
-                            </NewDishProvider>
-                          </NewRestaurantProvider>
-                        </ToastProvider>
-                      </DialogProvider>
-                    </ThemeProvider>
+                    {/* Dentro de AuthProvider: el perfil se pide con la sesión
+                        y se vacía sin ella. */}
+                    <MyProfileProvider>
+                      <ThemeProvider>
+                        <DialogProvider>
+                          <ToastProvider>
+                            <NewRestaurantProvider>
+                              <NewDishProvider>
+                                <IntentHandler />
+                                <SyncRunner />
+                                <PushRunner />
+                                <Slot />
+                              </NewDishProvider>
+                            </NewRestaurantProvider>
+                          </ToastProvider>
+                        </DialogProvider>
+                      </ThemeProvider>
+                    </MyProfileProvider>
                   </AuthProvider>
                 </MigrationsRunner>
               </SQLiteProvider>
