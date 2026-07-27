@@ -5,6 +5,7 @@ function entry(over: Partial<RecentEntry> & Pick<RecentEntry, 'kind' | 'id' | 'c
     title: `${over.kind} ${over.id}`,
     detail: null,
     imagePath: null,
+    imageRemoteKey: null,
     restaurantId: null,
     dishIds: [],
     ...over,

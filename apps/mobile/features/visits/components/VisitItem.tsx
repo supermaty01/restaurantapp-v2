@@ -8,6 +8,8 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 
 interface VisitItemProps {
   imageUrl: string | null;
+  /** Clave en R2 de esa foto: la reserva si el fichero local no está. */
+  imageRemoteKey?: string | null | undefined;
   date: string;
   title: string;
   comments: string | null;
@@ -25,7 +27,17 @@ interface VisitItemProps {
  * only part you actually scan for.
  */
 const VisitItem = React.memo<VisitItemProps>(
-  ({ imageUrl, date, title, comments, previewData, onPress, deleted, restaurantDeleted }) => {
+  ({
+    imageUrl,
+    imageRemoteKey,
+    date,
+    title,
+    comments,
+    previewData,
+    onPress,
+    deleted,
+    restaurantDeleted,
+  }) => {
     return (
       <PeekablePressable
         previewData={previewData}
@@ -34,7 +46,13 @@ const VisitItem = React.memo<VisitItemProps>(
         baseOpacity={deleted || restaurantDeleted ? 0.6 : 1}
         className="mb-3 flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5"
       >
-        <Thumbnail name={title} uri={imageUrl} size={66} icon="restaurant" />
+        <Thumbnail
+          name={title}
+          uri={imageUrl}
+          remoteKey={imageRemoteKey}
+          size={66}
+          icon="restaurant"
+        />
 
         <View className="min-w-0 flex-1 justify-center">
           <Text className="font-bold text-[15px] text-ink" numberOfLines={1}>

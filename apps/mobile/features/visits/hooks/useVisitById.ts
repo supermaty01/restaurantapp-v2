@@ -25,6 +25,7 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
       restaurantDeleted: schema.restaurants.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
       dishId: schema.dishes.id,
       dishName: schema.dishes.name,
       dishDeleted: schema.dishes.deleted,
@@ -90,6 +91,7 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
         visit.images.push({
           id: row.imageId,
           uri: imagePathToUri(row.imagePath!),
+          remoteKey: row.imageRemoteKey ?? null,
         });
       }
 

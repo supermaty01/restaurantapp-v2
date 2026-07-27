@@ -22,7 +22,7 @@ interface DishItemProps {
 /** A dish in a list. Same anatomy as RestaurantItem (docs/14). */
 const DishItem = React.memo<DishItemProps>(
   ({ name, comments, tags, rating, images, previewData, onPress }) => {
-    const imageUrl = images[0]?.uri ?? null;
+    const image = images[0];
 
     return (
       <PeekablePressable
@@ -32,7 +32,13 @@ const DishItem = React.memo<DishItemProps>(
         className="mb-3 rounded-xl border border-line bg-surface p-2.5"
       >
         <View className="flex-row gap-3">
-          <Thumbnail name={name} uri={imageUrl} size={66} icon="fast-food" />
+          <Thumbnail
+            name={name}
+            uri={image?.uri}
+            remoteKey={image?.remoteKey}
+            size={66}
+            icon="fast-food"
+          />
 
           <View className="min-w-0 flex-1 justify-center">
             <Text className="font-bold text-[15px] text-ink" numberOfLines={1}>

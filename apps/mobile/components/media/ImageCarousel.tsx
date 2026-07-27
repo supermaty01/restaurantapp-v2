@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import {
   FlatList,
@@ -10,6 +9,8 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
+
+import { Photo } from '@/components/ui/Photo';
 
 import { ImageLightbox, type LightboxImage } from './ImageLightbox';
 
@@ -44,8 +45,9 @@ export function ImageCarousel({ images, height = CAROUSEL_HEIGHT }: ImageCarouse
         accessibilityRole="imagebutton"
         accessibilityLabel={`Ver imagen ${index + 1} de ${images.length}`}
       >
-        <Image
-          source={item.uri}
+        <Photo
+          uri={item.uri}
+          remoteKey={item.remoteKey}
           style={{ width, height }}
           contentFit="cover"
           cachePolicy="memory-disk"

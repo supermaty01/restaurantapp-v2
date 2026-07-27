@@ -24,6 +24,7 @@ export const useVisitList = (includeDeleted: boolean = false) => {
       restaurantDeleted: schema.restaurants.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
     })
     .from(schema.visits);
 

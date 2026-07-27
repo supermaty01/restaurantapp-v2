@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
+import { Photo } from '@/components/ui/Photo';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 import { useVisitsByRestaurant } from '@/features/visits/hooks/useVisitsByRestaurant';
 import { formatVisitDate } from '@/lib/helpers/date';
@@ -22,7 +22,7 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
           // Toma la primera imagen del array si existe
-          const imageUrl = item.images?.[0]?.uri ?? null;
+          const image = item.images?.[0];
           return (
             <TouchableOpacity
               className="flex-row items-center py-3 border-b border-line"
@@ -30,9 +30,10 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
                 router.push({ pathname: '/visits/[id]/view', params: { id: item.id } })
               }
             >
-              {imageUrl ? (
-                <Image
-                  source={imageUrl}
+              {image ? (
+                <Photo
+                  uri={image.uri}
+                  remoteKey={image.remoteKey}
                   style={{ width: 56, height: 56, borderRadius: 4, marginRight: 12 }}
                   contentFit="cover"
                   cachePolicy="memory-disk"

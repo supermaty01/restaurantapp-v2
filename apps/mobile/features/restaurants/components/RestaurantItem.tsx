@@ -15,6 +15,8 @@ interface RestaurantItemProps {
   tags: TagDTO[];
   rating: number | null;
   imageUrl?: string | undefined;
+  /** Clave en R2 de esa foto: la reserva si el fichero local no está. */
+  imageRemoteKey?: string | null | undefined;
   previewData: PeekPreviewData;
   onPress?: (() => void) | undefined;
 }
@@ -28,7 +30,7 @@ interface RestaurantItemProps {
  * is better said with space than with a line of italic apology.
  */
 const RestaurantItem = React.memo<RestaurantItemProps>(
-  ({ name, comments, tags, rating, imageUrl, previewData, onPress }) => {
+  ({ name, comments, tags, rating, imageUrl, imageRemoteKey, previewData, onPress }) => {
     const uri = imageUrl ? imagePathToUri(imageUrl) : undefined;
 
     return (
@@ -39,7 +41,7 @@ const RestaurantItem = React.memo<RestaurantItemProps>(
         className="mb-3 rounded-xl border border-line bg-surface p-2.5"
       >
         <View className="flex-row gap-3">
-          <Thumbnail name={name} uri={uri} size={66} icon="restaurant" />
+          <Thumbnail name={name} uri={uri} remoteKey={imageRemoteKey} size={66} icon="restaurant" />
 
           <View className="min-w-0 flex-1 justify-center">
             <Text className="font-bold text-[15px] text-ink" numberOfLines={1}>

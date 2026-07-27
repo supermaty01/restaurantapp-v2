@@ -259,7 +259,13 @@ function RecentEntryCard({ entry, onPress }: { entry: RecentEntry; onPress: () =
 
   return (
     <Card onPress={onPress} className="flex-row items-center gap-3.5">
-      <Thumbnail name={entry.title} uri={uri} size={64} icon={ICON_FOR[entry.kind]} />
+      <Thumbnail
+        name={entry.title}
+        uri={uri}
+        remoteKey={entry.imageRemoteKey}
+        size={64}
+        icon={ICON_FOR[entry.kind]}
+      />
       <View className="min-w-0 flex-1">
         <Txt variant="heading" weight="bold" serif={false} numberOfLines={1}>
           {entry.title}

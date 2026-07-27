@@ -26,6 +26,7 @@ export const useDishesDetails = (dishIds: number[]) => {
             tagColor: schema.tags.color,
             imageId: schema.images.id,
             imagePath: schema.images.path,
+            imageRemoteKey: schema.images.remoteKey,
           })
           .from(schema.dishes)
           .where(inArray(schema.dishes.id, dishIds))

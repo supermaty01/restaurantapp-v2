@@ -16,10 +16,10 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { fetchSharedVisit, rejectTag, type SharedVisit } from '@/features/social/api';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
-import { remoteImageUri } from '@/features/social/remote-image';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
+import { remoteImageUri } from '@/lib/helpers/remote-image';
 
 /**
  * Someone else's meal.

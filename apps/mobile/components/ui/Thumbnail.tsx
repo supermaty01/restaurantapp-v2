@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { View } from 'react-native';
 
 import { gradientFor } from '@/lib/design/tokens';
+
+import { Photo } from './Photo';
 
 import type { ComponentProps } from 'react';
 
@@ -19,6 +20,7 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 export function Thumbnail({
   name,
   uri,
+  remoteKey,
   size = 66,
   radius = 11,
   icon,
@@ -27,6 +29,8 @@ export function Thumbnail({
 }: {
   name: string;
   uri?: string | null | undefined;
+  /** Clave en R2 de esta foto: la reserva si el fichero local no está. */
+  remoteKey?: string | null | undefined;
   /** Side length of the square. Ignored when `aspectRatio` is given. */
   size?: number;
   radius?: number;
@@ -47,8 +51,9 @@ export function Thumbnail({
       className={`overflow-hidden ${className}`}
     >
       {uri ? (
-        <Image
-          source={uri}
+        <Photo
+          uri={uri}
+          remoteKey={remoteKey}
           style={{ width: '100%', height: '100%' }}
           contentFit="cover"
           cachePolicy="memory-disk"

@@ -24,6 +24,7 @@ export const useVisitsByRestaurant = (restaurantId: number | undefined) => {
             restaurantName: schema.restaurants.name,
             imageId: schema.images.id,
             imagePath: schema.images.path,
+            imageRemoteKey: schema.images.remoteKey,
           })
           .from(schema.visits)
           .where(eq(schema.visits.restaurantId, restaurantId))

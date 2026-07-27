@@ -133,13 +133,14 @@ export function VisitList() {
 
   const renderListItem = useCallback(
     ({ item }: { item: VisitListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri ?? null;
+      const image = item.images?.[0];
       const previewData = buildPreviewData(item);
       const formattedVisitDate = formatDate(item.visited_at);
 
       return (
         <VisitItem
-          imageUrl={imageUrl}
+          imageUrl={image?.uri ?? null}
+          imageRemoteKey={image?.remoteKey}
           date={formattedVisitDate}
           title={item.restaurant.name}
           comments={item.comments}

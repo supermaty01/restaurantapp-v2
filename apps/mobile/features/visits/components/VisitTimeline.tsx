@@ -230,7 +230,8 @@ function VisitTile({
   onPress: () => void;
 }) {
   const name = visit.restaurant?.name ?? 'Sin restaurante';
-  const uri = visit.images?.[0]?.uri ?? null;
+  const image = visit.images?.[0];
+  const uri = image?.uri ?? null;
 
   return (
     // Mismo peek que la vista de lista. Faltaba aquí, y no es un detalle: una
@@ -249,7 +250,14 @@ function VisitTile({
       scaleValue={1.02}
       style={{ width: size }}
     >
-      <Thumbnail name={name} uri={uri} size={size} radius={12} icon="restaurant" />
+      <Thumbnail
+        name={name}
+        uri={uri}
+        remoteKey={image?.remoteKey}
+        size={size}
+        radius={12}
+        icon="restaurant"
+      />
       <View className="pt-1.5">
         <Txt variant="callout" weight="bold" serif={false} numberOfLines={1}>
           {name}

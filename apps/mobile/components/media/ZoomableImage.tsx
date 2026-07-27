@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useCallback, useState } from 'react';
 import { StyleSheet } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -9,12 +8,16 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 
+import { Photo } from '@/components/ui/Photo';
+
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const DOUBLE_TAP_SCALE = 2.5;
 
 interface ZoomableImageProps {
   uri: string;
+  /** Clave en R2, si la hay: la reserva cuando el fichero local no está. */
+  remoteKey?: string | null | undefined;
   width: number;
   height: number;
   /** Notifies the pager so it can disable horizontal paging while zoomed in. */
@@ -28,7 +31,7 @@ interface ZoomableImageProps {
  * the Expo base stack) rather than pulling a zoom library: image libraries were
  * historically what broke every SDK upgrade. See docs/11-dependencias.md.
  */
-export function ZoomableImage({ uri, width, height, onZoomChange }: ZoomableImageProps) {
+export function ZoomableImage({ uri, remoteKey, width, height, onZoomChange }: ZoomableImageProps) {
   const scale = useSharedValue(MIN_SCALE);
   const savedScale = useSharedValue(MIN_SCALE);
   const translateX = useSharedValue(0);
@@ -152,8 +155,9 @@ export function ZoomableImage({ uri, width, height, onZoomChange }: ZoomableImag
     <GestureDetector gesture={composed}>
       <Animated.View style={[{ width, height }, styles.container]}>
         <Animated.View style={animatedStyle}>
-          <Image
-            source={uri}
+          <Photo
+            uri={uri}
+            remoteKey={remoteKey}
             style={{ width, height }}
             contentFit="contain"
             cachePolicy="memory-disk"

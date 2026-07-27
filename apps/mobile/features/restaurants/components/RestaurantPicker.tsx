@@ -103,6 +103,7 @@ function RestaurantPicker<
                   <Thumbnail
                     name={selected.name}
                     uri={selected.images?.[0]?.uri ?? null}
+                    remoteKey={selected.images?.[0]?.remoteKey}
                     size={40}
                     radius={9}
                     icon="restaurant"
@@ -202,6 +203,7 @@ function RestaurantPicker<
                     <Thumbnail
                       name={restaurant.name}
                       uri={restaurant.images?.[0]?.uri ?? null}
+                      remoteKey={restaurant.images?.[0]?.remoteKey}
                       size={44}
                       radius={10}
                       icon="restaurant"

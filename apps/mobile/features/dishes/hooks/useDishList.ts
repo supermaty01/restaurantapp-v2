@@ -25,6 +25,7 @@ export const useDishList = (includeDeleted: boolean = false) => {
       tagColor: schema.tags.color,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
     })
     .from(schema.dishes);
 

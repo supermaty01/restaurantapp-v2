@@ -1,4 +1,3 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FlatList, View, Text, useWindowDimensions } from 'react-native';
@@ -8,6 +7,7 @@ import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/Filt
 import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
 import { ListHeader } from '@/components/ui/ListHeader';
+import { Photo } from '@/components/ui/Photo';
 import DishItem from '@/features/dishes/components/DishItem';
 import { useDishList } from '@/features/dishes/hooks/useDishList';
 import type { DishListDTO } from '@/features/dishes/types/dish-dto';
@@ -148,7 +148,7 @@ export function DishList() {
 
   const renderGridItem = useCallback(
     ({ item }: { item: DishListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri;
+      const image = item.images?.[0];
       const previewData = buildPreviewData(item);
 
       return (
@@ -157,9 +157,10 @@ export function DishList() {
           previewData={previewData}
           onPress={() => navigateToDish(item.id)}
         >
-          {imageUrl ? (
-            <Image
-              source={imageUrl}
+          {image ? (
+            <Photo
+              uri={image.uri}
+              remoteKey={image.remoteKey}
               style={{ width: '100%', height: 100 }}
               contentFit="cover"
               recyclingKey={`grid-dish-${item.id}`}

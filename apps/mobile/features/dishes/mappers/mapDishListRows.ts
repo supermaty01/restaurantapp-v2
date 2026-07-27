@@ -16,6 +16,7 @@ export interface DishListRow {
   tagDeleted?: boolean | null;
   imageId?: number | null;
   imagePath?: string | null;
+  imageRemoteKey?: string | null;
 }
 
 export function mapDishListRows(rows: DishListRow[]): DishListDTO[] {
@@ -58,6 +59,7 @@ export function mapDishListRows(rows: DishListRow[]): DishListDTO[] {
       dish.images.push({
         id: row.imageId,
         uri: imagePathToUri(row.imagePath),
+        remoteKey: row.imageRemoteKey ?? null,
       });
     }
   }
