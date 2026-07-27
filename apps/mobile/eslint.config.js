@@ -140,6 +140,30 @@ module.exports = tseslint.config(
       ],
     },
   },
+  // --- Solo `services/` habla con la red ------------------------------------
+  //
+  // docs/12 lo dice desde el principio y no lo comprobaba nadie. Eran dos sitios
+  // —el bucle del asistente y el borrado del avatar anterior—, que es
+  // exactamente cuándo conviene recogerlo: con dos, mover una cabecera o un
+  // reintento es un cambio; con diez, es una tarde.
+  //
+  // Se prohíbe el `fetch` global por nombre. `services/` queda fuera por no
+  // estar en `files`.
+  {
+    files: ['app/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message:
+            'Las llamadas de red viven en services/ (services/api para el Worker). ' +
+            'Aquí va la decisión de qué pedir, no cómo pedirlo. Ver docs/12.',
+        },
+      ],
+    },
+  },
+
   // NOTE: cross-feature isolation ("a feature must not import another feature's
   // internals") is intentionally NOT enforced here. no-restricted-imports can't
   // express "any feature except my own" — a single `@/features/*/*` pattern also

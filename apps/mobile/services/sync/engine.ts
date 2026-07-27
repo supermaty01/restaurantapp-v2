@@ -2,6 +2,7 @@ import { eq, inArray } from 'drizzle-orm';
 
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
+import { IdentityMap } from '@/services/sync/identityMap';
 import { linkLocalData } from '@/services/sync/linkLocalData';
 import { applyLinks, collectLinks, parentIdsByUuid } from '@/services/sync/links';
 import { applyRemoteRecord, toRemoteRecord, toTombstoneRecord } from '@/services/sync/records';
@@ -83,6 +84,8 @@ export class SyncEngine {
     const pushedIds: number[] = [];
     /** Parents that moved this pass, per table: whose links need resending. */
     const touched = new Map<string, { id: number; uuid: string }[]>();
+    /** La traducción id↔uuid de esta pasada. Ver `identityMap.ts`. */
+    const identity = new IdentityMap(this.db);
 
     // Dependency order: FK targets (restaurants) push before children (dishes).
     for (const cfg of SYNC_TABLES) {
@@ -92,24 +95,39 @@ export class SyncEngine {
       const uuids = [...new Set(forTable.map((c) => c.rowUuid))];
       const records: RemoteRecord[] = [];
 
-      for (const uuid of uuids) {
-        const rows = await this.db
+      /**
+       * Las filas del lote, de una vez.
+       *
+       * Antes esto era un `select … limit 1` **por uuid**. En un diario
+       * importado de la v1 la primera subida tiene una entrada por fila
+       * existente, así que eran miles de consultas seguidas antes de mandar
+       * nada. El trabajo era el mismo; lo caro era preguntarlo de uno en uno.
+       */
+      type LocalRow = Record<string, unknown> & {
+        id: number;
+        uuid: string;
+        createdAt: string;
+        updatedAt: string;
+        deleted: boolean;
+      };
+
+      const found = new Map<string, LocalRow>();
+      for (const batch of chunk(uuids, MARK_BATCH)) {
+        const rows = (await this.db
           .select()
           .from(cfg.table)
-          .where(eq(column(cfg.table, 'uuid'), uuid))
-          .limit(1);
-        const local = rows[0] as
-          | (Record<string, unknown> & {
-              id: number;
-              uuid: string;
-              createdAt: string;
-              updatedAt: string;
-              deleted: boolean;
-            })
-          | undefined;
+          .where(inArray(column(cfg.table, 'uuid'), batch))) as LocalRow[];
+        for (const row of rows) found.set(row.uuid, row);
+      }
+
+      // Y las claves ajenas de todas ellas, también de una vez.
+      await identity.primeForeignKeys(cfg, [...found.values()]);
+
+      for (const uuid of uuids) {
+        const local = found.get(uuid);
 
         if (local) {
-          records.push(await toRemoteRecord(this.db, cfg, local, this.accountUuid));
+          records.push(await toRemoteRecord(this.db, cfg, local, this.accountUuid, identity));
           const list = touched.get(cfg.name) ?? [];
           list.push({ id: local.id, uuid: local.uuid });
           touched.set(cfg.name, list);
@@ -206,6 +224,8 @@ export class SyncEngine {
    */
   async pull(): Promise<void> {
     const touched = new Map<string, string[]>();
+    /** La traducción id↔uuid de esta pasada. Ver `identityMap.ts`. */
+    const identity = new IdentityMap(this.db);
 
     for (const cfg of SYNC_TABLES) {
       let cursor = await this.getCursor(cfg.name);
@@ -215,8 +235,14 @@ export class SyncEngine {
         const records = await this.transport.pull(cfg.name, cursor, PULL_PAGE);
         if (records.length === 0) break;
 
+        // Las claves ajenas de la página entera, de una vez. Antes cada fila
+        // pedía las suyas por separado: con `images`, que tiene tres, una
+        // página de quinientas eran mil quinientas consultas para traducir unos
+        // pocos cientos de uuids distintos.
+        await identity.primeRemoteForeignKeys(cfg, records);
+
         for (const record of records) {
-          await applyRemoteRecord(this.db, cfg, record);
+          await applyRemoteRecord(this.db, cfg, record, identity);
         }
         seen.push(...records.filter((r) => !r.deleted).map((r) => r.uuid));
 
@@ -262,7 +288,12 @@ export class SyncEngine {
           parents.map((p) => p.uuid),
           PUSH_BATCH,
         )) {
-          const scoped = rows.filter((row) => batch.includes(row[cfg.parent.remote] as string));
+          // `Set` y no `Array.includes`: dentro de un `filter` sobre todas las
+          // uniones, `includes` recorre el lote entero por cada fila. Con un
+          // diario de los grandes eso es el producto de dos números grandes
+          // para responder una pregunta de pertenencia.
+          const inBatch = new Set(batch);
+          const scoped = rows.filter((row) => inBatch.has(row[cfg.parent.remote] as string));
           await this.transport.replaceLinks(cfg.name, cfg.parent.remote, batch, scoped);
         }
       }

@@ -1,8 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { getSupabase } from '@/services/supabase/client';
-
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+import { accessToken, deleteImage, workerBaseUrl } from '@/services/api/worker';
 
 /**
  * Subir una foto de perfil.
@@ -20,15 +18,13 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
  * nueva por subida convierte ese `immutable` de problema en ventaja.
  */
 export async function uploadAvatar(localUri: string, accountUuid: string): Promise<string> {
-  if (!API_URL) throw new Error('No hay servidor configurado para las fotos');
+  const base = workerBaseUrl();
+  if (!base) throw new Error('No hay servidor configurado para las fotos');
 
-  const supabase = getSupabase();
-  const { data } = (await supabase?.auth.getSession()) ?? { data: null };
-  const token = data?.session?.access_token;
+  const token = await accessToken();
   if (!token) throw new Error('No has iniciado sesión');
 
   const key = `avatar-${Date.now()}`;
-  const base = API_URL.replace(/\/$/, '');
 
   const upload = await FileSystem.uploadAsync(
     `${base}/images/${encodeURIComponent(key)}`,
@@ -61,25 +57,14 @@ export async function uploadAvatar(localUri: string, accountUuid: string): Promi
  * apunta a googleusercontent.com y ahí no hay nada nuestro que borrar.
  */
 export async function deletePreviousAvatar(previousUrl: string | null): Promise<void> {
-  if (!API_URL || !previousUrl) return;
-
-  const base = API_URL.replace(/\/$/, '');
+  const base = workerBaseUrl();
+  if (!base || !previousUrl) return;
   if (!previousUrl.startsWith(`${base}/images/`)) return;
 
   const key = previousUrl.split('/').pop();
   if (!key?.startsWith('avatar-')) return;
 
-  try {
-    const supabase = getSupabase();
-    const { data } = (await supabase?.auth.getSession()) ?? { data: null };
-    const token = data?.session?.access_token;
-    if (!token) return;
-
-    await fetch(`${base}/images/${key}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
-    });
-  } catch {
-    // Ver arriba.
-  }
+  // La mecánica de hablar con el Worker vive en services/api; aquí queda solo la
+  // decisión de qué borrar y cuándo, que es lo propio de esta feature.
+  await deleteImage(key);
 }
