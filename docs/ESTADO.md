@@ -68,54 +68,78 @@ Nada de esto está empezado, y los dos primeros son los que se abaratan haciénd
    `npm run db:test` es obligatorio (AGENTS §2) y en esta ronda Docker Desktop no
    estaba levantado.
 
-## 📦 Actualizar desde la v1 sin desinstalar
+## 📦 Actualizar desde la v1 sin desinstalar — ✅ diagnosticado, y no era la firma
 
-**Es un problema de firma, y no se arregla con código.** Android instala una
-actualización encima de otra app solo si coinciden tres cosas, y de las tres
-solo falta comprobar una:
+**El bloqueo era el `versionCode`, y el diagnóstico anterior de este documento
+estaba equivocado.** Se dio por hecho que el problema era la clave de firma; el
+histórico del propio proyecto de EAS dice otra cosa:
 
-| Requisito                | Estado                                                                 |
-| ------------------------ | ---------------------------------------------------------------------- |
-| Mismo `applicationId`    | ✅ `com.supermaty01.restaurantapp` en `app.config.js`, igual que la v1 |
-| `versionCode` mayor      | ✅ La v1.3 salió con 1; la v2 declara 2                                |
-| **Misma clave de firma** | ❓ **Esto es lo que hay que averiguar**                                |
+```bash
+eas build:list --platform android --limit 25
+```
 
-Si la clave no coincide, la instalación falla con
-`INSTALL_FAILED_UPDATE_INCOMPATIBLE` —o el genérico «App not installed», que no
-explica nada— y la única salida es desinstalar, que **se lleva por delante el
-diario de quien no haya hecho copia**. Por eso importa saberlo antes de repartir
-nada, no después.
+| Versión    | versionCode | Fecha    |
+| ---------- | ----------- | -------- |
+| v1.1.0     | 5           | mar 2026 |
+| v1.2.x     | 5           | mar 2026 |
+| **v1.3.0** | **6**       | abr 2026 |
+| v2.0.0     | **2**       | jul 2026 |
 
-### Cómo comprobarlo
+Android se niega a instalar encima un APK con un `versionCode` menor, y lo dice
+con «App not installed», que no menciona versiones ni números. **2 es menor que 6.** De ahí el error, exactamente el que el autor describe.
 
-Con el APK de la v1 que esté instalado y uno nuevo de EAS:
+Y hay una vuelta de tuerca que explica por qué parecía que nada servía: el
+comentario de `app.config.js` afirmaba que _«la v1.3 salió con `versionCode: 1`»_
+y por eso lo subió a 2. La afirmación era falsa, así que el arreglo resolvió el
+problema equivocado y el síntoma no cambió. Ahora está en **7**, y lo sujeta
+`lib/__tests__/version-code.node.test.ts` con el número real escrito y
+comprobado.
+
+### Lo que ya está resuelto
+
+| Requisito             | Estado                                                                              |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| Mismo `applicationId` | ✅ `com.supermaty01.restaurantapp`, leído del APK de la v2 con `aapt2 dump badging` |
+| `versionCode` mayor   | ✅ 7 > 6, y verificado en el `build.gradle` que genera `expo prebuild`              |
+| Misma clave de firma  | 🟡 Casi seguro que sí — falta un minuto para confirmarlo                            |
+
+### El minuto que falta: confirmar la firma
+
+**v1 y v2 se construyeron en el mismo proyecto de EAS**
+(`acb4a328-034e-4fa5-8381-226436faaf98`, slug `restaurantapp`, cuenta
+`supermaty01`) y con el mismo perfil `preview`. EAS guarda **un keystore por
+proyecto y plataforma**, así que la firma debería ser la misma salvo que alguien
+lo regenerara por el camino. No se pudo comprobar contra el APK de la v1 porque
+el artefacto de abril ya caducó en los servidores de Expo, pero el autor
+conserva el APK.
+
+La huella de la v2 (build del 27 de julio) es:
+
+```
+SHA-256: ecd0954a63c21d3f1dc6ffe8aa1e72ce43800c049bfc58ed74dd470e63a3e883
+```
+
+Para comparar, con el APK de la v1 a mano:
 
 ```bash
 apksigner verify --print-certs v1.apk
 ```
 
-Comparar el `SHA-256` del certificado con el del APK de la v2. Si son iguales,
-no hay nada que hacer.
+Si el SHA-256 coincide, no queda nada por hacer: basta con la build nueva. Si no
+coincide, hay que subir a EAS el keystore con el que se firmó la v1
+(`eas credentials` → Android → el perfil → Keystore → subir uno existente).
 
-### Si no coinciden
+### Y una cosa que hay que probar antes de repartir
 
-Depende de cómo se repartió la v1, y son caminos distintos:
+Que la v2 **instale encima** deja de ser hipotético el problema de que abra la
+base de datos de la v1 _en su sitio_. Hasta ahora el camino v1 → v2 solo se ha
+ejercitado importando una copia, que sustituye el fichero entero; las migraciones
+de drizzle están escritas con `coalesce` justo para ese caso, pero una
+actualización en el sitio es un camino distinto y no se ha visto nunca.
 
-- **La v1 se instalaba a mano (APK suelto).** Hay que encontrar el keystore con
-  el que se firmó —el `.jks` o `.keystore`, más alias y contraseñas— y subirlo a
-  EAS con `eas credentials` → Android → el perfil → Keystore → subir uno
-  existente. A partir de ahí las builds salen firmadas igual.
-- **La v1 estaba en Google Play.** Entonces la clave que instala es la de _app
-  signing_ y la tiene Google; la que se sube es la de _upload_. Repartir un APK
-  de EAS por fuera nunca va a coincidir con lo instalado desde Play, así que el
-  camino es publicar la v2 en Play con la misma clave de subida.
-- **El keystore de la v1 se perdió.** No hay solución técnica: Android no deja
-  cambiar la clave de una app instalada. Toca desinstalar, y entonces lo
-  importante pasa a ser **avisar de exportar antes** — la copia manual desde
-  Ajustes, que ya existe y funciona.
-
-**Lo que hace falta para decidir:** un APK de la v1 y saber si llegó a estar en
-Play. Con eso, la respuesta es una de las tres de arriba.
+**Antes de mandar el enlace:** instalar la v2 encima de una v1 con datos reales,
+y comprobar que el diario sigue ahí. Y avisar de exportar antes, que es gratis y
+la única red que hay si algo sale mal.
 
 ### 🔍 De la auditoría (ronda 6) — detalle en [Lo que queda pendiente](#-lo-que-queda-pendiente-por-orden)
 
@@ -131,7 +155,7 @@ Play. Con eso, la respuesta es una de las tres de arriba.
 ### 🧱 De rondas anteriores
 
 - [ ] **RAM: ~1 GB medido** (`TOTAL PSS`), con swap. Plan en [docs/16 §2](16-memoria-e-imagenes.md), **midiendo antes de construir miniaturas**
-- [ ] **Que la v2 se instale encima de la v1, sin desinstalar** — es un problema de firma, no de código. Detalle en [Actualizar desde la v1](#-actualizar-desde-la-v1-sin-desinstalar)
+- [ ] **Que la v2 se instale encima de la v1** — el `versionCode` ya está corregido (era 2, la v1.3 salió con 6); falta confirmar la firma contra el APK de la v1 y probar la actualización en el sitio. Detalle en [Actualizar desde la v1](#-actualizar-desde-la-v1-sin-desinstalar--diagnosticado-y-no-era-la-firma)
 - [x] ~~Persona etiquetada en una visita no se muestra tras crearla~~ — **ya estaba arreglado y nadie lo tachó**: era uno de los cinco hooks de la ronda 6 que pasaban `'visitParticipants'` (el nombre del export) en vez de `visit_participant` (el SQL), así que la pantalla no se enteraba de la tabla de unión. Comprobado en el histórico; hoy lo impide el tipo y lo vigila `live-tables-contract`
 - [x] ~~La moneda está fijada a COP~~ — ajuste en Ajustes, con el valor inicial deducido de la región del móvil. **No convierte lo ya escrito**, y la propia fila lo dice
 - [x] ~~`jszip` sigue en `dependencies`~~ — a `devDependencies`; solo lo usa `zip.node.test.ts`
