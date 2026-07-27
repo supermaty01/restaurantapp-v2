@@ -86,7 +86,7 @@ No se persigue un % de cobertura global (métrica que miente). Se exige cobertur
 | **Migraciones de esquema** | ✅ Hecho: `migrations.node.test.ts` aplica la cadena entera sobre SQLite real                                                                       |
 | **Políticas RLS y RPCs**   | ✅ Hecho: 154 asserts en `supabase/tests/*.test.sql`, cada fichero sobre una base construida desde cero. Bloqueante en CI                           |
 | **Motor de sync**          | ✅ Parcial: cubierto contra un `FakeServer` que modela el trigger LWW y `sync_seq`. ❌ **Falta** contra Supabase local (dos dispositivos de verdad) |
-| **Import de backups**      | ✅ Parcial: el esquema del `.restoshare` está cubierto en `packages/shared`. ❌ **Falta** el round-trip export→import idempotente                   |
+| **Import de backups**      | ✅ El esquema del `.restoshare` en `packages/shared`, y el round-trip export→import en `services/share/round-trip.node.test.ts`                     |
 | **Repositorios y mappers** | ✅ Hecho                                                                                                                                            |
 | **Schemas zod**            | ✅ Hecho                                                                                                                                            |
 | **Tools del asistente**    | ✅ Parcial: `tools.node.test.ts` cubre la ejecución. ❌ **Falta** el set de evaluación de preguntas                                                 |
