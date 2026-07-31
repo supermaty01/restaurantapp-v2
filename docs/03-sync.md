@@ -38,6 +38,8 @@ Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila
 
 Lo arregla `ensureDefaultsLoaded` (`features/privacy/loadDefaults.ts`), que el sync espera. Y si no se pueden leer, **no se publica nada**: el servidor no distingue «todavía no lo sé» de «no comparto nada», y la segunda respuesta esconde el diario entero.
 
+Hay una segunda puerta al mismo fallo, y solo se abre al estrenar teléfono. El ajuste es **de la cuenta** pero se guarda **en el dispositivo**, así que un móvil nuevo no tiene nada en disco y su privado de reserva pisaría lo que la cuenta ya tenía elegido. Por eso **la primera vez manda el servidor**: si aquí no se ha elegido nunca y la cuenta tiene fila en `visibility_defaults`, se adopta y se guarda localmente. A partir de ahí manda el móvil, que es donde está el control.
+
 ### Push
 
 1. Leer `change_log` con `synced = false`, agrupado por tabla, en orden de dependencia (restaurants → dishes/visits → uniones → images).

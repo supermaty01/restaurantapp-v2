@@ -583,3 +583,30 @@ export async function pushVisibilityDefaults(defaults: {
 }): Promise<void> {
   await callRpc<null>('set_visibility_defaults', defaults);
 }
+
+/**
+ * Lo que la cuenta ya tenía elegido, si es que tenía algo.
+ *
+ * Solo hace falta al estrenar dispositivo: el ajuste es de la cuenta y se guarda
+ * en el móvil, así que un teléfono nuevo no sabe nada y publicaría su privado de
+ * reserva encima. La primera vez manda el servidor.
+ *
+ * Devuelve `null` cuando la cuenta nunca lo tocó, que es distinto de «todo
+ * privado»: ahí no hay nada que adoptar y el móvil sigue con lo suyo.
+ */
+export async function fetchVisibilityDefaults(): Promise<{
+  restaurant: string;
+  dish: string;
+  visit: string;
+} | null> {
+  const { data, error } = (await client()
+    .from('visibility_defaults')
+    .select('restaurant, dish, visit')
+    .maybeSingle()) as {
+    data: { restaurant: string; dish: string; visit: string } | null;
+    error: RpcError | null;
+  };
+
+  if (error) throw new Error(error.message, { cause: error });
+  return data;
+}

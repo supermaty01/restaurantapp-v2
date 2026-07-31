@@ -99,6 +99,14 @@ servidor no distingue «todavía no lo sé» de «no comparto nada», y la segun
 respuesta esconde el diario. Se repara solo en la primera sincronización con la
 versión nueva.
 
+**Y una segunda puerta al mismo fallo, que se abre al estrenar teléfono.**
+Buscándola se vio que el ajuste es de la cuenta pero se guarda en el
+dispositivo: un móvil nuevo no tiene nada en disco, así que su privado de
+reserva pisaría lo elegido igualmente. Ahora la primera vez manda el servidor
+—se adopta su fila y se guarda en local— y a partir de ahí manda el móvil. No
+estaba en la lista del autor porque todavía no le ha pasado; le pasará el día
+que instale la app en un segundo teléfono.
+
 #### Los otros dos del mismo viaje
 
 - **«Hay dos diarios» a quien solo tiene un teléfono.** La señal para preguntar

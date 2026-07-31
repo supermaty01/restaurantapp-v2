@@ -1,4 +1,4 @@
-import { getSetting } from '@/services/db/settings-repository';
+import { getSetting, setSetting } from '@/services/db/settings-repository';
 import type { AppDatabase } from '@/services/db/types';
 
 import { getDefaults, isLoaded, markLoaded, setDefaults, unmarkLoaded } from './defaultsStore';
@@ -41,6 +41,7 @@ export async function ensureDefaultsLoaded(db: AppDatabase): Promise<void> {
     try {
       const stored = await getSetting(db, defaultVisibilityKey(entity));
       if (stored && isVisibility(stored) && isExplicit(stored)) read[entity] = stored;
+      else everWritten.delete(entity);
     } catch {
       // Que una preferencia no se pueda leer no puede dejar la app sin arrancar;
       // se reintenta en la siguiente pasada.
@@ -48,7 +49,58 @@ export async function ensureDefaultsLoaded(db: AppDatabase): Promise<void> {
     }
   }
 
+  for (const entity of Object.keys(read) as ShareableEntity[]) everWritten.add(entity);
   if (Object.keys(read).length > 0) setDefaults({ ...getDefaults(), ...read });
+}
+
+/**
+ * Las que este dispositivo ha guardado alguna vez, frente a las que solo tienen
+ * el valor de reserva.
+ *
+ * La diferencia importa porque el ajuste es **de la cuenta** y se guarda **en el
+ * dispositivo**. Un móvil nuevo que entra en una cuenta donde ya se eligió
+ * «mis amigos ven mis visitas» no tiene nada escrito en disco, así que lee el
+ * privado de reserva y —sin esto— lo publicaría encima de lo que hay: el mismo
+ * fallo que arregló esta ronda, por otra puerta y solo al estrenar teléfono.
+ *
+ * Así que la primera vez manda el servidor, y a partir de ahí manda el móvil.
+ */
+const everWritten = new Set<ShareableEntity>();
+
+export function neverChosenHere(): boolean {
+  return everWritten.size === 0;
+}
+
+/** Lo llama el control de Ajustes: a partir de aquí manda este dispositivo. */
+export function markChosenHere(entity: ShareableEntity): void {
+  everWritten.add(entity);
+}
+
+/**
+ * Adopta lo que la cuenta ya tenía elegido, y lo guarda en este dispositivo.
+ *
+ * Se llama una sola vez, al descubrir que aquí no se ha elegido nunca. Guardarlo
+ * en disco es lo que hace que la próxima pasada ya vaya por el camino normal.
+ */
+export async function adoptDefaults(
+  db: AppDatabase,
+  remote: Record<ShareableEntity, ExplicitVisibility>,
+): Promise<void> {
+  setDefaults({ ...getDefaults(), ...remote });
+  for (const entity of SHAREABLE_ENTITIES) {
+    everWritten.add(entity);
+    try {
+      await setSetting(db, defaultVisibilityKey(entity), remote[entity]);
+    } catch {
+      // Se vuelve a intentar en la siguiente pasada; mientras tanto la copia en
+      // memoria ya es la buena, que es lo que evita publicar el valor erróneo.
+    }
+  }
+}
+
+/** Test-only: olvida lo que se sabe de las escrituras entre casos. */
+export function resetWrittenDefaults(): void {
+  everWritten.clear();
 }
 
 /**

@@ -1,6 +1,12 @@
 import { getDefaults } from '@/features/privacy/defaultsStore';
-import { defaultsAreKnown, ensureDefaultsLoaded } from '@/features/privacy/loadDefaults';
-import { pushVisibilityDefaults } from '@/features/social/api';
+import {
+  adoptDefaults,
+  defaultsAreKnown,
+  ensureDefaultsLoaded,
+  neverChosenHere,
+} from '@/features/privacy/loadDefaults';
+import { isExplicit, isVisibility, type ExplicitVisibility } from '@/features/privacy/visibility';
+import { fetchVisibilityDefaults, pushVisibilityDefaults } from '@/features/social/api';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
 import { downloadMissingPhotos, uploadPendingPhotos } from '@/services/sync/photos';
@@ -12,6 +18,45 @@ export interface SyncOutcome {
   ok: boolean;
   error: string | null;
   at: string;
+}
+
+/**
+ * Los ajustes de «quién ve lo mío», en la dirección correcta.
+ *
+ * El ajuste es **de la cuenta** y vive **en el dispositivo**, y esa asimetría
+ * tiene una consecuencia solo visible al estrenar teléfono: un móvil nuevo no
+ * tiene nada escrito en disco, así que lee su privado de reserva y lo publicaría
+ * encima de lo que la cuenta ya tenía elegido. Es el mismo fallo que esta ronda
+ * arregló para el arranque, por otra puerta.
+ *
+ * Así que **la primera vez manda el servidor**: si aquí no se ha elegido nunca y
+ * la cuenta sí tiene fila, se adopta y se guarda en disco. A partir de ahí manda
+ * el móvil, que es donde está el control.
+ */
+async function publishVisibilityDefaults(db: AppDatabase): Promise<void> {
+  if (neverChosenHere()) {
+    const remote = await fetchVisibilityDefaults();
+    const adopted = remote && toExplicitDefaults(remote);
+    if (adopted) {
+      await adoptDefaults(db, adopted);
+      return;
+    }
+  }
+
+  await pushVisibilityDefaults(getDefaults());
+}
+
+/** Descarta una fila del servidor con valores que la app no sabe interpretar. */
+function toExplicitDefaults(row: {
+  restaurant: string;
+  dish: string;
+  visit: string;
+}): Record<'restaurant' | 'dish' | 'visit', ExplicitVisibility> | null {
+  const usable = (value: string): value is ExplicitVisibility =>
+    isVisibility(value) && isExplicit(value);
+
+  if (!usable(row.restaurant) || !usable(row.dish) || !usable(row.visit)) return null;
+  return { restaurant: row.restaurant, dish: row.dish, visit: row.visit };
 }
 
 /**
@@ -33,7 +78,7 @@ export async function runSync(db: AppDatabase, accountUuid: string): Promise<Syn
     // fallida), no se publica nada: el servidor no distingue "no lo sé" de "no
     // comparto", y la segunda respuesta esconde el diario.
     await ensureDefaultsLoaded(db);
-    if (defaultsAreKnown()) await pushVisibilityDefaults(getDefaults());
+    if (defaultsAreKnown()) await publishVisibilityDefaults(db);
     await engine.sync();
 
     // A partir de aquí este dispositivo y esta cuenta ya no son dos diarios que

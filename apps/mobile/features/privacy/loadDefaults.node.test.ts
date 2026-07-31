@@ -1,13 +1,21 @@
 import { makeTestDb } from '@/services/db/__tests__/test-db';
-import { setSetting } from '@/services/db/settings-repository';
+import { getSetting, setSetting } from '@/services/db/settings-repository';
 
 import { getDefaults, resetDefaultVisibility } from './defaultsStore';
-import { defaultsAreKnown, ensureDefaultsLoaded } from './loadDefaults';
+import {
+  adoptDefaults,
+  defaultsAreKnown,
+  ensureDefaultsLoaded,
+  markChosenHere,
+  neverChosenHere,
+  resetWrittenDefaults,
+} from './loadDefaults';
 import { defaultVisibilityKey } from './visibility';
 
 describe('los ajustes de visibilidad, antes de publicarlos', () => {
   beforeEach(() => {
     resetDefaultVisibility();
+    resetWrittenDefaults();
   });
 
   it('se leen del disco los tres, no solo el que alguien esté mirando', async () => {
@@ -38,6 +46,46 @@ describe('los ajustes de visibilidad, antes de publicarlos', () => {
     await ensureDefaultsLoaded(db);
 
     expect(getDefaults().dish).toBe('private');
+  });
+
+  /**
+   * El ajuste es de la cuenta y se guarda en el móvil, así que un teléfono
+   * recién estrenado no sabe nada y publicaría su privado de reserva encima de
+   * lo que la cuenta ya tenía elegido.
+   */
+  it('un móvil sin nada escrito no puede imponer su privado de reserva', async () => {
+    const { db } = makeTestDb();
+    await ensureDefaultsLoaded(db);
+
+    expect(neverChosenHere()).toBe(true);
+  });
+
+  it('un móvil con algo escrito sí manda', async () => {
+    const { db } = makeTestDb();
+    await setSetting(db, defaultVisibilityKey('visit'), 'friends');
+    await ensureDefaultsLoaded(db);
+
+    expect(neverChosenHere()).toBe(false);
+  });
+
+  it('elegir en Ajustes basta para que mande este móvil', async () => {
+    const { db } = makeTestDb();
+    await ensureDefaultsLoaded(db);
+    markChosenHere('dish');
+
+    expect(neverChosenHere()).toBe(false);
+  });
+
+  it('adoptar lo de la cuenta lo deja también en disco', async () => {
+    const { db } = makeTestDb();
+    await ensureDefaultsLoaded(db);
+
+    await adoptDefaults(db, { restaurant: 'public', dish: 'friends', visit: 'friends' });
+
+    expect(getDefaults()).toEqual({ restaurant: 'public', dish: 'friends', visit: 'friends' });
+    expect(await getSetting(db, defaultVisibilityKey('visit'))).toBe('friends');
+    // Y a partir de aquí manda el móvil, sin volver a preguntar al servidor.
+    expect(neverChosenHere()).toBe(false);
   });
 
   it('no vuelve a leer lo que ya leyó', async () => {

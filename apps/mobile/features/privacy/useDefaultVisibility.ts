@@ -6,7 +6,7 @@ import * as schema from '@/services/db/schema';
 import { setSetting } from '@/services/db/settings-repository';
 
 import { getDefaults, isLoaded, setDefaults, subscribeToDefaults } from './defaultsStore';
-import { ensureDefaultsLoaded } from './loadDefaults';
+import { ensureDefaultsLoaded, markChosenHere } from './loadDefaults';
 import { defaultVisibilityKey, type ExplicitVisibility, type ShareableEntity } from './visibility';
 
 /**
@@ -40,6 +40,7 @@ export function useDefaultVisibility(entity: ShareableEntity) {
     async (next: ExplicitVisibility) => {
       // Applied optimistically: a toggle should not wait on a disk write.
       setDefaults({ ...getDefaults(), [entity]: next });
+      markChosenHere(entity);
       try {
         await setSetting(db, defaultVisibilityKey(entity), next);
       } catch (error) {
