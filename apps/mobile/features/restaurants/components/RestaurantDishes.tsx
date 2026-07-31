@@ -3,7 +3,6 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
-
 import { useDishesByRestaurant } from '@/features/dishes/hooks/useDishesByRestaurant';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 import { useTheme } from '@/lib/context/ThemeContext';

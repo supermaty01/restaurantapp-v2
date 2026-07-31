@@ -92,8 +92,7 @@ export default function UserProfileScreen() {
     : (available[0]?.kind ?? null);
 
   const query = useMemo(
-    () =>
-      kind ? { kind, sort: filters.sort, minRating: filters.minRating, page: 0 } : null,
+    () => (kind ? { kind, sort: filters.sort, minRating: filters.minRating, page: 0 } : null),
     [kind, filters],
   );
 
@@ -114,10 +113,7 @@ export default function UserProfileScreen() {
     [profile, counts, entries],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: FeedEntry }) => <FeedCard entry={item} />,
-    [],
-  );
+  const renderItem = useCallback(({ item }: { item: FeedEntry }) => <FeedCard entry={item} />, []);
 
   if (profile.loading && !profile.data) {
     return (

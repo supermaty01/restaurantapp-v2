@@ -30,7 +30,13 @@ Lo de la escritura faltaba: escribir una entrada y quedarse en la app la dejaba 
 
 `recordChange` emite una señal (`services/sync/pending.ts`) y `useSync` decide qué hacer con ella: los repositorios no tienen cuenta, ni red, ni por qué decidir cuándo se habla con un servidor.
 
+**Lo que se pide mientras corre una pasada no se descarta.** `requestSync` devolvía la que estuviera en marcha —es idempotente, y dos a la vez se pisarían los cursores, así que evitar la segunda era correcto— pero contesta a otra pregunta: quien acaba de guardar algo pregunta si **eso** llegó, y la pasada en curso ya envió lo suyo antes de que existiera. Con fotos subiendo, que es la parte que dura minutos, etiquetar a alguien durante ese rato dejaba la etiqueta en el móvil hasta el siguiente arranque. Ahora se anota y se repite al terminar. Una sola repetición, no una cola: la pasada siguiente drena la bandeja entera.
+
 Cada pasada envía primero los **ajustes de visibilidad** de la cuenta. Una fila guardada como `default` no significa nada para el servidor hasta que sabe cuál _es_ el default de esa cuenta.
+
+**Y hay que leerlos del disco antes**, cosa que durante un tiempo no se hacía. El almacén en memoria (`defaultsStore`) nace en blanco —todo privado— y solo lo rellenaba `useDefaultVisibility`, que es un hook: corre cuando se monta un formulario o la pantalla de Ajustes, no al arrancar. Así que la primera pasada tras abrir la app publicaba `private/private/private` encima de lo que el usuario tuviera elegido, y toda fila guardada como `default` —que son casi todas— pasaba a ser privada **para el servidor**, que es quien decide qué puede leer un amigo. En el móvil del dueño no se notaba nada: la app lee de SQLite. Los amigos veían un perfil vacío hasta que esa persona, por casualidad, volviera a abrir Ajustes.
+
+Lo arregla `ensureDefaultsLoaded` (`features/privacy/loadDefaults.ts`), que el sync espera. Y si no se pueden leer, **no se publica nada**: el servidor no distingue «todavía no lo sé» de «no comparto nada», y la segunda respuesta esconde el diario entero.
 
 ### Push
 
@@ -105,6 +111,14 @@ Al iniciar sesión con datos locales existentes:
 1. Se ofrece "subir tus datos a tu cuenta": asigna `user_id` a todas las filas locales y encola todo en `change_log`.
 2. Si la cuenta ya tiene datos en la nube (segundo dispositivo), se hace pull completo + push; los UUIDs garantizan que no hay colisiones, conviven ambos conjuntos.
 3. Caso raro (misma entidad creada a mano en dos dispositivos antes de vincular): quedan duplicados lógicos. **Decisión:** no se deduplica automáticamente; se ofrece detección de duplicados como utilidad manual (misma lógica de conflictos que ya tiene el import de `.restoshare`).
+
+### Cuándo se pregunta «hay dos diarios»
+
+La pantalla `sync-choice` solo aparece **la primera vez que este dispositivo y esta cuenta se encuentran**, y solo con entradas a los dos lados.
+
+Durante un tiempo la señal fue «hay filas sin subir», como sustituto de «este móvil ya escribía antes de esta cuenta». No lo es: la bandeja de salida tiene algo cada vez que se escribe una entrada y todavía no ha corrido el sync. Bastaba con guardar una comida y cerrar la app —o que la pasada fallara por falta de red— para que el siguiente arranque anunciara «hay dos diarios» a alguien que solo ha usado la app en un teléfono. Y como la marca de «ya elegiste» solo se escribía **al elegir**, cerrar la pantalla hacía que volviera a salir en cada arranque, con dos de las tres opciones capaces de borrar un diario entero delante.
+
+Ahora la respuesta la da una marca propia (`sync_linked_account` en `app_settings`) que pone el gestor de sync al terminar una pasada correcta. Después de eso ya no hay dos diarios: hay uno.
 
 ## Errores y robustez
 

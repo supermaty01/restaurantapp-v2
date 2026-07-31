@@ -1,4 +1,4 @@
-# 14 · Sistema de diseño «Clay»
+# 14 · Sistema de diseño «Huerta»
 
 Referencia de la capa visual. El código la cita como `docs/14`.
 
@@ -6,9 +6,20 @@ El punto de partida fue el proyecto de Claude Design **«RestaurantApp Refresh»
 
 ## La idea
 
-Papel y arcilla. Fondos cálidos en lugar de blancos y grises, un único acento (terracota) que marca lo accionable, y una serif editorial para lo que se mira frente a una sans para lo que se lee.
+Papel y huerta. Fondos cálidos teñidos de verde en lugar de blancos y grises, un único acento —el caramelo de la corteza de pan— que marca lo accionable, y una serif editorial para lo que se mira frente a una sans para lo que se lee.
 
 Un diario gastronómico se compone de fotos de comida, y esas fotos ya traen todo el color que una pantalla puede soportar. La interfaz se aparta: superficies neutras cálidas, un solo acento, y color saturado únicamente donde lo pone el usuario (etiquetas, valoraciones).
+
+### Por qué se cambió la paleta (julio 2026)
+
+La primera versión era **terracota `#C0623D` sobre crema `#F7F1E8`**, y eso es casi exactamente la paleta de Claude Code: el mismo coral sobre el mismo papel. Un parecido de esa clase no se arregla retocando un tono, porque los dos rasgos que lo delatan son el **lienzo crema** y el **acento coral**, así que se movieron los dos:
+
+- El lienzo pasa a un papel teñido de salvia (`#F2F4EA`), sacado del fondo verde pálido del icono de Android (`#DFE2CF`) y del brillo del logo (`#EFF3E7`).
+- El acento pasa del coral (~18° de tono) al caramelo de la corteza (~30°), tomado del pan del logo (`#98683E`).
+
+Todo lo demás sale del mismo sitio: la carne (`#A05F3F`) da los degradados de relleno, la lechuga (`#8EB66F`) da el verde de «todo bien», y el trazo cacao (`#3B1C08`) da la tinta.
+
+**En oscuro el acento sube a un caramelo claro** (`#C99155`), y por eso `onPrimary` deja de ser blanco y pasa a ser tinta: blanco sobre ese tono da 2,7:1 y no se lee. Es el único token cuyo valor cambia de _rol_ entre esquemas, y la razón de que un `#fff` escrito a mano encima de `bg-primary` sea ahora un fallo de contraste y no un atajo inofensivo.
 
 ## Color
 
@@ -19,18 +30,19 @@ La paleta vive **una sola vez** en [`lib/design/tokens.ts`](../apps/mobile/lib/d
 
 `tokens.node.test.ts` falla si las dos se desincronizan, porque nada en ejecución lo notaría: la pantalla simplemente saldría a medio tematizar.
 
-| Token                      | Uso                                                  |
-| -------------------------- | ---------------------------------------------------- |
-| `canvas`                   | Fondo de la aplicación                               |
-| `surface` / `surfaceAlt`   | Tarjetas, campos, hojas / barra de pestañas          |
-| `sunken`                   | Superficie hundida: pistas, campos deshabilitados    |
-| `line` / `lineStrong`      | Filetes y separadores                                |
-| `ink` / `Muted` / `Subtle` | Texto primario, secundario, terciario                |
-| `primary`                  | El único acento: acciones, enlaces, pestaña activa   |
-| `accent`                   | Valoraciones                                         |
-| `sage`                     | Categorías, estados positivos                        |
-| `danger`                   | Acciones destructivas                                |
-| `inverse` / `onInverse`    | El bloque invertido (el contador oscuro sobre claro) |
+| Token                      | Uso                                                         |
+| -------------------------- | ----------------------------------------------------------- |
+| `canvas`                   | Fondo de la aplicación                                      |
+| `surface` / `surfaceAlt`   | Tarjetas, campos, hojas / barra de pestañas                 |
+| `sunken`                   | Superficie hundida: pistas, campos deshabilitados           |
+| `line` / `lineStrong`      | Filetes y separadores                                       |
+| `ink` / `Muted` / `Subtle` | Texto primario, secundario, terciario                       |
+| `primary`                  | El único acento: acciones, enlaces, pestaña activa          |
+| `accent`                   | Valoraciones                                                |
+| `sage`                     | Categorías, estados positivos                               |
+| `danger`                   | Acciones destructivas                                       |
+| `onPrimary`                | Texto sobre `primary`. **Blanco en claro, tinta en oscuro** |
+| `inverse` / `onInverse`    | El bloque invertido (el contador oscuro sobre claro)        |
 
 ### Colores que elige el usuario
 
@@ -42,8 +54,10 @@ La dirección depende del tema: oscurecer es lo correcto sobre papel y hace desa
 
 ## Tipografía
 
-- **Newsreader** (serif) para lo editorial: titulares, cifras, nombres de sitio.
-- **Plus Jakarta Sans** para todo lo que se lee de corrido.
+- **Fraunces** (serif) para lo editorial: titulares, cifras, nombres de sitio.
+- **Manrope** para todo lo que se lee de corrido.
+
+Antes eran Newsreader y Plus Jakarta Sans, una pareja correcta y anónima: una serif de periódico y una geométrica que se ve en media web. Fraunces hace el mismo trabajo con carácter —terminaciones suaves, contraste alto, algo de brillo de rótulo de bar— y Manrope da a lo que se lee de corrido una humanidad que la anterior no tenía.
 
 Ambas son paquetes de solo assets (`@expo-google-fonts/*`), sin código nativo, así que no añaden riesgo en las actualizaciones de Expo — la preocupación central de [docs/11](11-dependencias.md).
 
@@ -129,3 +143,11 @@ Los formularios comparten `FormScaffold`: campos agrupados por lo que respondes 
 Las visitas abren agrupadas por mes con cabeceras fijadas, al estilo de una galería de fotos. Una lista plana de unos cientos de entradas no da ninguna sensación de _cuándo_; por mes se navega por memoria, que es como se busca una comida.
 
 **Pendiente:** v1 permitía deslizar entre pestañas mediante `material-top-tabs` anclado abajo. SDK 56 prohibió declarar navegadores de react-navigation a mano, así que sigue sin estar.
+
+## La pantalla de arranque
+
+Dos bloques en `app.config.js` —claro y oscuro— con los mismos colores que `canvas`, para que el destello y la primera pantalla sean literalmente el mismo color. Con solo el claro, abrir la app de noche empezaba con un verde pálido a pantalla completa que caía de golpe a un lienzo casi negro.
+
+Sigue al **sistema**, que es lo único que sabe el arranque: el ajuste de tema de la app vive en SQLite y ahí todavía no hay base de datos abierta. Con el tema puesto en «claro» sobre un móvil en oscuro (o al revés) hay un salto; es el único caso y no tiene arreglo desde ahí.
+
+El hueco entre esa pantalla y el primer fotograma de React lo cubre `android.backgroundColor` más `SystemUI.setBackgroundColorAsync` en `ThemeContext` — el segundo sí sigue al ajuste de la app, porque para entonces ya se conoce.

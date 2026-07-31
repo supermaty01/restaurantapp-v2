@@ -193,12 +193,10 @@ export default function AccountScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="gap-1.5">
-          <Txt variant="title">
-            {mode === 'sign-in' ? 'Entra en tu cuenta' : 'Crea una cuenta'}
-          </Txt>
+          <Txt variant="title">{mode === 'sign-in' ? 'Entra en tu cuenta' : 'Crea una cuenta'}</Txt>
           <Txt variant="callout" tone="muted">
-            Es opcional. Sirve para tener tu diario en más de un móvil, recuperarlo si pierdes
-            este, y compartir con amigos. Lo que ya has escrito se queda donde está.
+            Es opcional. Sirve para tener tu diario en más de un móvil, recuperarlo si pierdes este,
+            y compartir con amigos. Lo que ya has escrito se queda donde está.
           </Txt>
         </View>
 

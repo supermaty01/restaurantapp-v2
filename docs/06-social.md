@@ -26,18 +26,18 @@ Por entidad, el valor guardado es uno de cuatro: **`default`** | `private` | `fr
 
 Esto se hizo primero al revés, copiando el ajuste en la fila al crearla, y estaba mal por dos motivos que solo se ven con datos reales:
 
-- El ajuste se convertía en una sugerencia de una sola vez. Cambiar "mis amigos ven mis visitas" no movía nada de lo ya escrito, que es lo contrario de lo que promete algo llamado *default*.
+- El ajuste se convertía en una sugerencia de una sola vez. Cambiar "mis amigos ven mis visitas" no movía nada de lo ya escrito, que es lo contrario de lo que promete algo llamado _default_.
 - Todo lo importado de la v1 —que es casi todo un diario de años— se quedaba clavado en `private`, porque en la v1 ese campo no existía. El diario entero era invisible para los amigos de su dueño y ningún ajuste lo alcanzaba.
 
 El precio es que **ninguna comprobación de visibilidad puede mirar la columna directamente**. Todas pasan por `effective_visibility(stored, owner, entity)` (migración 0014), y los ajustes generales viven también en Postgres (`visibility_defaults`) porque es el servidor quien decide si tu amigo puede leer una fila.
 
 **Sin cuenta no aparece nada de esto.** Ni la sección de Ajustes, ni el control en cada entrada, ni el filtro de las listas. Nada sale del dispositivo, así que «quién lo ve» tiene una sola respuesta posible; ofrecer el control igualmente sugiere que hay algo que decidir, y un control de privacidad que no cambia nada es justo el que enseña a dejar de leerlos. Lo decide `useSharingAvailable()`, y los dos componentes se defienden solos además de que las pantallas los escondan.
 
-Lo que se *guarda* no cambia: las entradas se escriben como `default` igualmente, así que iniciar sesión más tarde aplica los ajustes retroactivamente a todo lo ya escrito, sin migración y sin preguntar.
+Lo que se _guarda_ no cambia: las entradas se escriben como `default` igualmente, así que iniciar sesión más tarde aplica los ajustes retroactivamente a todo lo ya escrito, sin migración y sin preguntar.
 
 El ajuste general por defecto es privado, y no por prudencia genérica: compartir algo sin querer no se deshace del todo, y el default tiene que ser aquel cuyo error se puede corregir.
 
-Se puede **sobrescribir en cada entrada**: al crearla, y después desde la propia pantalla de detalle. Esto último importa más de lo que parece — decidir compartir una comida casi siempre pasa *después* de registrarla. Una entrada marcada a mano no se mueve nunca; solo las que están en `default` siguen al ajuste.
+Se puede **sobrescribir en cada entrada**: al crearla, y después desde la propia pantalla de detalle. Esto último importa más de lo que parece — decidir compartir una comida casi siempre pasa _después_ de registrarla. Una entrada marcada a mano no se mueve nunca; solo las que están en `default` siguen al ajuste.
 
 Los cuatro valores son además un **filtro** en las tres listas, sobre el valor guardado y no el resuelto: «¿cuáles dejé en automático?» es la pregunta que hay que poder responder para auditar lo que compartes, porque son justo las que se moverán si cambias el ajuste.
 
@@ -47,7 +47,7 @@ Si puedes leer una visita, puedes leer **el restaurante donde ocurrió y los pla
 
 Sin esto, quien guardaba sus restaurantes en privado y compartía una visita mandaba una tarjeta que decía "Una visita" y nada más: ni dónde, ni qué comió. La visita es el envoltorio; sin su contenido no queda nada que compartir.
 
-No al revés: ver un plato no da acceso a las demás visitas a ese restaurante. La decisión de quien comparte fue sobre *esa comida*, no sobre el sitio. Y la nota y los comentarios del restaurante se quedan fuera — son opinión sobre el lugar en general.
+No al revés: ver un plato no da acceso a las demás visitas a ese restaurante. La decisión de quien comparte fue sobre _esa comida_, no sobre el sitio. Y la nota y los comentarios del restaurante se quedan fuera — son opinión sobre el lugar en general.
 
 Implementado en `can_read_visit` y `visit_detail` (migración 0011).
 
@@ -102,7 +102,19 @@ Regla actual (0012): **una entrada no aparece si ya está representada por otra.
 
 ### Paginación
 
-Por cursor (`before`), no por offset: la lista crece por arriba, y con offset alguien publicando a mitad de scroll desplaza todas las páginas siguientes y ves la misma tarjeta dos veces. Un timestamp nombra una posición que se queda quieta. `usePagedResource` lo implementa una vez para el feed, la bandeja y los perfiles.
+Por cursor (`before`), no por offset: la lista crece por arriba, y con offset alguien publicando a mitad de scroll desplaza todas las páginas siguientes y ves la misma tarjeta dos veces. Un timestamp nombra una posición que se queda quieta. `usePagedResource` lo implementa una vez para el feed y la bandeja.
+
+**Las secciones del perfil ajeno son la excepción**, y por eso tienen su propio hook (`useUserSection`): no crecen mientras las lees —son el catálogo de otra persona— y se pueden ordenar por nombre o por nota, donde ninguna fecha nombra la posición siguiente. Ahí sí se pagina por número de página.
+
+## El perfil de otra persona, por secciones
+
+Visitas / Lugares / Platos, las mismas tres del diario propio, porque son las mismas tres cosas y quien entra en un perfil suele venir a una de ellas.
+
+**Solo se dibuja la sección que tiene algo.** Los conteos (`user_section_counts`, migración 0021) llegan antes que las listas, así que a quien no es tu amigo y solo tiene sitios públicos se le enseña una pestaña, no tres con dos vacías; y con una sola sección no se dibuja ningún selector, porque un control de una opción es un adorno con la altura de un control.
+
+`user_entries_of` **no reutiliza `user_entries`** aunque devuelva la misma forma de fila. `user_entries` poda los platos que pertenecen a una visita compartida y los sitios que ya salen por una visita, lo cual es correcto para un feed —registrar una comida escribe sitio, visita y platos, y sin la poda la misma cena aparece tres veces seguidas— y es exactamente lo que no se quiere en una sección llamada «Platos», donde faltarían justo los platos de los que hay constancia. Una sección es un catálogo, no una crónica.
+
+Los filtros son menos que los del diario propio, y a propósito: **las etiquetas no se comparten** —son la libreta privada de quien escribe, y no viajan a quien mira— y el filtro por restaurante necesita el catálogo local, que del diario ajeno no se tiene. Quedan orden y nota mínima, los dos resueltos por el servidor: ordenar en el móvil solo ordenaría lo que ya se ha bajado.
 
 ### Fuera de alcance
 
@@ -110,7 +122,7 @@ Likes y comentarios. Multiplican superficie de moderación y notificaciones sin 
 
 ## Sincronización de las relaciones
 
-Las tablas de unión (`restaurant_tag`, `dish_tag`, `dish_visit`, `visit_participant`) **viajan con su fila padre**, no por `change_log`. Una unión no tiene uuid, ni marcas de tiempo, ni identidad propia: *es* el par de uuids, así que no hay nada que reconciliar por última-escritura-gana. Ver [03](03-sync.md).
+Las tablas de unión (`restaurant_tag`, `dish_tag`, `dish_visit`, `visit_participant`) **viajan con su fila padre**, no por `change_log`. Una unión no tiene uuid, ni marcas de tiempo, ni identidad propia: _es_ el par de uuids, así que no hay nada que reconciliar por última-escritura-gana. Ver [03](03-sync.md).
 
 ## Notificaciones
 

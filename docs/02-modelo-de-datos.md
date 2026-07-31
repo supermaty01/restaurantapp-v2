@@ -67,7 +67,7 @@ visit_participant (N:M)
 
 - `linked_account_uuid` es el uuid remoto de `auth.users`, no un id local: quien te acompaña vive en el móvil de otra persona, y su fila aquí es una etiqueta con un puntero. En el espejo de Postgres la columna se llama `linked_user_id`.
 - El `username` se **copia** en vez de consultarse. Una etiqueta tiene que dibujarse sin conexión y años después; un handle que desde entonces cambió es un problema menor que un chip que no sabe pintarse.
-- `tag_status` distingue si la etiqueta *puede* viajar (`pending`, hay cuenta a la que llegar) de si es solo un nombre anotado (`local`). **No es un flujo de aprobación**: a nadie se le pide permiso para etiquetarlo. El consentimiento es posterior y vive en `tag_rejections`, una tabla solo de servidor. Ver [06](06-social.md).
+- `tag_status` distingue si la etiqueta _puede_ viajar (`pending`, hay cuenta a la que llegar) de si es solo un nombre anotado (`local`). **No es un flujo de aprobación**: a nadie se le pide permiso para etiquetarlo. El consentimiento es posterior y vive en `tag_rejections`, una tabla solo de servidor. Ver [06](06-social.md).
 - Identidad: la cuenta cuando la hay, el nombre cuando no. Dos amigas pueden llamarse Ana, pero una cuenta es una persona.
 
 ### Visibilidad por entidad
@@ -79,6 +79,24 @@ visit_participant (N:M)
 Los ajustes generales por tipo viven en `app_settings` (local) y en `visibility_defaults` (Postgres): el servidor también tiene que poder resolverlos, porque es quien decide si tu amigo puede leer una fila.
 
 Los tags y las personas son siempre privados (solo el nombre de la persona etiquetada se muestra a quien ya puede ver la visita).
+
+### La moneda de un precio
+
+`dishes` gana `currency` (ISO 4217), nula cuando no hay precio. Va **en el plato**, no en la cuenta: un diario de comidas viaja, y el mismo cuaderno tiene un menú del día en Madrid y un corrientazo en Bogotá. Con una moneda global, la mitad de los precios pasados quedan mal etiquetados cada vez que cambias de país.
+
+Hay también un ajuste general (`defaultCurrency` en `app_settings`), y es importante ver en qué se diferencia del de visibilidad, porque se parecen y hacen lo contrario:
+
+|                                       | `defaultVisibility_*`     | `defaultCurrency`         |
+| ------------------------------------- | ------------------------- | ------------------------- |
+| Qué se guarda en la fila              | El literal `default`      | La moneda, copiada        |
+| Cuándo se resuelve                    | Al leer                   | Al escribir               |
+| Cambiar el ajuste mueve lo ya escrito | **Sí**, y ese es el punto | **No**, y ese es el punto |
+
+Cambiar «quién ve mis visitas» tiene que mover las que dijeron «lo que digan mis ajustes». Cambiar de moneda al aterrizar en otro país no puede reescribir lo que pagaste el mes pasado.
+
+Precio y moneda se escriben juntos o no se escriben (`pairPriceAndCurrency`). **El espejo no lo exige con un `check`** a propósito: un móvil con la versión anterior instalada sigue enviando precio sin moneda, y rechazar esa fila tumbaría el lote entero y dejaría su sync parado hasta que actualizara la app.
+
+Migración de lo existente (0011 local, 0020 espejo): la app solo se ha usado en Colombia y en Europa y las dos escalas no se solapan —un plato de menos de 1000 no existe en pesos, uno de más de 1000 no existe en euros—, así que el propio número dice de dónde viene. Es una suposición, y lo que quede mal etiquetado se corrige a mano.
 
 ## Esquema cloud (Supabase)
 

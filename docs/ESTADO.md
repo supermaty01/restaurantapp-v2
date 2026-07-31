@@ -1,10 +1,226 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-26 (ronda 5)
+**Última actualización:** 2026-07-31 (ronda 6)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
-## 🔴 AQUÍ SE RETOMA — 26 de julio de 2026 (ronda 5)
+## 🔴 AQUÍ SE RETOMA — 31 de julio de 2026 (ronda 6)
+
+Ronda de **feedback de una semana de uso real, con dos personas**. La lista del
+autor traía dieciséis puntos; están todos tocados menos lo que se dice abajo.
+
+El hallazgo que justifica la ronda entera: **abrir la app dejaba de compartir el
+diario**. Está explicado en detalle más abajo, pero el resumen es que los ajustes
+de visibilidad se publicaban en blanco en la primera pasada de sync tras
+arrancar, y eso vaciaba el perfil de esa persona para todos sus amigos hasta que
+por casualidad volviera a abrir Ajustes. Explica los dos síntomas que reportó el
+autor —«dejé de ver todas sus visitas» y «me etiquetó y luego desapareció»— con
+un solo fallo.
+
+### 🚨 Antes de tocar nada: lo que NO se ha podido verificar
+
+Esta sesión **no tenía Docker**, así que las aserciones SQL no se corrieron. Hay
+**dos migraciones nuevas del espejo sin ejecutar ni una vez** contra un Postgres
+de verdad:
+
+- **0020** — `dishes.currency` y `visit_detail` devolviéndola.
+- **0021** — `user_section_counts` y `user_entries_of`, las dos funciones nuevas
+  del perfil ajeno. Esta es la que más miedo debe dar: es SQL nuevo y largo, con
+  un `union all` de tres ramas y un `order by` con cuatro claves condicionales.
+
+**El paso cero de la próxima sesión es `supabase start && npm run db:test`.** Si
+0021 no compila, la pantalla de perfil de otra persona sale vacía con un error
+de RPC; el resto de la app no se entera.
+
+Lo que sí está verde: TypeScript en 0, lint sin avisos y **353 tests** de app
+(+42), incluidos los de la migración local 0011 corriendo contra un SQLite de
+verdad.
+
+### 👉 Lo siguiente, en orden
+
+0. **`supabase db push` y `npm run db:test`.** Ver arriba. Antes que el APK.
+1. **Generar un APK nuevo y probarlo.** Sigue siendo obligatorio y ahora más:
+   esta ronda cambia **fuentes** (Fraunces + Manrope, paquetes nuevos) y la
+   **pantalla de arranque** (bloque `dark`), y las dos cosas son build nativa. Un
+   recargar de JavaScript no las trae. `eas build -p android --profile preview`.
+2. **Eliminar cuenta y datos (GDPR).** Sigue siendo lo único del plan original
+   que queda. Ver la ronda 5 más abajo.
+
+### ❓ Preguntas para el autor (nadie estaba disponible al hacer esto)
+
+Ninguna bloquea nada; todas se resolvieron con la opción menos destructiva.
+
+1. **La moneda de lo ya escrito.** La regla que pediste —bajo mil, euros; de mil
+   en adelante, pesos— está aplicada tal cual, con el límite exacto (1000) del
+   lado del peso. **Si algún plato queda mal etiquetado hay que corregirlo a
+   mano**, plato a plato: no hay forma de saberlo desde fuera. Merece un vistazo
+   a los platos que rondan las tres cifras.
+2. **Las monedas de la lista** son EUR, COP, USD, GBP, MXN, ARS, CLP, PEN y BRL.
+   Si falta alguna, es una línea en `features/dishes/currency.ts`.
+3. **La paleta nueva («Huerta»)** mueve el lienzo a un papel teñido de salvia y
+   el acento a un caramelo. Es un cambio de carácter, no un retoque: si te
+   esperabas «lo mismo pero un poco distinto», dilo y se rebaja. La anterior está
+   en el historial de `lib/design/tokens.ts`.
+4. **La bienvenida de primera apertura** se inventó: no estaba en la lista, pero
+   «el onboarding es raro» sin más detalle apuntaba a que no había ninguno. Se
+   enseña una sola vez y se salta con un botón. Para volver a verla, borrar
+   `onboardingSeen` de `app_settings`.
+5. **Los filtros del perfil ajeno son menos que los del diario propio**: solo
+   orden y nota mínima. Las etiquetas no viajan a quien mira —son la libreta
+   privada de quien escribe— y el filtro por restaurante necesita el catálogo
+   local. Si quieres las etiquetas ahí, hay que decidir antes si se comparten.
+
+### 🟢 Lo cerrado en la ronda 6
+
+#### 🔴 El fallo que vaciaba los perfiles
+
+**Síntoma:** un amigo cambia su foto de perfil y, a partir de ese momento, deja
+de vérsele todo. También pasaba al revés: una visita etiquetada que se veía bien
+y desapareció sola.
+
+**Causa:** `defaultsStore` —los ajustes de «quién ve mis visitas/platos/sitios»—
+nace en blanco, con todo en privado, y solo lo rellenaba `useDefaultVisibility`,
+que es un hook y por tanto solo corre cuando se monta un formulario o la pantalla
+de Ajustes. Pero `runSync` publica esos ajustes en **cada pasada**, y la primera
+ocurre al arrancar la app. O sea: abrir la app y no tocar nada mandaba
+`private/private/private` al servidor, encima de lo que el usuario tuviera
+elegido.
+
+Toda fila guardada como `default` —que son casi todas, porque 0014 las migró
+así— pasaba a ser privada **para el servidor**, que es quien decide qué puede
+leer un amigo. En el móvil del dueño no se notaba nada: la app lee de SQLite.
+
+Cambiar la foto de perfil no tenía nada que ver; lo único que hacía falta era
+abrir la app.
+
+**Arreglo:** `features/privacy/loadDefaults.ts` lee los tres del disco y el sync
+lo espera antes de publicar. Y si no se pueden leer, **no se publica nada**: el
+servidor no distingue «todavía no lo sé» de «no comparto nada», y la segunda
+respuesta esconde el diario. Se repara solo en la primera sincronización con la
+versión nueva.
+
+#### Los otros dos del mismo viaje
+
+- **«Hay dos diarios» a quien solo tiene un teléfono.** La señal para preguntar
+  era «hay algo sin subir», que lo cumple cualquiera que guarde una comida y
+  cierre la app antes de que corra el sync. Y como la marca de «ya elegiste» solo
+  se escribía al elegir, cerrar la pantalla hacía que volviera a salir en cada
+  arranque —con dos de las tres opciones capaces de borrar un diario entero
+  delante—. Ahora la señal es una marca (`sync_linked_account`) que pone el sync
+  al terminar bien: la pregunta es «¿es la primera vez que este móvil y esta
+  cuenta se encuentran?», que es lo que decía ser.
+
+- **Lo que se pide sincronizar durante una pasada ya no se descarta.**
+  `requestSync` devolvía la pasada en curso, que es idempotente y evita cursores
+  cruzados —correcto— pero contesta a otra pregunta: quien guarda algo y pide
+  sincronizar pregunta si **eso** llegó, y la pasada en curso ya envió lo suyo
+  antes de que existiera. Con fotos subiendo (minutos), etiquetar a alguien
+  durante ese rato dejaba la etiqueta en el móvil hasta el siguiente arranque.
+  Ahora se anota y se repite al terminar; una sola repetición, porque la pasada
+  siguiente drena la bandeja entera.
+
+#### Moneda por plato (0011 local, 0020 espejo)
+
+El precio era un número sin unidad que la app pintaba **siempre en pesos
+colombianos**, la única moneda escrita en el código. Ahora vive en el plato.
+
+El ajuste general sigue existiendo con otro papel: es lo que se **propone** al
+escribir un precio nuevo, y se copia en la fila al guardar. Es a propósito lo
+contrario del `default` de visibilidad —que se resuelve al leer para que cambiar
+el ajuste mueva lo ya escrito—: cambiar de país es normal y reescribir lo que
+pagaste el mes pasado no lo es.
+
+El relleno de lo existente aplica la regla del autor. No hay `check` en el
+espejo que exija que precio y moneda vayan juntos, aunque la regla sea esa: un
+móvil con la versión anterior instalada sigue enviando precio sin moneda, y una
+comprobación ahí rechazaría el lote entero y dejaría su sync parado hasta que
+actualizara.
+
+#### El perfil de otra persona, por secciones (0021)
+
+Visitas / Lugares / Platos, como el diario propio, con orden y nota mínima
+resueltos por el servidor. **Solo salen las secciones que tienen algo**: los
+conteos llegan antes que las listas, así que a quien no es tu amigo y solo tiene
+sitios públicos se le enseña una pestaña, no tres con dos vacías. Con una sola
+sección no se dibuja ningún selector.
+
+No se reutiliza `user_entries` porque hace algo que ahí está mal: quita los
+platos que pertenecen a una visita compartida. Eso es correcto para un feed
+—registrar una comida escribe sitio, visita y platos, y sin esa poda la misma
+cena sale tres veces— y es exactamente lo que no se quiere en una sección
+llamada «Platos». Una sección es un catálogo, no una crónica.
+
+#### Diseño: la paleta ya no se parece a Claude Code
+
+Era terracota `#C0623D` sobre crema `#F7F1E8`. Los dos rasgos que lo delataban
+eran el lienzo crema y el acento coral, así que se mueven los dos: papel teñido
+de salvia y acento en el caramelo de la corteza de pan (~30° en vez de ~18°).
+Todo sale del logo. Newsreader y Plus Jakarta Sans dejan sitio a **Fraunces** y
+**Manrope**.
+
+En oscuro el acento sube a un caramelo claro, así que `onPrimary` pasa a ser
+tinta: blanco sobre ese tono da 2,7:1 y no se lee. Los pocos `#fff` escritos a
+mano encima de `bg-primary` pasan a leer el token.
+
+**La pantalla de arranque ya tiene versión oscura** (bloque `dark` en
+`expo-splash-screen`), con el fondo de la ventana nativa a juego —que es lo que
+se cuela entre esa pantalla y el primer fotograma de React—. Sigue al **sistema**
+y no al ajuste de la app: el ajuste vive en SQLite y ahí todavía no hay base de
+datos abierta. Con el tema en «claro» sobre un móvil en oscuro hay un salto; es
+el único caso y no tiene arreglo desde ahí.
+
+#### Lo demás de la lista
+
+- **El desfile de avatares en Inicio.** Cada pantalla pedía el perfil por su
+  cuenta al arrancar: hueco → iniciales del correo (con su color) → iniciales del
+  nombre (con otro color) → foto. Ahora el perfil se guarda en `app_settings`, lo
+  comparten las pantallas, y mientras no se sabe si hay foto se dibuja el disco
+  vacío en vez de unas iniciales que van a durar medio segundo.
+- **Una persona etiquetada que tiene cuenta se dibuja con su cara.** Sale de la
+  lista de amistades, que es la única fuente que hay y además la correcta: a una
+  cuenta solo se la puede etiquetar eligiéndola de esa lista.
+- **La píldora de «Ordenar por»** se quedaba cuadrada al deseleccionarse. El
+  redondeo dependía de una cadena de clases que cambia de forma entre renders;
+  ahora va en `style`.
+- **Los drawers con buscador se abren encima del teclado.** Un `Modal` de React
+  Native se dibuja en su propia ventana nativa, así que ni el
+  `KeyboardAvoidingView` del padre ni el `adjustResize` de la actividad llegaban.
+- **Dentro de un restaurante**, las visitas van de la más reciente a la más
+  antigua (las sin fecha al final: «sin fecha» no es «hace un momento») y los
+  platos por orden alfabético.
+- **Confirmación antes de quitar a alguien de amigos**, desde la lista y desde su
+  perfil, con su nombre en la pregunta. Cancelar una solicitud enviada pregunta
+  distinto: nadie se entera de eso. Quitarse de una etiqueta ya preguntaba;
+  ahora el texto está escrito una sola vez y compartido.
+- **Foto de perfil a pantalla completa** desde el perfil de la persona.
+- **Registro e inicio de sesión**, que era casi todo: ver el bloque de la ronda
+  en el commit `feat(cuenta)`. Apple queda detrás de una bandera apagada.
+
+### ⚠️ Encontrado de paso, sin arreglar
+
+- **`npm run check` desde la raíz sigue roto**, igual que en la ronda 5:
+  `packages/shared` no tiene `src/`. Verificar con `-w apps/mobile -w apps/api`.
+- **El `package-lock.json` no trae los binarios nativos de Linux.** En una
+  máquina Linux, `npm ci`/`npm install` deja fuera
+  `@rollup/rollup-linux-x64-gnu` y `@unrs/resolver-binding-linux-x64-gnu`, así
+  que `lint` (eslint-import-resolver-typescript) y los tests del Worker (vitest →
+  rollup) revientan con «Cannot find native binding» — que no es un fallo del
+  código y cuesta un rato entenderlo. Se resuelve con
+  `npm install --no-save @rollup/rollup-linux-x64-gnu @unrs/resolver-binding-linux-x64-gnu`,
+  que **no toca el lockfile**. Regenerar el lockfile en Linux lo arreglaría de
+  raíz, pero cambia 776 KB de fichero y merece un commit propio.
+- **Siete ficheros sin formatear** que `format:check` marca: `docs/05`, `09`,
+  `11`, `12`, `13`, `supabase/scripts/reset-device.md` y
+  `apps/mobile/google-services.json`. Anteriores a esta ronda y verificados
+  contra el árbol limpio. Los dos de `docs/` que sí se tocaron aquí (`02` y `06`)
+  van formateados, así que su diff trae ruido de reajuste de líneas además del
+  contenido nuevo.
+- **`useVisitsByRestaurant` no filtra `deleted = false`.** La lista de visitas de
+  un restaurante enseña también las borradas. Es anterior a esta ronda y no
+  estaba en la lista; una línea, pero cambia lo que se ve y merece decidirse
+  aparte.
+
+## 🔵 Ronda anterior — 26 de julio de 2026 (ronda 5)
 
 Las **notificaciones nuevas están hechas y probadas contra Postgres de verdad**
 (migración 0019). De la lista que fijó el autor —foto de perfil > scroll >

@@ -54,10 +54,7 @@ function Booting() {
   const colors = scheme === 'dark' ? darkColors : lightColors;
 
   return (
-    <View
-      className="flex-1 items-center justify-center"
-      style={{ backgroundColor: colors.canvas }}
-    >
+    <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.canvas }}>
       <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );

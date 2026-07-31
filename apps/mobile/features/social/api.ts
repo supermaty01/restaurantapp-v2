@@ -255,9 +255,7 @@ export async function fetchUserEntries(userId: string, before?: string): Promise
  */
 export type SectionKind = 'visit' | 'dish' | 'restaurant';
 
-export async function fetchUserSectionCounts(
-  userId: string,
-): Promise<Record<SectionKind, number>> {
+export async function fetchUserSectionCounts(userId: string): Promise<Record<SectionKind, number>> {
   const rows = await callRpc<{ kind: string; total: number | string }[]>('user_section_counts', {
     target: userId,
   });

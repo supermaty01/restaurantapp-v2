@@ -78,9 +78,7 @@ export function SectionFilterSheet({
       visible={visible}
       onClose={onClose}
       title="Filtrar y ordenar"
-      subtitle={
-        activeSectionFilterCount(draft) === 0 ? 'Sin filtros activos' : '1 filtro activo'
-      }
+      subtitle={activeSectionFilterCount(draft) === 0 ? 'Sin filtros activos' : '1 filtro activo'}
       footer={
         <View className="flex-row gap-2.5">
           <View className="flex-1">
