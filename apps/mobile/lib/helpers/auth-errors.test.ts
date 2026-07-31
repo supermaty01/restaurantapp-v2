@@ -43,6 +43,42 @@ describe('describeAuthError', () => {
     expect(describeAuthError('invalid_grant')).toContain('caducado');
   });
 
+  /**
+   * Los de correo y contraseña son los únicos que sí puede arreglar quien
+   * entra, y llegaban tal cual: «Invalid login credentials» en una app escrita
+   * entera en español.
+   */
+  it('says in Spanish that the email or password did not match', () => {
+    const result = describeAuthError('Invalid login credentials');
+    expect(result).toContain('correo o la contraseña');
+  });
+
+  it('does not reveal whether the account exists', () => {
+    // Supabase devuelve lo mismo si el correo no existe y si la contraseña está
+    // mal, a propósito. Distinguirlos diría qué correos tienen cuenta aquí.
+    const result = describeAuthError('Invalid login credentials');
+    expect(result).not.toMatch(/no existe|no está registrad/i);
+  });
+
+  it('sends someone with an existing account to sign in instead', () => {
+    expect(describeAuthError('User already registered')).toContain('Entra');
+  });
+
+  it('explains a short password', () => {
+    expect(describeAuthError('Password should be at least 6 characters')).toContain('corta');
+  });
+
+  it('turns a dead network into something actionable', () => {
+    // `fetch failed` es lo que sale sin red, y no dice nada a nadie.
+    expect(describeAuthError('Network request failed')).toContain('conexión');
+  });
+
+  it('explains an unconfirmed email without blaming the password', () => {
+    const result = describeAuthError('Email not confirmed');
+    expect(result).toContain('correo');
+    expect(result).not.toContain('contraseña');
+  });
+
   it('passes an unknown error through rather than swallowing it', () => {
     expect(describeAuthError('algo raro que nadie ha visto')).toBe('algo raro que nadie ha visto');
   });

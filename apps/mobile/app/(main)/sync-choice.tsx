@@ -99,7 +99,11 @@ export default function SyncChoiceScreen() {
       await applyDivergenceChoice(db, createSupabaseTransport(accountUuid), choice);
       await rememberChoiceMade(db, accountUuid);
       await syncNow();
-      router.back();
+      // Al inicio y no `back()`: esta pantalla aparece sola encima de lo que
+      // hubiera, así que "volver" es volver a un sitio que nadie eligió — y a
+      // veces al formulario a medias que disparó el sync. Después de decidir
+      // qué diario manda, lo que se quiere ver es el diario.
+      router.replace('/(main)/(tabs)');
     } catch (error) {
       await tell({
         title: 'No se pudo aplicar',

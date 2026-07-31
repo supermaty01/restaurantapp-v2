@@ -60,6 +60,8 @@ export default function MainLayout() {
         >
           {/* The tab bar carries its own headers. */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* Sin cabecera y sin volver: no se llega a ella, se sale de ella. */}
+          <Stack.Screen name="welcome" options={{ headerShown: false }} />
 
           <Stack.Screen name="search" options={{ title: 'Buscar' }} />
           <Stack.Screen name="tags/index" options={{ title: 'Etiquetas' }} />

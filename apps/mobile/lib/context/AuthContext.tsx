@@ -16,6 +16,19 @@ interface AuthResult {
   error: string | null;
 }
 
+/**
+ * Lo que pasó al crear una cuenta.
+ *
+ * `needsConfirmation` existe porque `signUp` **no falla** cuando el proyecto
+ * pide confirmar el correo: devuelve un usuario sin sesión y ya está. La
+ * pantalla no distinguía ese caso de un registro con sesión inmediata, así que
+ * pulsar «Crear cuenta» no hacía nada visible — ni error, ni sesión, ni una
+ * frase diciendo que había que mirar el correo.
+ */
+export interface SignUpResult extends AuthResult {
+  needsConfirmation: boolean;
+}
+
 interface AuthContextValue {
   /** Whether accounts are available at all (env configured). */
   isConfigured: boolean;
@@ -25,22 +38,34 @@ interface AuthContextValue {
   /** The logged-in account uuid, or null in anonymous mode. */
   accountUuid: string | null;
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
-  signUpWithEmail: (email: string, password: string) => Promise<AuthResult>;
+  signUpWithEmail: (email: string, password: string) => Promise<SignUpResult>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<AuthResult>;
   /** Completes a login from a redirect the system delivered to the app. */
   completeOAuth: (url: string) => Promise<AuthResult>;
+  /** Manda el correo para poner una contraseña nueva. */
+  resetPassword: (email: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
 }
+
+/**
+ * Esta copia de la app no tiene nube configurada.
+ *
+ * Escrito para leerse: antes era la cadena `not-configured`, que llegaba tal
+ * cual al diálogo de error. Nadie que vea «not-configured» en su móvil sabe qué
+ * hacer con eso.
+ */
+const NOT_CONFIGURED = 'Esta copia de la app funciona solo en local: no tiene cuenta configurada.';
 
 const AuthContext = createContext<AuthContextValue>({
   isConfigured: false,
   loading: false,
   session: null,
   accountUuid: null,
-  signInWithEmail: async () => ({ error: 'not-configured' }),
-  signUpWithEmail: async () => ({ error: 'not-configured' }),
-  signInWithOAuth: async () => ({ error: 'not-configured' }),
-  completeOAuth: async () => ({ error: 'not-configured' }),
+  signInWithEmail: async () => ({ error: NOT_CONFIGURED }),
+  signUpWithEmail: async () => ({ error: NOT_CONFIGURED, needsConfirmation: false }),
+  signInWithOAuth: async () => ({ error: NOT_CONFIGURED }),
+  completeOAuth: async () => ({ error: NOT_CONFIGURED }),
+  resetPassword: async () => ({ error: NOT_CONFIGURED }),
   signOut: async () => {},
 });
 
@@ -89,18 +114,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithEmail = useCallback(
     async (email: string, password: string): Promise<AuthResult> => {
-      if (!supabase) return { error: 'not-configured' };
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error: error?.message ?? null };
+      if (!supabase) return { error: NOT_CONFIGURED };
+      // El correo, siempre en minúsculas: los proveedores lo tratan sin
+      // distinguir mayúsculas y quien lo escribe con el teclado en automático
+      // manda "Mateo@..." y se queda fuera de su propia cuenta.
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      // Traducido, no crudo: Supabase contesta en inglés y eso salía tal cual.
+      return { error: error ? describeAuthError(error.message) : null };
     },
     [supabase],
   );
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string): Promise<AuthResult> => {
-      if (!supabase) return { error: 'not-configured' };
-      const { error } = await supabase.auth.signUp({ email, password });
-      return { error: error?.message ?? null };
+    async (email: string, password: string): Promise<SignUpResult> => {
+      if (!supabase) return { error: NOT_CONFIGURED, needsConfirmation: false };
+
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim().toLowerCase(),
+        password,
+      });
+      if (error) return { error: describeAuthError(error.message), needsConfirmation: false };
+
+      /*
+       * Sin sesión y con usuario significa "te hemos mandado un correo".
+       *
+       * Es la única señal que da Supabase cuando el proyecto exige confirmar, y
+       * sin mirarla la pantalla se quedaba igual que antes de pulsar: ni error,
+       * ni sesión, ni una frase. Parecía que el botón no funcionaba.
+       *
+       * El caso raro de un correo ya registrado también cae aquí —Supabase no
+       * lo delata, a propósito, para no decirle a nadie qué correos existen— y
+       * el mensaje sirve igual: mira tu correo.
+       */
+      return { error: null, needsConfirmation: data.session === null };
+    },
+    [supabase],
+  );
+
+  const resetPassword = useCallback(
+    async (email: string): Promise<AuthResult> => {
+      if (!supabase) return { error: NOT_CONFIGURED };
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+        redirectTo: REDIRECT_TO,
+      });
+      return { error: error ? describeAuthError(error.message) : null };
     },
     [supabase],
   );
@@ -115,7 +175,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
    */
   const completeOAuth = useCallback(
     async (url: string): Promise<AuthResult> => {
-      if (!supabase) return { error: 'not-configured' };
+      if (!supabase) return { error: NOT_CONFIGURED };
 
       const callback = parseOAuthCallback(url);
       devLog('Auth', 'redirect recibido:', redactUrl(url));
@@ -190,7 +250,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithOAuth = useCallback(
     async (provider: OAuthProvider): Promise<AuthResult> => {
-      if (!supabase) return { error: 'not-configured' };
+      if (!supabase) return { error: NOT_CONFIGURED };
 
       // Ask Supabase for the provider URL, open it, and exchange the code the
       // deep-link redirect carries back. Standard Expo + Supabase OAuth flow.
@@ -200,7 +260,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (error || !data.url) {
         devLog('Auth', 'signInWithOAuth no devolvió URL:', error?.message ?? '(sin error)');
-        return { error: error?.message ?? 'oauth-url-missing' };
+        return {
+          error: error
+            ? describeAuthError(error.message)
+            : 'El proveedor no devolvió ninguna dirección de acceso. Revisa que esté habilitado en Supabase.',
+        };
       }
 
       devLog('Auth', 'abriendo:', redactUrl(data.url));
@@ -208,7 +272,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, REDIRECT_TO);
       devLog('Auth', 'el navegador cerró con:', result.type);
-      if (result.type !== 'success') return { error: 'cancelled' };
+      // Cerrar el navegador no es un fallo: es haber cambiado de idea. Antes
+      // devolvía `cancelled`, que la pantalla enseñaba como un error rojo con
+      // esa misma palabra en inglés.
+      if (result.type !== 'success') return { error: null };
 
       return completeOAuth(result.url);
     },
@@ -231,9 +298,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUpWithEmail,
       signInWithOAuth,
       completeOAuth,
+      resetPassword,
       signOut,
     }),
-    [loading, session, signInWithEmail, signUpWithEmail, signInWithOAuth, completeOAuth, signOut],
+    [
+      loading,
+      session,
+      signInWithEmail,
+      signUpWithEmail,
+      signInWithOAuth,
+      completeOAuth,
+      resetPassword,
+      signOut,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

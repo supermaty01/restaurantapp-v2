@@ -20,3 +20,18 @@
  * tell apart from a slow network.
  */
 export const ASSISTANT_ENABLED = false;
+
+/**
+ * Entrar con Apple (docs/04).
+ *
+ * Apagado. El botón lleva ahí desde el principio y no hay nada detrás: exige un
+ * Apple Developer Program de pago, un Service ID y una clave firmante, y sin eso
+ * el proveedor contesta «Unsupported provider» después de mandarte al navegador
+ * y traerte de vuelta. Un botón que solo puede fallar es peor que no tener el
+ * botón.
+ *
+ * Lo pide además la propia App Store cuando haya versión de iOS: si se ofrece
+ * otro acceso social, hay que ofrecer también el de Apple. Ese es el día de
+ * ponerlo a `true`, no antes.
+ */
+export const APPLE_SIGN_IN_ENABLED = false;

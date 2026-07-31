@@ -15,7 +15,9 @@ import { useMyProfile } from '@/features/social/myProfile';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 import { useSync } from '@/lib/hooks/useSync';
+import { countPendingChanges } from '@/services/sync/pendingCount';
 import type { PhotoProgress } from '@/services/sync/photos';
 import { photoProgressLabel, SYNC_LABEL, type SyncStatus } from '@/services/sync/syncStore';
 
@@ -27,13 +29,36 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { session, isConfigured, signOut } = useAuth();
   const { status, lastOutcome, photos, syncNow } = useSync();
-  const { tell } = useDialog();
+  const { ask, tell } = useDialog();
   const { incoming } = useFriends();
+  const db = useDatabase();
 
   // Guardado entre arranques: antes esta tarjeta pedía el perfil en cada
   // montaje y enseñaba iniciales del correo, luego iniciales del nombre, luego
   // la foto.
   const { profile, known } = useMyProfile();
+
+  /*
+   * Cerrar sesión es la acción que más se lamenta de esta pantalla: se toca por
+   * error al buscar otra cosa, y si queda algo sin subir se pierde el único
+   * momento en que podía subirse. Así que pregunta, y si hay pendientes lo dice
+   * en la propia pregunta en vez de dejarlo para después.
+   */
+  const confirmSignOut = async () => {
+    const pending = await countPendingChanges(db);
+    const confirmed = await ask({
+      title: '¿Cerrar sesión?',
+      message:
+        pending > 0
+          ? `Quedan ${pending} cambios sin subir. Si cierras ahora, se quedan en este móvil hasta que vuelvas a entrar.`
+          : 'Tu diario se queda en este teléfono. Podrás volver a entrar cuando quieras.',
+      icon: 'log-out-outline',
+      confirmLabel: pending > 0 ? 'Cerrar de todas formas' : 'Cerrar sesión',
+      cancelLabel: 'Cancelar',
+      destructive: pending > 0,
+    });
+    if (confirmed) await signOut();
+  };
 
   return (
     <Screen scroll tabBar contentClassName="pt-3">
@@ -94,7 +119,12 @@ export default function ProfileScreen() {
           onPress={() => router.push('/(main)/settings')}
         />
         {session ? (
-          <Row icon="log-out-outline" label="Cerrar sesión" danger onPress={signOut} />
+          <Row
+            icon="log-out-outline"
+            label="Cerrar sesión"
+            danger
+            onPress={() => void confirmSignOut()}
+          />
         ) : null}
       </View>
     </Screen>

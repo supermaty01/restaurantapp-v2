@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 
@@ -23,6 +24,7 @@ import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
  */
 export default function SyncStatusScreen() {
   const db = useDatabase();
+  const router = useRouter();
   const { accountUuid } = useAuth();
   const { colors } = useTheme();
   const { status, syncNow } = useSync();
@@ -205,6 +207,16 @@ export default function SyncStatusScreen() {
                   await load();
                 })();
               }}
+            />
+
+            {/* Una salida, y no solo el gesto de volver. Se llega aquí desde el
+                final del registro —«¿está todo?»— y quien llega ha terminado un
+                trámite: lo siguiente es su diario, no la pantalla anterior. */}
+            <Button
+              label="Ir al inicio"
+              icon="home-outline"
+              variant="ghost"
+              onPress={() => router.replace('/(main)/(tabs)')}
             />
           </>
         ) : null}
