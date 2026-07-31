@@ -3,23 +3,11 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from 'react';
 
 import * as schema from '@/services/db/schema';
-import { getSetting, setSetting } from '@/services/db/settings-repository';
+import { setSetting } from '@/services/db/settings-repository';
 
-import {
-  getDefaults,
-  isLoaded,
-  markLoaded,
-  setDefaults,
-  subscribeToDefaults,
-  unmarkLoaded,
-} from './defaultsStore';
-import {
-  defaultVisibilityKey,
-  isExplicit,
-  isVisibility,
-  type ExplicitVisibility,
-  type ShareableEntity,
-} from './visibility';
+import { getDefaults, isLoaded, setDefaults, subscribeToDefaults } from './defaultsStore';
+import { ensureDefaultsLoaded } from './loadDefaults';
+import { defaultVisibilityKey, type ExplicitVisibility, type ShareableEntity } from './visibility';
 
 /**
  * The visibility a new entry starts with, per kind.
@@ -41,28 +29,12 @@ export function useDefaultVisibility(entity: ShareableEntity) {
 
   const all = useSyncExternalStore(subscribeToDefaults, getDefaults);
 
+  // La lectura la hace `ensureDefaultsLoaded`, que es la misma que espera el
+  // sync antes de publicarlos. Dos lectores distintos para el mismo dato es
+  // exactamente como el almacén acabó publicándose en blanco.
   useEffect(() => {
-    if (isLoaded(entity)) return;
-    markLoaded(entity);
-
-    let cancelled = false;
-    void (async () => {
-      try {
-        const stored = await getSetting(db, defaultVisibilityKey(entity));
-        if (!cancelled && stored && isVisibility(stored) && isExplicit(stored)) {
-          setDefaults({ ...getDefaults(), [entity]: stored });
-        }
-      } catch {
-        // A missing preference must never keep a form from opening; allow a
-        // later mount to try again.
-        unmarkLoaded(entity);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [db, entity]);
+    void ensureDefaultsLoaded(db);
+  }, [db]);
 
   const update = useCallback(
     async (next: ExplicitVisibility) => {

@@ -1,11 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo } from 'react';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
 import * as schema from '@/services/db/schema';
 
 import { mapVisitListRows } from '../mappers/mapVisitListRows';
+import { byNewestFirst } from '../utils/order';
 
 import type { VisitListRow } from '../mappers/mapVisitListRows';
 
@@ -34,5 +36,16 @@ export const useVisitsByRestaurant = (restaurantId: number | undefined) => {
     [restaurantId],
   );
 
-  return mapVisitListRows((rawData ?? []) as VisitListRow[]);
+  /*
+   * De la más reciente a la más antigua.
+   *
+   * Salían en el orden en que SQLite las devolviera, que es el de inserción: en
+   * un sitio al que vuelves, lo primero de la lista era la primera vez que
+   * fuiste, hace años, y la de anoche quedaba al final. Un historial de un lugar
+   * se lee siempre desde la última vez.
+   */
+  return useMemo(
+    () => mapVisitListRows((rawData ?? []) as VisitListRow[]).sort(byNewestFirst),
+    [rawData],
+  );
 };

@@ -252,6 +252,8 @@ export interface SharedDish {
   uuid: string;
   name: string;
   price: number | null;
+  /** En qué moneda. Nula en filas anteriores a la columna (0020). */
+  currency: string | null;
   rating: number | null;
   comments: string | null;
   imageKey: string | null;
@@ -314,6 +316,7 @@ interface SharedVisitRow {
     uuid: string;
     name: string;
     price: string | number | null;
+    currency: string | null;
     rating: number | null;
     comments: string | null;
     image_key: string | null;
@@ -355,6 +358,7 @@ export async function fetchSharedVisit(visitUuid: string): Promise<SharedVisit |
       name: dish.name,
       // numeric comes back as a string from PostgREST; the UI wants a number.
       price: dish.price === null || dish.price === undefined ? null : Number(dish.price),
+      currency: dish.currency ?? null,
       rating: dish.rating,
       comments: dish.comments,
       imageKey: dish.image_key,

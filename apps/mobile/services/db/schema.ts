@@ -76,6 +76,10 @@ export const dishes = sqliteTable('dishes', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   name: text('name').notNull(),
   price: integer('price'),
+  // La moneda del precio, por plato y no por cuenta: un diario de comidas viaja
+  // y lo que se apuntó en euros se apuntó en euros para siempre. Nula solo
+  // cuando el precio también lo es (features/dishes/currency.ts).
+  currency: text('currency'),
   rating: integer('rating'),
   comments: text('comments'),
   restaurantId: integer('restaurant_id').references(() => restaurants.id),

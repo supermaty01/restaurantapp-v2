@@ -7,6 +7,7 @@ import { FormSection } from '@/components/ui/FormScaffold';
 import { Screen } from '@/components/ui/Screen';
 import { PrivacyCard } from '@/features/privacy/PrivacyCard';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
+import CurrencyCard from '@/features/settings/components/CurrencyCard';
 import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
@@ -163,6 +164,13 @@ export default function SettingsScreen() {
           <NotificationsCard />
         </FormSection>
       ) : null}
+
+      <FormSection
+        title="Precios"
+        hint="El punto de partida de cada precio nuevo; cada plato guarda el suyo"
+      >
+        <CurrencyCard />
+      </FormSection>
 
       <FormSection title="Apariencia">
         <ThemeCard onPress={handleThemePress} />

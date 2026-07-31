@@ -5,6 +5,7 @@
 import { eq } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { guessLegacyCurrency } from '@/features/dishes/currency';
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange } from '@/services/db/sync-write';
@@ -244,6 +245,9 @@ export async function importDish(
       .values({
         name: dish.name,
         price: dish.price,
+        // Un fichero anterior a la moneda trae el precio sin unidad; se deduce
+        // igual que en la migración, del propio número.
+        currency: dish.currency ?? guessLegacyCurrency(dish.price),
         rating: dish.rating,
         comments: dish.comments,
         restaurantId,

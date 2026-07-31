@@ -44,7 +44,7 @@ describe('sync store', () => {
     expect(getSyncState().status).toBe('ok');
   });
 
-  it('joins an in-flight pass instead of starting a second one', async () => {
+  it('never runs two passes at once', async () => {
     // Regression: useSync is mounted twice (SyncRunner + account screen); a
     // per-hook guard let two syncs run at once (double push, racing cursors).
     const { db } = makeTestDb();
@@ -61,7 +61,37 @@ describe('sync store', () => {
 
     release({ ok: true, error: null, at: 'now' });
     await Promise.all([first, second]);
-    expect(mockRunSync).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Lo que se pide durante una pasada se hace después, no se tira.
+   *
+   * Unirse a la que corre parecía suficiente y no lo era: esa ya envió lo suyo
+   * antes de que existiera lo nuevo. Con fotos subiendo —minutos— guardar una
+   * entrada durante ese rato la dejaba en el móvil hasta el siguiente arranque,
+   * y a quien acababas de etiquetar sin enterarse.
+   */
+  it('repite la pasada si algo se pidió mientras corría', async () => {
+    const { db } = makeTestDb();
+    let release: (v: unknown) => void = () => {};
+    mockRunSync
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      )
+      .mockResolvedValue({ ok: true, error: null, at: 'now' });
+
+    const first = requestSync(db, ACCOUNT);
+    void requestSync(db, ACCOUNT);
+    void requestSync(db, ACCOUNT);
+
+    release({ ok: true, error: null, at: 'now' });
+    await first;
+    // Una repetición, no una por petición: la siguiente pasada drena la bandeja
+    // entera, así que tres peticiones seguidas son un solo sync de más.
+    await Promise.resolve();
+    expect(mockRunSync).toHaveBeenCalledTimes(2);
   });
 
   it('allows a new pass once the previous finished', async () => {

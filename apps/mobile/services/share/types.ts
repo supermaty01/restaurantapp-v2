@@ -33,6 +33,15 @@ export interface ShareableRestaurant {
 export interface ShareableDish {
   name: string;
   price: number | null;
+  /**
+   * En qué moneda está el precio.
+   *
+   * Opcional porque los ficheros escritos antes de que la moneda existiera no
+   * la traen: al importarlos se deduce del propio número, igual que hizo la
+   * migración (`guessLegacyCurrency`). Un precio sin unidad en un fichero que
+   * cruza de un móvil a otro es un número que el que lo recibe no puede leer.
+   */
+  currency?: string | null;
   rating: number | null;
   comments: string | null;
   tags: ShareableTag[];

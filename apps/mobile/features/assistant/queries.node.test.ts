@@ -34,6 +34,7 @@ async function seedDiary(db: AppDatabase) {
   const carbonaraRoma = await createDish(db, {
     name: 'Carbonara',
     price: 1500,
+    currency: 'COP',
     rating: 5,
     comments: null,
     restaurantId: roma,
@@ -41,6 +42,7 @@ async function seedDiary(db: AppDatabase) {
   const carbonaraLocal = await createDish(db, {
     name: 'Pasta a la carbonara',
     price: 1200,
+    currency: 'COP',
     rating: 4,
     comments: null,
     restaurantId: local,
@@ -48,6 +50,7 @@ async function seedDiary(db: AppDatabase) {
   const burger = await createDish(db, {
     name: 'Hamburguesa',
     price: 1000,
+    currency: 'COP',
     rating: 3,
     comments: null,
     restaurantId: local,
@@ -143,6 +146,7 @@ describe('assistant queries', () => {
     const promo = await createDish(db, {
       name: 'Menú 100% vegano',
       price: 900,
+      currency: 'COP',
       rating: 4,
       comments: null,
       restaurantId: bar,

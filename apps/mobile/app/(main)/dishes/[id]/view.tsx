@@ -8,6 +8,7 @@ import { DetailField, DetailMissing, DetailScaffold } from '@/components/ui/Deta
 import { useDialog } from '@/components/ui/Dialog';
 import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
+import { formatPrice } from '@/features/dishes/currency';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import {
   canHardDeleteDish,
@@ -23,12 +24,6 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportDish } from '@/services/share/exportService';
-
-const priceFormat = new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  minimumFractionDigits: 0,
-});
 
 export default function DishDetailScreen() {
   const sharing = useSharingAvailable();
@@ -156,7 +151,7 @@ export default function DishDetailScreen() {
         {dish.price ? (
           <DetailField label="Precio">
             <Txt variant="title" tone="primary" serif>
-              {priceFormat.format(dish.price)}
+              {formatPrice(dish.price, dish.currency)}
             </Txt>
           </DetailField>
         ) : null}

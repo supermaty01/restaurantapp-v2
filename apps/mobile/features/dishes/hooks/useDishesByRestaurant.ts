@@ -1,6 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo } from 'react';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
 import * as schema from '@/services/db/schema';
@@ -48,5 +49,15 @@ export const useDishesByRestaurant = (
     [restaurantId, includeDeleted],
   );
 
-  return mapDishListRows(rawData ?? []);
+  /*
+   * Por orden alfabético.
+   *
+   * La carta de un sitio se recorre buscando un plato por su nombre, no por
+   * cuándo lo apuntaste. `localeCompare` para que las tildes y la ñ caigan donde
+   * un lector español las busca.
+   */
+  return useMemo(
+    () => mapDishListRows(rawData ?? []).sort((a, b) => a.name.localeCompare(b.name, 'es')),
+    [rawData],
+  );
 };

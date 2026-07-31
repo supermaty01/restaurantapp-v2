@@ -5,7 +5,12 @@ import { makeTestDb } from '@/services/db/__tests__/test-db';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
-import { applyDivergenceChoice } from '@/services/sync/resolveDivergence';
+import {
+  applyDivergenceChoice,
+  needsDivergenceChoice,
+  rememberAccountLinked,
+  rememberChoiceMade,
+} from '@/services/sync/resolveDivergence';
 
 import { FakeServer } from './fake-transport';
 
@@ -122,5 +127,66 @@ describe('elegir qué manda cuando los dos lados divergen', () => {
 
     const outcome = await applyDivergenceChoice(device.db, server.transport(), 'device-wins');
     expect(outcome.queued).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Cuándo se pregunta, que es donde estaba el fallo.
+ *
+ * La señal era «hay algo sin subir», y eso lo cumple cualquiera que guarde una
+ * comida y cierre la app. Un usuario con un solo teléfono se encontraba «hay dos
+ * diarios» al arrancar, cada vez, con las tres opciones —dos de ellas capaces de
+ * borrarle el diario— delante.
+ */
+describe('cuándo se pregunta', () => {
+  async function deviceWithDiary(server: FakeServer) {
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+    await engineFor(device.db, server).sync();
+    return device;
+  }
+
+  it('no pregunta a un móvil que ya sincronizó con esta cuenta', async () => {
+    const server = new FakeServer();
+    const device = await deviceWithDiary(server);
+    await rememberAccountLinked(device.db, ACCOUNT);
+
+    // La bandeja tiene algo, como después de cualquier escritura sin sync aún.
+    await addRestaurant(device.db, 'Chinaka');
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(false);
+  });
+
+  it('sí pregunta la primera vez, con diario a los dos lados', async () => {
+    const server = new FakeServer();
+    const cloud = makeTestDb();
+    await addRestaurant(cloud.db, 'Ichiran');
+    await engineFor(cloud.db, server).push();
+
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(true);
+  });
+
+  it('no pregunta si la nube está vacía: solo se puede querer subir', async () => {
+    const server = new FakeServer();
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(false);
+  });
+
+  it('no vuelve a preguntar una vez elegido', async () => {
+    const server = new FakeServer();
+    const cloud = makeTestDb();
+    await addRestaurant(cloud.db, 'Ichiran');
+    await engineFor(cloud.db, server).push();
+
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+    await rememberChoiceMade(device.db, ACCOUNT);
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(false);
   });
 });

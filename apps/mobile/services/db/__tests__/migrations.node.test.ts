@@ -203,12 +203,92 @@ describe('actualización v1.3 → v2', () => {
     expect(cols).toEqual(expect.arrayContaining(['linked_account_uuid', 'username']));
   });
 
-  it('es idempotente: correrla dos veces no rompe nada', () => {
-    // Un arranque interrumpido a mitad de migración deja el registro sin
-    // escribir, y la siguiente apertura vuelve a intentarlo.
+  /**
+   * Las que reescriben datos se pueden repetir.
+   *
+   * Un arranque interrumpido a mitad de migración deja el registro sin escribir
+   * y la siguiente apertura vuelve a intentar **esa** migración. Se comprueba
+   * sobre 0010, que es la que reescribe una columna de todas las filas: una
+   * regla de reescritura que no sea idempotente convierte un reintento en
+   * corrupción. Las que añaden columnas (0007, 0009, 0011) no lo son ni pueden
+   * serlo — `ADD COLUMN` falla la segunda vez, que es precisamente el error que
+   * deja la base intacta.
+   */
+  it('repetir la reescritura de 0010 no cambia nada', () => {
     upgrade();
     const rows = db.prepare('SELECT count(*) n FROM restaurants').get();
-    expect(() => applyMigrations(db, { from: 10 })).not.toThrow();
+    expect(() => applyMigrations(db, { from: 10, to: 10 })).not.toThrow();
     expect(db.prepare('SELECT count(*) n FROM restaurants').get()).toEqual(rows);
+  });
+});
+
+/**
+ * 0011 — la moneda de cada precio.
+ *
+ * El relleno es una suposición sobre datos que ya existen, así que se prueba
+ * como tal: la app solo se ha usado en Colombia y en Europa y las dos escalas no
+ * se solapan, de forma que el propio número dice de dónde viene. Si la regla se
+ * toca, esto tiene que fallar antes de que un diario entero quede en la moneda
+ * equivocada.
+ */
+describe('migración 0011 — moneda por plato', () => {
+  let db: Database.Database;
+
+  beforeEach(() => {
+    db = new Database(':memory:');
+    db.pragma('foreign_keys = ON');
+  });
+
+  afterEach(() => db.close());
+
+  function seedPrices() {
+    applyMigrations(db, { to: 10 });
+    db.exec(`
+      INSERT INTO restaurants (id, name, deleted) VALUES (1, 'Guadalupe', 0);
+      INSERT INTO dishes (id, name, price, restaurant_id, deleted) VALUES
+        (1, 'Menú del día', 12, 1, 0),
+        (2, 'Corrientazo', 18000, 1, 0),
+        (3, 'Justo en el límite', 1000, 1, 0),
+        (4, 'Sin precio', NULL, 1, 0);
+    `);
+  }
+
+  it('un precio pequeño se lee como euros', () => {
+    seedPrices();
+    applyMigrations(db, { from: 11 });
+    expect(db.prepare('SELECT currency FROM dishes WHERE id = 1').get()).toEqual({
+      currency: 'EUR',
+    });
+  });
+
+  it('un precio grande se lee como pesos', () => {
+    seedPrices();
+    applyMigrations(db, { from: 11 });
+    expect(db.prepare('SELECT currency FROM dishes WHERE id = 2').get()).toEqual({
+      currency: 'COP',
+    });
+  });
+
+  // En euros es un plato que no existe; en pesos es una propina.
+  it('el límite exacto cae del lado del peso', () => {
+    seedPrices();
+    applyMigrations(db, { from: 11 });
+    expect(db.prepare('SELECT currency FROM dishes WHERE id = 3').get()).toEqual({
+      currency: 'COP',
+    });
+  });
+
+  it('sin precio no hay moneda: una etiqueta sobre nada', () => {
+    seedPrices();
+    applyMigrations(db, { from: 11 });
+    expect(db.prepare('SELECT currency FROM dishes WHERE id = 4').get()).toEqual({
+      currency: null,
+    });
+  });
+
+  it('no pierde ningún plato por el camino', () => {
+    seedPrices();
+    applyMigrations(db, { from: 11 });
+    expect(db.prepare('SELECT count(*) n FROM dishes').get()).toEqual({ n: 4 });
   });
 });

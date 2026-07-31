@@ -2,20 +2,36 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/Dialog';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, SectionHeader } from '@/components/ui/Surface';
 import type { UserSummary } from '@/features/social/api';
 import { UserRow } from '@/features/social/components/UserRow';
+import { cancelRequestDialog, removeFriendDialog } from '@/features/social/confirmations';
 import { useFriends } from '@/features/social/hooks/useFriends';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 export default function FriendsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { ask } = useDialog();
   const { friends, incoming, outgoing, loading, error, reload, enabled, accept, decline, remove } =
     useFriends();
 
   const openProfile = (userId: string) => router.push(`/(main)/friends/${userId}`);
+
+  /*
+   * "Quitar" está a un dedo de "Aceptar" y de abrir el perfil, y no se deshace
+   * solo: volver a ser amigos exige una solicitud nueva y que la acepte la otra
+   * persona. La pregunta lleva el nombre de quien se va, que es lo que evita
+   * confirmar a la persona equivocada.
+   */
+  const confirmRemove = (users: UserSummary[], cancelling: boolean) => async (userId: string) => {
+    const user = users.find((candidate) => candidate.userId === userId);
+    const name = user?.displayName ?? user?.username ?? 'esta persona';
+    const confirmed = await ask(cancelling ? cancelRequestDialog(name) : removeFriendDialog(name));
+    if (confirmed) await remove(userId);
+  };
 
   if (!enabled) {
     return (
@@ -78,8 +94,18 @@ export default function FriendsScreen() {
         onDecline={decline}
         onOpen={openProfile}
       />
-      <Group title="Amigos" users={friends} onRemove={remove} onOpen={openProfile} />
-      <Group title="Solicitudes enviadas" users={outgoing} onRemove={remove} onOpen={openProfile} />
+      <Group
+        title="Amigos"
+        users={friends}
+        onRemove={(id) => void confirmRemove(friends, false)(id)}
+        onOpen={openProfile}
+      />
+      <Group
+        title="Solicitudes enviadas"
+        users={outgoing}
+        onRemove={(id) => void confirmRemove(outgoing, true)(id)}
+        onOpen={openProfile}
+      />
     </ScrollView>
   );
 }

@@ -25,7 +25,9 @@ export function isExplicit(value: Visibility): value is ExplicitVisibility {
   return value !== 'default';
 }
 
-export type ShareableEntity = 'restaurant' | 'dish' | 'visit';
+/** Lo que puede compartirse, y por tanto lo que tiene un ajuste por defecto. */
+export const SHAREABLE_ENTITIES = ['restaurant', 'dish', 'visit'] as const;
+export type ShareableEntity = (typeof SHAREABLE_ENTITIES)[number];
 
 export function isVisibility(value: string): value is Visibility {
   return (VISIBILITIES as readonly string[]).includes(value);

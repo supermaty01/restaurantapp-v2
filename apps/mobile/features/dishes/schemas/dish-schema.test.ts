@@ -16,6 +16,34 @@ describe('dishSchema', () => {
     }
   });
 
+  // Un plato sin precio es el caso normal, no un error. Quien lo normaliza es
+  // el campo: `z.coerce` convertiría '' en 0 y el esquema lo rechazaría con "El
+  // valor debe ser positivo".
+  it('accepts a dish with no price', () => {
+    const result = dishSchema.safeParse({
+      name: 'Pasta',
+      restaurantId: 1,
+      comments: '',
+      price: undefined,
+      currency: 'EUR',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.price).toBeUndefined();
+  });
+
+  it('keeps the currency the form chose', () => {
+    const result = dishSchema.safeParse({
+      name: 'Menú',
+      restaurantId: 1,
+      price: '12',
+      currency: 'EUR',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.currency).toBe('EUR');
+  });
+
   it('rejects missing restaurant selection', () => {
     const result = dishSchema.safeParse({
       name: 'Pasta',

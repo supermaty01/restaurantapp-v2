@@ -78,6 +78,13 @@
       "when": 1785200000000,
       "tag": "0010_visibility_default",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785600000000,
+      "tag": "0011_dish_currency",
+      "breakpoints": true
     }
   ]
 }

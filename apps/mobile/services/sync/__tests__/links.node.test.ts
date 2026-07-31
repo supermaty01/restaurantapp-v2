@@ -21,6 +21,7 @@ const place = (name: string) => ({
 const plate = (name: string, restaurantId: number) => ({
   name,
   price: null,
+  currency: 'COP',
   rating: null,
   comments: null,
   restaurantId,

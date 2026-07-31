@@ -119,6 +119,7 @@ async function fetchDishData(db: DrizzleDb, dishId: number): Promise<ShareableDi
     return {
       name: dish.name,
       price: dish.price,
+      currency: dish.currency,
       rating: dish.rating,
       comments: dish.comments,
       tags,

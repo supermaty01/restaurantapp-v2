@@ -8,6 +8,9 @@ import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
+import { FormPriceField } from '@/features/dishes/components/PriceField';
+import { pairPriceAndCurrency } from '@/features/dishes/currency';
+import { useDefaultCurrency } from '@/features/dishes/hooks/useDefaultCurrency';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
 import { createDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
@@ -37,6 +40,9 @@ export default function DishCreateScreen() {
 
   const { notify } = useToast();
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
+  // Solo como punto de partida: se copia en el plato al guardarlo, así que
+  // cambiar la moneda por defecto mañana no toca lo escrito hoy.
+  const { value: defaultCurrency } = useDefaultCurrency();
   const {
     control,
     handleSubmit,
@@ -64,7 +70,9 @@ export default function DishCreateScreen() {
         name: data.name.trim(),
         restaurantId: data.restaurantId,
         comments: data.comments?.trim() || '',
-        price: data.price || null,
+        // Las dos juntas: sin precio no se guarda moneda, y con precio siempre
+        // hay una — la elegida, o la del ajuste general.
+        ...pairPriceAndCurrency(data.price, data.currency, defaultCurrency),
         rating: data.rating || null,
       };
 
@@ -125,12 +133,11 @@ export default function DishCreateScreen() {
       </FormSection>
 
       <FormSection title="Detalles" hint="Opcional">
-        <FormInput
+        <FormPriceField
           control={control}
-          name="price"
-          label="Precio"
-          placeholder="0"
-          keyboardType="numeric"
+          priceName="price"
+          currencyName="currency"
+          fallbackCurrency={defaultCurrency}
         />
         <FormInput
           control={control}

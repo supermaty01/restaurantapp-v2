@@ -17,6 +17,7 @@ async function seed(db: AppDatabase) {
   const carbonara = await createDish(db, {
     name: 'Carbonara',
     price: 1500,
+    currency: 'COP',
     rating: 5,
     comments: null,
     restaurantId: roma,

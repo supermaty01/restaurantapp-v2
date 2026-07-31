@@ -115,6 +115,9 @@ export const SYNC_TABLES: SyncTableConfig[] = [
     scalars: [
       { local: 'name', remote: 'name', required: true },
       { local: 'price', remote: 'price' },
+      // Viaja con el precio: sin ella, el otro dispositivo recibe un número sin
+      // unidad y lo pinta en la moneda que le toque.
+      { local: 'currency', remote: 'currency' },
       { local: 'rating', remote: 'rating' },
       { local: 'comments', remote: 'comments' },
       {

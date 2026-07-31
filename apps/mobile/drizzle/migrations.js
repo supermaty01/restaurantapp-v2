@@ -12,6 +12,7 @@ import m0007 from './0007_add_sync_columns.sql';
 import m0008 from './0008_visit_date_optional.sql';
 import m0009 from './0009_people_accounts.sql';
 import m0010 from './0010_visibility_default.sql';
+import m0011 from './0011_dish_currency.sql';
 
   export default {
     journal,
@@ -26,7 +27,8 @@ m0006,
 m0007,
 m0008,
 m0009,
-m0010
+m0010,
+m0011
     }
   }
   

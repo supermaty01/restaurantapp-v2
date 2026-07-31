@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, View } from 'react-native';
 
 import { useTheme } from '@/lib/context/ThemeContext';
-import { elevation } from '@/lib/design/tokens';
+import { elevation, radius } from '@/lib/design/tokens';
 
 import { PressableScale } from './Motion';
 import { Txt } from './Txt';
@@ -174,12 +174,19 @@ export function Chip({
     accent: colors.accent,
   };
 
+  /*
+   * El redondeo va en `style` y no en una clase.
+   *
+   * `rounded-pill` se perdía al cambiar de tono: una píldora que dejaba de estar
+   * seleccionada se quedaba cuadrada hasta que la pantalla se volvía a montar.
+   * Es el patrón que lo provoca —una cadena de clases que cambia de forma entre
+   * renders, aquí porque `backgrounds[tone]` entra y sale— y la forma de la
+   * píldora es lo último que puede depender de eso.
+   */
   const body = (
     <View
-      className={`flex-row items-center gap-1 rounded-pill px-2.5 py-1 ${
-        color ? '' : backgrounds[tone]
-      } ${className}`}
-      style={color ? { backgroundColor: `${color}26` } : undefined}
+      className={`flex-row items-center gap-1 px-2.5 py-1 ${color ? '' : backgrounds[tone]} ${className}`}
+      style={[{ borderRadius: radius.pill }, color ? { backgroundColor: `${color}26` } : null]}
     >
       {icon ? <Ionicons name={icon} size={11} color={color ?? iconColours[tone]} /> : null}
       <Txt

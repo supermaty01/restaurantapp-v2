@@ -10,6 +10,8 @@ export interface DishWriteInput {
   visibility?: Visibility;
   name: string;
   price: number | null;
+  /** Nula si no hay precio; las dos se escriben juntas o no se escriben. */
+  currency: string | null;
   rating: number | null;
   comments: string | null;
   restaurantId: number;

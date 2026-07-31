@@ -8,6 +8,9 @@ import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
+import { FormPriceField } from '@/features/dishes/components/PriceField';
+import { pairPriceAndCurrency } from '@/features/dishes/currency';
+import { useDefaultCurrency } from '@/features/dishes/hooks/useDefaultCurrency';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import { updateDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
@@ -33,6 +36,9 @@ export default function DishEditScreen() {
   const { notify } = useToast();
   const { id } = useGlobalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  // Solo para un plato que todavía no tenía precio: el que ya lo tiene conserva
+  // su moneda, que es el dato que hace que el número signifique algo.
+  const { value: defaultCurrency } = useDefaultCurrency();
 
   const {
     control,
@@ -65,6 +71,7 @@ export default function DishEditScreen() {
         comments: dish.comments || '',
         rating: dish.rating !== null ? dish.rating : undefined,
         price: dish.price !== null ? dish.price : undefined,
+        currency: dish.currency ?? undefined,
       });
       setSelectedTags(dish.tags);
       setSelectedImages(dish.images);
@@ -78,7 +85,7 @@ export default function DishEditScreen() {
         name: data.name.trim(),
         restaurantId: data.restaurantId,
         comments: data.comments?.trim() || '',
-        price: data.price || null,
+        ...pairPriceAndCurrency(data.price, data.currency, defaultCurrency),
         rating: data.rating || null,
       };
 
@@ -139,12 +146,11 @@ export default function DishEditScreen() {
       </FormSection>
 
       <FormSection title="Detalles" hint="Opcional">
-        <FormInput
+        <FormPriceField
           control={control}
-          name="price"
-          label="Precio"
-          placeholder="0"
-          keyboardType="numeric"
+          priceName="price"
+          currencyName="currency"
+          fallbackCurrency={defaultCurrency}
         />
         <FormInput
           control={control}

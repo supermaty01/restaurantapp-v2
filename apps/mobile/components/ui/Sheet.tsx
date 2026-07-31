@@ -1,6 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import {
+  Keyboard,
+  Modal,
+  Platform,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, {
   Easing,
@@ -99,6 +107,39 @@ const FLING_VELOCITY = 700;
  */
 const DRAG_SLOP = 12;
 
+/**
+ * Cuánto teclado hay delante, ahora mismo.
+ *
+ * Un `Modal` de React Native se dibuja en su propia ventana nativa, así que ni
+ * `KeyboardAvoidingView` del padre ni el `adjustResize` de la actividad llegan
+ * hasta aquí: la hoja se quedaba pegada al borde inferior y el teclado la tapaba
+ * casi entera. En los paneles con buscador —etiquetas, restaurantes— eso
+ * significaba escribir a ciegas y no ver ni un resultado.
+ *
+ * `Did` y no `Will` en Android, donde `Will` no se emite; en iOS sí, y es lo que
+ * hace que la hoja suba a la vez que el teclado en vez de dar un salto después.
+ */
+function useKeyboardInset(): number {
+  const [inset, setInset] = useState(0);
+
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const shown = Keyboard.addListener(showEvent, (event) => {
+      setInset(event.endCoordinates?.height ?? 0);
+    });
+    const hidden = Keyboard.addListener(hideEvent, () => setInset(0));
+
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  return inset;
+}
+
 export function Sheet({
   visible,
   onClose,
@@ -158,11 +199,17 @@ export function Sheet({
   const [chromeHeight, setChromeHeight] = useState(0);
   const [footerHeight, setFooterHeight] = useState(0);
 
-  const bottomPad = Math.max(insets.bottom, 12);
+  /*
+   * Con el teclado delante la hoja se apoya en él, no en el borde de la
+   * pantalla, y el hueco de la barra de navegación deja de existir porque lo
+   * ocupa el propio teclado.
+   */
+  const keyboardInset = useKeyboardInset();
+  const bottomPad = keyboardInset > 0 ? 12 : Math.max(insets.bottom, 12);
   const bodyMaxHeight = Math.max(
     // Un suelo para que el cuerpo no desaparezca antes de la primera medida.
     160,
-    windowHeight * maxHeightRatio - chromeHeight - footerHeight - bottomPad,
+    windowHeight * maxHeightRatio - chromeHeight - footerHeight - bottomPad - keyboardInset,
   );
 
   /** Dónde está la hoja: 0 es abierta del todo, `sheetHeight` es fuera de la pantalla. */
@@ -334,6 +381,10 @@ export function Sheet({
               // medio camino. El hueco de la barra de navegación lo cubre el
               // relleno, no un margen.
               paddingBottom: bottomPad,
+              // El teclado empuja la hoja hacia arriba en vez de taparla. Como
+              // margen y no como `translateY`, para no pelearse con el gesto de
+              // arrastrar ni con la animación de entrada, que ya viven ahí.
+              marginBottom: keyboardInset,
               borderTopLeftRadius: 26,
               borderTopRightRadius: 26,
             },
