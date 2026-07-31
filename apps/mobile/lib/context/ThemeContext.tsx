@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
+import * as SystemUI from 'expo-system-ui';
 import { colorScheme } from 'nativewind';
 import React, { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { useColorScheme } from 'react-native';
@@ -57,6 +58,24 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   useEffect(() => {
     colorScheme.set(themeMode);
   }, [themeMode]);
+
+  /*
+   * El fondo de la ventana nativa, debajo de todo lo que dibuja React.
+   *
+   * Se ve en los huecos: entre la pantalla de arranque y el primer fotograma,
+   * al rebotar el scroll, y detrás de las transiciones de pantalla. Android lo
+   * pinta blanco si no se dice, así que en modo oscuro cada uno de esos huecos
+   * era un destello. La pantalla de arranque ya trae su par claro/oscuro en
+   * `app.config.js`; esto es la continuación en ejecución, y además sigue al
+   * ajuste de la app y no solo al del sistema.
+   */
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(
+      isDarkMode ? darkColors.canvas : lightColors.canvas,
+    ).catch(() => {
+      // Cosmético: si la plataforma no lo soporta, no hay nada que reparar.
+    });
+  }, [isDarkMode]);
 
   useEffect(() => {
     let cancelled = false;

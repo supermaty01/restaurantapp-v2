@@ -79,6 +79,9 @@ export default {
       foregroundImage: './assets/burger-logo-fondo.png',
       backgroundColor: '#DFE2CF',
     },
+    // El hueco entre la pantalla de arranque y el primer fotograma de React:
+    // sin esto Android lo pinta blanco, y en modo oscuro es un flash.
+    backgroundColor: '#F2F4EA',
     package: BUNDLE_ID,
     versionCode: VERSION_CODE,
     // Registro de la app en Firebase, que es de donde FCM saca a quién entregar
@@ -111,13 +114,31 @@ export default {
     'expo-router',
     'expo-sqlite',
     'expo-secure-store',
+    // La pantalla de arranque, en los dos temas.
+    //
+    // Antes solo estaba el bloque claro, así que en modo oscuro la app abría con
+    // un destello verde pálido a pantalla completa y caía de golpe a un lienzo
+    // casi negro. Los colores son `canvas` de lib/design/tokens.ts, y no un par
+    // sacado del icono, para que el destello y la primera pantalla sean
+    // literalmente el mismo color.
+    //
+    // Sigue al **sistema**, que es lo único que sabe el arranque: el ajuste de
+    // tema de la app vive en SQLite y todavía no hay base de datos abierta
+    // cuando esto se pinta. Con el tema en "claro" sobre un móvil en oscuro
+    // (o al revés) hay un salto; es el único caso y no tiene arreglo desde aquí.
     [
       'expo-splash-screen',
       {
         image: './assets/burger-logo.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: '#DFE2CF',
+        backgroundColor: '#F2F4EA',
+        dark: {
+          image: './assets/burger-logo.png',
+          imageWidth: 200,
+          resizeMode: 'contain',
+          backgroundColor: '#1B1711',
+        },
       },
     ],
     [
@@ -140,7 +161,9 @@ export default {
       'expo-notifications',
       {
         icon: './assets/burger-logo.png',
-        color: '#C2603C',
+        // El acento de la paleta: un aviso que llega en otro color que la app
+        // se lee como si fuera de otra aplicación.
+        color: '#8A5A2B',
       },
     ],
   ],

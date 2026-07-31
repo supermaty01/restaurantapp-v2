@@ -3,8 +3,10 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
+
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 import { useVisitsByRestaurant } from '@/features/visits/hooks/useVisitsByRestaurant';
+import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
 
 interface RestaurantVisitsProps {
@@ -13,6 +15,7 @@ interface RestaurantVisitsProps {
 
 export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) {
   const router = useRouter();
+  const { colors } = useTheme();
   const visits = useVisitsByRestaurant(restaurant.id);
 
   return (
@@ -46,7 +49,7 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
                 </Text>
                 {item.comments && <Text className="text-sm text-ink-subtle">{item.comments}</Text>}
               </View>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" className="" />
+              <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
             </TouchableOpacity>
           );
         }}
@@ -63,7 +66,7 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
           router.push({ pathname: '/visits/new', params: { restaurantId: restaurant.id } })
         }
       >
-        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Ionicons name="add-circle-outline" size={20} color={colors.onPrimary} />
         <Text className="text-on-primary font-bold ml-2">Añadir Visita</Text>
       </TouchableOpacity>
     </View>

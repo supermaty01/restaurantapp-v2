@@ -1,9 +1,19 @@
 /**
- * The Clay palette — the single source of truth for colour in the app.
+ * La paleta «Huerta» — el único sitio donde vive el color de la app.
  *
- * Taken from the "RestaurantApp Refresh" design project (docs/14). Warm clay
- * and paper tones, terracotta as the one accent, amber for ratings, sage for
- * category chips.
+ * Sale del logo (`assets/burger-logo.png`), no de un mockup: la cáscara de pan
+ * tostado (#98683E), la carne (#A05F3F), la lechuga (#8EB66F), el trazo cacao
+ * (#3B1C08) y el fondo verde pálido del icono (#DFE2CF). Un diario de comidas
+ * ya tiene todo el color que una pantalla aguanta en las fotos, así que la
+ * interfaz se aparta: papel con un punto de verde, un solo acento, y saturación
+ * solo donde la pone el usuario.
+ *
+ * **Por qué se cambió.** La anterior era terracota (#C0623D) sobre crema
+ * (#F7F1E8), que es casi exactamente la paleta de Claude Code — el mismo tono
+ * coral sobre el mismo papel. Los dos rasgos que lo delataban eran el lienzo
+ * crema y el acento coral, así que se movieron los dos: el lienzo a un papel
+ * teñido de salvia y el acento del coral (~18°) al caramelo de la corteza
+ * (~30°). El parecido desaparece sin que la app deje de ser cálida.
  *
  * Two consumers, and they must not drift:
  *
@@ -55,44 +65,49 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  canvas: '#F7F1E8',
+  canvas: '#F2F4EA',
   surface: '#FFFFFF',
-  surfaceAlt: '#FFFDF8',
-  sunken: '#EFE7D8',
-  line: '#EFE7D8',
-  lineStrong: '#E6DDCE',
-  ink: '#2A211C',
-  inkMuted: '#6B6355',
-  inkSubtle: '#9A8F7D',
-  primary: '#C0623D',
-  primaryPressed: '#A44F2F',
+  surfaceAlt: '#FAFCF3',
+  sunken: '#E6EAD9',
+  line: '#E4E9D7',
+  lineStrong: '#D3D9C2',
+  ink: '#2F1D0C',
+  inkMuted: '#6A5A47',
+  inkSubtle: '#9A8D78',
+  primary: '#8A5A2B',
+  primaryPressed: '#6E461F',
   onPrimary: '#FFFFFF',
-  accent: '#E0A83B',
-  sage: '#8A9A6B',
-  danger: '#B04A3A',
-  inverse: '#2A211C',
-  onInverse: '#F7F1E8',
+  accent: '#A97A25',
+  sage: '#5F7F3D',
+  danger: '#A8402F',
+  inverse: '#2F1D0C',
+  onInverse: '#F2F4EA',
 };
 
 export const darkColors: ThemeColors = {
-  canvas: '#211C18',
-  surface: '#2C2621',
-  surfaceAlt: '#2C2621',
-  sunken: '#1A1512',
-  line: '#3A332C',
-  lineStrong: '#4A4139',
-  ink: '#F0E9DD',
-  inkMuted: '#B0A48F',
-  inkSubtle: '#8A7E6F',
-  primary: '#C0623D',
-  // Lighter than the base on dark, where a darker press reads as "disabled".
-  primaryPressed: '#D9784F',
-  onPrimary: '#FFFFFF',
-  accent: '#E0A83B',
-  sage: '#8A9A6B',
-  danger: '#D05A48',
-  inverse: '#F7F1E8',
-  onInverse: '#2A211C',
+  canvas: '#1B1711',
+  surface: '#272219',
+  surfaceAlt: '#272219',
+  sunken: '#141109',
+  line: '#3A3327',
+  lineStrong: '#4B4335',
+  ink: '#F0EEDF',
+  inkMuted: '#B3A992',
+  inkSubtle: '#8C8371',
+  // Más claro que en modo claro, no el mismo tono: un caramelo oscuro sobre un
+  // fondo oscuro no es un acento, es una mancha.
+  primary: '#C99155',
+  // Aclarar y no oscurecer al pulsar: sobre fondo oscuro, más oscuro se lee
+  // como "desactivado".
+  primaryPressed: '#DCA972',
+  // Y por eso el texto de encima es tinta, no blanco: blanco sobre este
+  // caramelo da 2,7:1 y no se lee.
+  onPrimary: '#241703',
+  accent: '#DDAF57',
+  sage: '#8EB66F',
+  danger: '#E0705A',
+  inverse: '#F2F4EA',
+  onInverse: '#2F1D0C',
 };
 
 /**
@@ -101,12 +116,12 @@ export const darkColors: ThemeColors = {
  * the same restaurant always gets the same colours.
  */
 export const placeholderGradients: readonly (readonly [string, string])[] = [
-  ['#D9A066', '#B5622F'],
-  ['#E6C67E', '#C98A3C'],
-  ['#C0623D', '#8A3F26'],
-  ['#A8B489', '#6E7F52'],
-  ['#E0A83B', '#B57F22'],
-  ['#D8B7A6', '#B07C63'],
+  ['#C29868', '#98683E'],
+  ['#D3B487', '#A9834B'],
+  ['#A05F3F', '#6F3C25'],
+  ['#8EB66F', '#5F7F3D'],
+  ['#B7C79A', '#7C8F5C'],
+  ['#C9A87C', '#8A5A2B'],
 ];
 
 /** Picks a stable gradient for a name, so a card never changes colour. */
@@ -127,15 +142,28 @@ export const radius = {
   pill: 100,
 } as const;
 
+/**
+ * Las dos familias.
+ *
+ * Antes eran Newsreader + Plus Jakarta Sans, una pareja correcta y anónima:
+ * una serif de periódico y una geométrica que se ve en media web. Fraunces
+ * tiene el mismo trabajo editorial pero con carácter —terminaciones suaves,
+ * contraste alto, algo de brillo de rótulo de bar— y Manrope da a lo que se lee
+ * de corrido una humanidad que la anterior no tenía.
+ *
+ * Las dos siguen siendo paquetes de solo assets (`@expo-google-fonts/*`), sin
+ * código nativo, así que no añaden riesgo en las actualizaciones de Expo — la
+ * preocupación central de docs/11.
+ */
 export const fonts = {
-  /** Newsreader — headings, numbers, anything that should feel editorial. */
-  display: 'Newsreader_500Medium',
-  displaySemi: 'Newsreader_600SemiBold',
-  /** Plus Jakarta Sans — everything else. */
-  body: 'PlusJakartaSans_400Regular',
-  bodyMedium: 'PlusJakartaSans_500Medium',
-  bodySemi: 'PlusJakartaSans_600SemiBold',
-  bodyBold: 'PlusJakartaSans_700Bold',
+  /** Fraunces — titulares, cifras, lo que se mira antes de leerse. */
+  display: 'Fraunces_500Medium',
+  displaySemi: 'Fraunces_600SemiBold',
+  /** Manrope — todo lo que se lee de corrido. */
+  body: 'Manrope_400Regular',
+  bodyMedium: 'Manrope_500Medium',
+  bodySemi: 'Manrope_600SemiBold',
+  bodyBold: 'Manrope_700Bold',
 } as const;
 
 /**
@@ -153,7 +181,7 @@ export const fonts = {
 export const elevation = {
   /** Resting cards and list rows. */
   low: {
-    shadowColor: '#2A211C',
+    shadowColor: '#2F1D0C',
     shadowOpacity: 0.06,
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 2 },
@@ -161,7 +189,7 @@ export const elevation = {
   },
   /** Raised surfaces: the tab bar, sticky headers. */
   medium: {
-    shadowColor: '#2A211C',
+    shadowColor: '#2F1D0C',
     shadowOpacity: 0.1,
     shadowRadius: 16,
     shadowOffset: { width: 0, height: 6 },
@@ -169,7 +197,7 @@ export const elevation = {
   },
   /** Sheets, dialogs, anything overlaying the page. */
   high: {
-    shadowColor: '#2A211C',
+    shadowColor: '#2F1D0C',
     shadowOpacity: 0.16,
     shadowRadius: 28,
     shadowOffset: { width: 0, height: 12 },

@@ -9,10 +9,9 @@ import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Card, SectionHeader } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
-import { fetchMyProfile } from '@/features/social/api';
 import type { Profile } from '@/features/social/api';
-import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
 import { useFriends } from '@/features/social/hooks/useFriends';
+import { useMyProfile } from '@/features/social/myProfile';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
@@ -31,10 +30,10 @@ export default function ProfileScreen() {
   const { tell } = useDialog();
   const { incoming } = useFriends();
 
-  const { data: profile } = useAsyncResource<Profile>(fetchMyProfile, {
-    enabled: Boolean(session),
-    deps: [session?.user.id],
-  });
+  // Guardado entre arranques: antes esta tarjeta pedía el perfil en cada
+  // montaje y enseñaba iniciales del correo, luego iniciales del nombre, luego
+  // la foto.
+  const { profile, known } = useMyProfile();
 
   return (
     <Screen scroll tabBar contentClassName="pt-3">
@@ -43,6 +42,7 @@ export default function ProfileScreen() {
       {session ? (
         <AccountCard
           profile={profile}
+          profileKnown={known}
           email={session.user.email ?? ''}
           syncStatus={status}
           syncPhotos={photos}
@@ -103,6 +103,7 @@ export default function ProfileScreen() {
 
 function AccountCard({
   profile,
+  profileKnown,
   email,
   syncStatus,
   syncPhotos,
@@ -113,6 +114,7 @@ function AccountCard({
   onEdit,
 }: {
   profile: Profile | null;
+  profileKnown: boolean;
   email: string;
   syncStatus: SyncStatus;
   syncPhotos: PhotoProgress | null;
@@ -128,7 +130,7 @@ function AccountCard({
   return (
     <Card className="mt-4 gap-3.5">
       <View className="flex-row items-center gap-3">
-        <Avatar name={name} uri={profile?.avatarUrl} size={54} />
+        <Avatar name={name} uri={profile?.avatarUrl} pending={!profileKnown} size={54} />
         <View className="flex-1">
           <Text className="font-display text-[20px] text-ink" numberOfLines={1}>
             {name}

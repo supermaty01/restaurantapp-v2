@@ -3,8 +3,10 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
+
 import { useDishesByRestaurant } from '@/features/dishes/hooks/useDishesByRestaurant';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
+import { useTheme } from '@/lib/context/ThemeContext';
 
 interface RestaurantDishesProps {
   restaurant: RestaurantDetailsDTO;
@@ -12,6 +14,7 @@ interface RestaurantDishesProps {
 
 export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) {
   const router = useRouter();
+  const { colors } = useTheme();
   const dishes = useDishesByRestaurant(restaurant.id, true);
 
   return (
@@ -51,7 +54,7 @@ export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) 
                 </View>
                 <Text className="text-sm text-ink-subtle">{item.comments}</Text>
               </View>
-              <Ionicons name="chevron-forward-outline" size={20} color="#999" className="" />
+              <Ionicons name="chevron-forward-outline" size={20} color={colors.inkSubtle} />
             </TouchableOpacity>
           );
         }}
@@ -68,7 +71,7 @@ export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) 
           router.push({ pathname: '/dishes/new', params: { restaurantId: restaurant.id } })
         }
       >
-        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Ionicons name="add-circle-outline" size={20} color={colors.onPrimary} />
         <Text className="text-on-primary font-bold ml-2">Añadir Plato</Text>
       </TouchableOpacity>
     </View>

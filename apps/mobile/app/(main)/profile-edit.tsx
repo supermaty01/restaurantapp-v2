@@ -15,10 +15,12 @@ import { fetchMyProfile, updateMyProfile } from '@/features/social/api';
 import type { Profile } from '@/features/social/api';
 import { deletePreviousAvatar, uploadAvatar } from '@/features/social/avatar';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
+import { setMyProfile } from '@/features/social/myProfile';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
 import { reportError } from '@/lib/helpers/report-error';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 import { usePermissionGate } from '@/lib/hooks/usePermissionGate';
 
 /** Mirrors the database constraint, so a bad handle is caught before the trip. */
@@ -28,6 +30,7 @@ export default function ProfileEditScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { session, accountUuid } = useAuth();
+  const db = useDatabase();
 
   const { data, loading, error } = useAsyncResource<Profile>(fetchMyProfile, {
     enabled: Boolean(session),
@@ -63,6 +66,9 @@ export default function ProfileEditScreen() {
       setAvatarUrl(null);
       try {
         await updateMyProfile({ avatarUrl: null });
+        // El resto de la app pinta la foto desde la copia compartida; sin esto,
+        // Inicio y Perfil seguirían enseñando la que se acaba de quitar.
+        if (data) setMyProfile({ ...data, avatarUrl: null }, db);
         void deletePreviousAvatar(previous);
       } catch (cause) {
         setAvatarUrl(previous);
@@ -97,6 +103,7 @@ export default function ProfileEditScreen() {
       const url = await uploadAvatar(picked, accountUuid);
       await updateMyProfile({ avatarUrl: url });
       setAvatarUrl(url);
+      if (data) setMyProfile({ ...data, avatarUrl: url }, db);
       void deletePreviousAvatar(previous);
       toast.notify('Foto actualizada');
     } catch (cause) {
@@ -135,6 +142,15 @@ export default function ProfileEditScreen() {
         displayName: displayName.trim() || null,
         bio: bio.trim() || null,
       });
+      setMyProfile(
+        {
+          ...data,
+          username: normalised,
+          displayName: displayName.trim() || null,
+          bio: bio.trim() || null,
+        },
+        db,
+      );
       router.back();
     } catch (cause) {
       // updateMyProfile already phrases its failures for a person ("ese nombre

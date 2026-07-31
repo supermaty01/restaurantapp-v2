@@ -246,6 +246,64 @@ export async function fetchUserEntries(userId: string, before?: string): Promise
   return (rows ?? []).map(toFeedEntry);
 }
 
+/**
+ * Cuántas entradas de cada clase deja ver esta persona a quien pregunta.
+ *
+ * Se pide antes de pintar el perfil: una pestaña que se abre vacía es peor que
+ * una pestaña que no está, y a quien no es tu amigo y solo tiene sitios públicos
+ * hay que enseñarle una sección, no tres con dos vacías (0021).
+ */
+export type SectionKind = 'visit' | 'dish' | 'restaurant';
+
+export async function fetchUserSectionCounts(
+  userId: string,
+): Promise<Record<SectionKind, number>> {
+  const rows = await callRpc<{ kind: string; total: number | string }[]>('user_section_counts', {
+    target: userId,
+  });
+
+  const counts: Record<SectionKind, number> = { visit: 0, dish: 0, restaurant: 0 };
+  for (const row of rows ?? []) {
+    if (row.kind === 'visit' || row.kind === 'dish' || row.kind === 'restaurant') {
+      counts[row.kind] = Number(row.total ?? 0);
+    }
+  }
+  return counts;
+}
+
+export type SectionSort = 'recent' | 'oldest' | 'name' | 'rating';
+
+export interface SectionQuery {
+  kind: SectionKind;
+  sort: SectionSort;
+  /** Nota mínima, o null para todas. Las entradas sin nota quedan fuera. */
+  minRating: number | null;
+  page: number;
+}
+
+/**
+ * Una sección del perfil de otra persona.
+ *
+ * Pagina por número de página y no por fecha, a diferencia del feed: esto es el
+ * catálogo de alguien —no crece mientras lo lees— y se puede ordenar por nombre
+ * o por nota, donde una fecha no nombra ninguna posición (0021).
+ */
+export async function fetchUserSection(
+  userId: string,
+  query: SectionQuery,
+  pageSize = 20,
+): Promise<FeedEntry[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('user_entries_of', {
+    target: userId,
+    entry_kind: query.kind,
+    sort_by: query.sort,
+    min_stars: query.minRating,
+    page_index: query.page,
+    rows_per_page: pageSize,
+  });
+  return (rows ?? []).map(toFeedEntry);
+}
+
 // ── Una visita compartida ────────────────────────────────────────────────────
 
 export interface SharedDish {

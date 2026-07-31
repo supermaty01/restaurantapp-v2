@@ -1,10 +1,10 @@
-import { Newsreader_500Medium, Newsreader_600SemiBold } from '@expo-google-fonts/newsreader';
+import { Fraunces_500Medium, Fraunces_600SemiBold } from '@expo-google-fonts/fraunces';
 import {
-  PlusJakartaSans_400Regular,
-  PlusJakartaSans_500Medium,
-  PlusJakartaSans_600SemiBold,
-  PlusJakartaSans_700Bold,
-} from '@expo-google-fonts/plus-jakarta-sans';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+} from '@expo-google-fonts/manrope';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { useFonts } from 'expo-font';
@@ -12,7 +12,7 @@ import { Slot } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import React, { Suspense, useState, createContext, useEffect } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { ActivityIndicator, Text, useColorScheme, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -28,7 +28,7 @@ import { AuthProvider } from '@/lib/context/AuthContext';
 import { NewDishProvider } from '@/lib/context/NewDishContext';
 import { NewRestaurantProvider } from '@/lib/context/NewRestaurantContext';
 import { ThemeProvider } from '@/lib/context/ThemeContext';
-import { lightColors } from '@/lib/design/tokens';
+import { darkColors, lightColors } from '@/lib/design/tokens';
 import { ensureAppDirectories } from '@/lib/helpers/directory-setup';
 import { DATABASE_NAME } from '@/services/db/constants';
 
@@ -40,11 +40,25 @@ export const DBVersionContext = createContext<() => void>(() => {});
 // and not a flash of fallback type.
 void SplashScreen.preventAutoHideAsync();
 
-/** Full-screen spinner on the app background, used before the theme exists. */
+/**
+ * Lo que se ve entre la pantalla de arranque y la primera pantalla de verdad.
+ *
+ * Va antes del `ThemeProvider` —el ajuste de tema vive en SQLite y esto es lo
+ * que espera a que SQLite esté listo—, así que lee el esquema del sistema
+ * directamente. Con los colores en crudo y no con clases: NativeWind resuelve
+ * `bg-canvas` a través del `colorScheme` que fija ese mismo provider, o sea que
+ * aquí todavía no dice nada.
+ */
 function Booting() {
+  const scheme = useColorScheme();
+  const colors = scheme === 'dark' ? darkColors : lightColors;
+
   return (
-    <View className="flex-1 items-center justify-center bg-canvas">
-      <ActivityIndicator size="large" color={lightColors.primary} />
+    <View
+      className="flex-1 items-center justify-center"
+      style={{ backgroundColor: colors.canvas }}
+    >
+      <ActivityIndicator size="large" color={colors.primary} />
     </View>
   );
 }
@@ -98,12 +112,12 @@ export default function RootLayout() {
   const [dbVersion, setDbVersion] = useState(0);
 
   const [fontsLoaded, fontError] = useFonts({
-    Newsreader_500Medium,
-    Newsreader_600SemiBold,
-    PlusJakartaSans_400Regular,
-    PlusJakartaSans_500Medium,
-    PlusJakartaSans_600SemiBold,
-    PlusJakartaSans_700Bold,
+    Fraunces_500Medium,
+    Fraunces_600SemiBold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
   });
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 /**
- * Clay design system (docs/14).
+ * Sistema de diseño «Huerta» (docs/14).
  *
  * Colours resolve through the CSS variables in global.css, so `bg-surface`
  * means the right thing in both schemes and no element needs a `dark:` twin.
@@ -52,13 +52,13 @@ module.exports = {
         'on-inverse': themed('on-inverse'),
       },
       fontFamily: {
-        // Newsreader for anything editorial, Plus Jakarta Sans for the rest.
-        display: ['Newsreader_500Medium'],
-        'display-semi': ['Newsreader_600SemiBold'],
-        sans: ['PlusJakartaSans_400Regular'],
-        medium: ['PlusJakartaSans_500Medium'],
-        semi: ['PlusJakartaSans_600SemiBold'],
-        bold: ['PlusJakartaSans_700Bold'],
+        // Fraunces para lo editorial, Manrope para lo que se lee de corrido.
+        display: ['Fraunces_500Medium'],
+        'display-semi': ['Fraunces_600SemiBold'],
+        sans: ['Manrope_400Regular'],
+        medium: ['Manrope_500Medium'],
+        semi: ['Manrope_600SemiBold'],
+        bold: ['Manrope_700Bold'],
       },
       borderRadius: {
         sm: '9px',

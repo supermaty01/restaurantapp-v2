@@ -14,7 +14,9 @@ import { Screen } from '@/components/ui/Screen';
 import { Card, EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
+import { useAccountAvatars } from '@/features/people/hooks/useAccountAvatars';
 import { fetchSharedVisit, rejectTag, type SharedVisit } from '@/features/social/api';
+import { removeTagDialog } from '@/features/social/confirmations';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
 import { remoteImageUri } from '@/features/social/remote-image';
 import { useAuth } from '@/lib/context/AuthContext';
@@ -37,6 +39,7 @@ export default function SharedVisitScreen() {
   const { visit: visitUuid } = useGlobalSearchParams<{ visit: string }>();
   const { session } = useAuth();
   const { colors } = useTheme();
+  const avatarFor = useAccountAvatars();
   const router = useRouter();
   const { ask, tell } = useDialog();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -106,14 +109,7 @@ export default function SharedVisitScreen() {
   };
 
   async function removeMe() {
-    const confirmed = await ask({
-      title: 'Quitarte de esta visita',
-      message:
-        'Dejará de aparecerte y perderás el acceso. No se borra nada del diario de quien te etiquetó.',
-      icon: 'person-remove-outline',
-      confirmLabel: 'Quitarme',
-      cancelLabel: 'Cancelar',
-    });
+    const confirmed = await ask(removeTagDialog());
     if (!confirmed) return;
 
     try {
@@ -236,7 +232,7 @@ export default function SharedVisitScreen() {
                   key={person.accountUuid ?? person.name}
                   className="flex-row items-center gap-2 rounded-pill border border-line bg-surface py-1.5 pl-1.5 pr-3.5"
                 >
-                  <Avatar name={person.name} size={24} />
+                  <Avatar name={person.name} uri={avatarFor(person.accountUuid)} size={24} />
                   <Txt variant="caption" weight="semi" serif={false}>
                     {person.name}
                   </Txt>

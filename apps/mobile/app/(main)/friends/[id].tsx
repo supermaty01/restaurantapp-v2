@@ -1,24 +1,46 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, Text, View } from 'react-native';
+import { useCallback, useMemo, useState } from 'react';
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 
+import { ImageLightbox } from '@/components/media/ImageLightbox';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/Dialog';
+import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Card, EmptyState } from '@/components/ui/Surface';
+import { Txt } from '@/components/ui/Txt';
 import {
-  fetchUserEntries,
   fetchUserProfile,
+  fetchUserSectionCounts,
   removeFriend,
   respondFriendRequest,
   sendFriendRequest,
+  type FeedEntry,
+  type FriendshipState,
+  type PublicProfile,
+  type SectionKind,
 } from '@/features/social/api';
-import type { FeedEntry, FriendshipState, PublicProfile } from '@/features/social/api';
 import { FeedCard } from '@/features/social/components/FeedCard';
+import {
+  activeSectionFilterCount,
+  defaultSectionFilters,
+  SectionFilterSheet,
+  type SectionFilters,
+} from '@/features/social/components/SectionFilterSheet';
+import { cancelRequestDialog, removeFriendDialog } from '@/features/social/confirmations';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
-import { usePagedResource } from '@/features/social/hooks/usePagedResource';
+import { useUserSection } from '@/features/social/hooks/useUserSection';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
+
+/** Las tres secciones, en el mismo orden que el diario propio. */
+const SECTIONS: { kind: SectionKind; label: string }[] = [
+  { kind: 'visit', label: 'Visitas' },
+  { kind: 'restaurant', label: 'Lugares' },
+  { kind: 'dish', label: 'Platos' },
+];
 
 /**
  * Someone else's profile.
@@ -27,38 +49,74 @@ import { reportError } from '@/lib/helpers/report-error';
  * a name and whatever is public, a friend sees the friends-only entries and the
  * bio. The client never filters the response — doing that would mean the data
  * had already been sent.
+ *
+ * Se reparte en visitas / lugares / platos como el diario propio, porque son las
+ * mismas tres cosas y quien viene aquí suele venir a una de ellas. **Solo salen
+ * las secciones que tienen algo**: los conteos llegan antes que las listas
+ * (`user_section_counts`, 0021), así que a alguien que no es tu amigo y solo
+ * tiene sitios públicos se le enseña una pestaña y no tres con dos vacías. Con
+ * una sola sección no se dibuja ninguna pestaña: un selector de una opción no es
+ * un selector.
  */
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { ask } = useDialog();
   const [busy, setBusy] = useState(false);
+  const [viewingPhoto, setViewingPhoto] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<SectionFilters>(defaultSectionFilters);
+  const [activeKind, setActiveKind] = useState<SectionKind | null>(null);
 
   const profile = useAsyncResource<PublicProfile | null>(() => fetchUserProfile(id), {
     enabled: Boolean(id),
     deps: [id],
   });
 
-  // Paged like the feed: a friend with a long diary used to stop at twenty
-  // entries with nothing to say it had.
-  const entries = usePagedResource<FeedEntry>(
-    (before) => fetchUserEntries(id, before),
-    (entry) => entry.occurredAt,
-    { enabled: Boolean(id), deps: [id] },
+  const counts = useAsyncResource(() => fetchUserSectionCounts(id), {
+    enabled: Boolean(id),
+    deps: [id],
+  });
+
+  /** Las que tienen algo que enseñar, en el orden del diario. */
+  const available = useMemo(
+    () => SECTIONS.filter((section) => (counts.data?.[section.kind] ?? 0) > 0),
+    [counts.data],
   );
+
+  // La pestaña elegida a mano manda; si no, la primera que tenga algo. Se
+  // calcula en vez de guardarse para que no quede apuntando a una sección que
+  // los conteos dicen que está vacía.
+  const kind = available.some((section) => section.kind === activeKind)
+    ? (activeKind as SectionKind)
+    : (available[0]?.kind ?? null);
+
+  const query = useMemo(
+    () =>
+      kind ? { kind, sort: filters.sort, minRating: filters.minRating, page: 0 } : null,
+    [kind, filters],
+  );
+
+  const entries = useUserSection(id, query);
 
   const act = useCallback(
     async (action: () => Promise<FriendshipState>, failure: string) => {
       setBusy(true);
       try {
         await action();
-        await Promise.all([profile.reload(), entries.reload()]);
+        await Promise.all([profile.reload(), counts.reload(), entries.reload()]);
       } catch (error) {
         reportError(failure, error);
       } finally {
         setBusy(false);
       }
     },
-    [profile, entries],
+    [profile, counts, entries],
+  );
+
+  const renderItem = useCallback(
+    ({ item }: { item: FeedEntry }) => <FeedCard entry={item} />,
+    [],
   );
 
   if (profile.loading && !profile.data) {
@@ -85,12 +143,23 @@ export default function UserProfileScreen() {
   const user = profile.data;
   const name = user.displayName ?? user.username;
 
+  /**
+   * Quitar no se deshace solo: volver a ser amigos exige una solicitud nueva y
+   * que la acepte la otra persona. Cancelar una solicitud enviada es otra cosa
+   * —nadie se entera— y por eso pregunta distinto.
+   */
+  const confirmRemove = async () => {
+    const sent = user.state === 'request_sent';
+    const confirmed = await ask(sent ? cancelRequestDialog(name) : removeFriendDialog(name));
+    if (confirmed) await act(() => removeFriend(user.userId), 'No se pudo quitar');
+  };
+
   return (
     <Screen padded={false}>
       <FlatList
         data={entries.items}
         keyExtractor={(item) => `${item.kind}:${item.entityUuid}`}
-        renderItem={({ item }) => <FeedCard entry={item} />}
+        renderItem={renderItem}
         contentContainerClassName="px-5 pb-8 gap-3"
         showsVerticalScrollIndicator={false}
         onEndReached={entries.loadMore}
@@ -105,14 +174,29 @@ export default function UserProfileScreen() {
         refreshControl={
           <RefreshControl
             refreshing={entries.loading}
-            onRefresh={entries.reload}
+            onRefresh={() => {
+              void counts.reload();
+              void entries.reload();
+            }}
             tintColor={colors.primary}
           />
         }
         ListHeaderComponent={
           <View className="pb-2">
             <Card className="items-center gap-3 py-5">
-              <Avatar name={name} uri={user.avatarUrl} size={72} />
+              {/* La foto se abre a pantalla completa. Es el único sitio donde
+                  se ve la cara de alguien en grande, y una foto de perfil de 72
+                  puntos es justo la que apetece mirar entera. Solo si la hay:
+                  ampliar unas iniciales no enseña nada. */}
+              <Pressable
+                accessibilityRole={user.avatarUrl ? 'imagebutton' : 'image'}
+                accessibilityLabel={user.avatarUrl ? `Ver la foto de ${name}` : name}
+                disabled={!user.avatarUrl}
+                onPress={() => setViewingPhoto(true)}
+              >
+                <Avatar name={name} uri={user.avatarUrl} size={88} />
+              </Pressable>
+
               <View className="items-center">
                 <Text className="font-display text-[22px] text-ink">{name}</Text>
                 <Text className="text-[13px] text-ink-subtle">@{user.username}</Text>
@@ -139,28 +223,139 @@ export default function UserProfileScreen() {
                 onDecline={() =>
                   act(() => respondFriendRequest(user.userId, false), 'No se pudo rechazar')
                 }
-                onRemove={() => act(() => removeFriend(user.userId), 'No se pudo quitar')}
+                onRemove={() => void confirmRemove()}
               />
             </Card>
+
+            {kind ? (
+              <SectionBar
+                sections={available}
+                active={kind}
+                counts={counts.data ?? { visit: 0, dish: 0, restaurant: 0 }}
+                filterCount={activeSectionFilterCount(filters)}
+                onSelect={setActiveKind}
+                onOpenFilters={() => setFiltersOpen(true)}
+              />
+            ) : null}
           </View>
         }
         ListEmptyComponent={
-          entries.loading ? null : (
+          entries.loading || counts.loading ? null : (
             <EmptyState
               icon="albums-outline"
               title={
-                user.state === 'friends' ? 'Todavía no ha compartido nada' : 'Nada público por aquí'
+                activeSectionFilterCount(filters) > 0
+                  ? 'Nada con ese filtro'
+                  : user.state === 'friends'
+                    ? 'Todavía no ha compartido nada'
+                    : 'Nada público por aquí'
               }
               message={
-                user.state === 'friends'
-                  ? 'Cuando comparta una visita o un plato, aparecerá aquí.'
-                  : 'Si os hacéis amigos podrás ver lo que comparta con sus amigos.'
+                activeSectionFilterCount(filters) > 0
+                  ? 'Prueba a bajar la valoración mínima.'
+                  : user.state === 'friends'
+                    ? 'Cuando comparta una visita o un plato, aparecerá aquí.'
+                    : 'Si os hacéis amigos podrás ver lo que comparta con sus amigos.'
               }
             />
           )
         }
       />
+
+      {kind ? (
+        <SectionFilterSheet
+          visible={filtersOpen}
+          kind={kind}
+          filters={filters}
+          onClose={() => setFiltersOpen(false)}
+          onApply={setFilters}
+        />
+      ) : null}
+
+      {user.avatarUrl ? (
+        <ImageLightbox
+          images={[{ id: user.userId, uri: user.avatarUrl }]}
+          initialIndex={0}
+          visible={viewingPhoto}
+          onClose={() => setViewingPhoto(false)}
+        />
+      ) : null}
     </Screen>
+  );
+}
+
+/**
+ * Las secciones y el botón de filtros, en una fila.
+ *
+ * Con una sola sección disponible no se dibuja el selector: un control de una
+ * opción es un adorno que ocupa la altura de un control.
+ */
+function SectionBar({
+  sections,
+  active,
+  counts,
+  filterCount,
+  onSelect,
+  onOpenFilters,
+}: {
+  sections: { kind: SectionKind; label: string }[];
+  active: SectionKind;
+  counts: Record<SectionKind, number>;
+  filterCount: number;
+  onSelect: (kind: SectionKind) => void;
+  onOpenFilters: () => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <View className="mt-4 flex-row items-center gap-2">
+      {sections.length > 1 ? (
+        <View className="flex-1 flex-row gap-2">
+          {sections.map((section) => {
+            const selected = section.kind === active;
+            return (
+              <PressableScale
+                key={section.kind}
+                accessibilityState={{ selected }}
+                accessibilityLabel={`${section.label}, ${counts[section.kind]}`}
+                onPress={() => onSelect(section.kind)}
+                scaleTo={0.95}
+                className={`rounded-pill px-3.5 py-2 ${
+                  selected ? 'bg-primary' : 'border border-line-strong bg-surface'
+                }`}
+              >
+                <Txt
+                  variant="caption"
+                  weight={selected ? 'bold' : 'semi'}
+                  serif={false}
+                  tone={selected ? 'onPrimary' : 'muted'}
+                >
+                  {section.label} · {counts[section.kind]}
+                </Txt>
+              </PressableScale>
+            );
+          })}
+        </View>
+      ) : (
+        <Txt variant="caption" tone="subtle" className="flex-1">
+          {sections[0]?.label} · {counts[active]}
+        </Txt>
+      )}
+
+      <PressableScale
+        accessibilityLabel="Filtrar y ordenar"
+        onPress={onOpenFilters}
+        scaleTo={0.92}
+        className="h-9 flex-row items-center gap-1.5 rounded-pill border border-line-strong bg-surface px-3"
+      >
+        <Ionicons name="options-outline" size={16} color={colors.ink} />
+        {filterCount > 0 ? (
+          <Txt variant="caption" weight="bold" serif={false} tone="primary">
+            {filterCount}
+          </Txt>
+        ) : null}
+      </PressableScale>
+    </View>
   );
 }
 

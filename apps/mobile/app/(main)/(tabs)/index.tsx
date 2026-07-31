@@ -11,6 +11,7 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { useHomeSummary } from '@/features/home/hooks/useHomeSummary';
 import type { RecentEntry } from '@/features/home/hooks/useHomeSummary';
+import { useMyProfile } from '@/features/social/myProfile';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
@@ -44,9 +45,14 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { session } = useAuth();
   const { restaurants, dishes, visits, recent } = useHomeSummary();
+  // El mismo perfil que pinta la pestaña Perfil, guardado entre arranques: sin
+  // esto el avatar de esta cabecera pasaba por hueco → iniciales → foto.
+  const { profile, known } = useMyProfile();
 
   const hour = new Date().getHours();
   const displayName =
+    profile?.displayName ??
+    profile?.username ??
     (session?.user.user_metadata?.['full_name'] as string | undefined) ??
     session?.user.email?.split('@')[0] ??
     null;
@@ -71,7 +77,12 @@ export default function HomeScreen() {
             accessibilityLabel="Tu perfil"
             onPress={() => router.push('/(main)/(tabs)/profile')}
           >
-            <Avatar name={displayName ?? 'Tú'} size={38} />
+            <Avatar
+              name={displayName ?? 'Tú'}
+              uri={profile?.avatarUrl}
+              pending={!known}
+              size={38}
+            />
           </Pressable>
         </View>
       </FadeInUp>

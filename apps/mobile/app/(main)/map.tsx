@@ -472,7 +472,7 @@ export default function MapScreen() {
               <Ionicons
                 name="add-circle-outline"
                 size={20}
-                color="#fff"
+                color={colors.onPrimary}
                 style={{ marginRight: 8 }}
               />
               <Text className="text-on-primary font-bold">Crear restaurante</Text>

@@ -135,7 +135,7 @@ function AssistantChat() {
           accessibilityRole="button"
           accessibilityLabel="Enviar"
         >
-          <Ionicons name="send" size={20} color="#fff" />
+          <Ionicons name="send" size={20} color={colors.onPrimary} />
         </TouchableOpacity>
       </View>
     </View>
