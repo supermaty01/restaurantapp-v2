@@ -106,9 +106,19 @@ Al iniciar sesión con datos locales existentes:
 2. Si la cuenta ya tiene datos en la nube (segundo dispositivo), se hace pull completo + push; los UUIDs garantizan que no hay colisiones, conviven ambos conjuntos.
 3. Caso raro (misma entidad creada a mano en dos dispositivos antes de vincular): quedan duplicados lógicos. **Decisión:** no se deduplica automáticamente; se ofrece detección de duplicados como utilidad manual (misma lógica de conflictos que ya tiene el import de `.restoshare`).
 
+## Cuándo se pregunta «¿qué diario manda?»
+
+Solo **la primera vez** que un dispositivo y una cuenta se encuentran, y solo si hay entradas a los dos lados. Lo marca el propio sync al terminar una pasada bien (`sync_linked_account`).
+
+La señal anterior era «hay cambios sin subir», tomada como sustituto de «este móvil ya escribía antes de esta cuenta». No lo es: la bandeja de salida tiene algo cada vez que se guarda una entrada y todavía no ha corrido el sync. Bastaba con apuntar una comida y cerrar la app —o que la pasada fallara por falta de red— para que el siguiente arranque le anunciara «hay dos diarios» a alguien que solo ha usado la app en un teléfono. Y como la otra marca solo se escribía al _elegir_, cerrar la pantalla sin contestar hacía que volviera a salir en cada arranque.
+
+Mientras la pregunta está abierta, **el sync no corre**. Sincronizar _es_ combinar, así que una pasada disparada por volver al primer plano contestaría la pregunta por su cuenta con la pantalla todavía abierta.
+
 ## Errores y robustez
 
 - Todo el sync es **idempotente**: repetir un push/pull no corrompe nada.
+- **Pedir sincronizar mientras corre una pasada no se descarta: se repite después.** Unirse a la que está en marcha parecía razonable —es idempotente— pero contesta a otra pregunta: quien pide sincronizar después de guardar algo pregunta si _eso_ llegó, y esa pasada ya envió lo suyo antes de que existiera. Se vivía al etiquetar a alguien mientras subían las fotos de la entrada anterior: la persona etiquetada no se enteraba hasta que quien la etiquetó volvía a abrir la app.
+- **Los ajustes de visibilidad se leen del disco antes de publicarlos**, y si no se pueden leer no se publica nada. El almacén en memoria nace en blanco —todo privado— así que la primera pasada tras arrancar publicaba `private/private/private` encima de lo elegido y dejaba de compartir el diario entero hasta que alguien abriera Ajustes. El servidor no distingue «no lo sé» de «no comparto», y la segunda respuesta esconde el diario.
 - Backoff exponencial en fallos de red; el estado de error se muestra pero nunca bloquea la app.
 - Tests: suite de integración del protocolo con un Supabase local (CLI) — escenarios de conflicto, borrado, bootstrap, doble dispositivo.
 

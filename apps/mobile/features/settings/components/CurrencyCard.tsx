@@ -13,16 +13,23 @@ import { useCurrency } from '../useCurrency';
 const SAMPLE = 12.5;
 
 /**
- * En qué moneda se leen los precios del diario.
+ * En qué moneda nacen los platos nuevos.
  *
- * El detalle de plato los formateaba fijos como pesos colombianos, escrito a
- * mano en la pantalla. Un diario que se lleva de viaje —que es de lo que va la
- * app— recoge precios de donde comes.
+ * Ya no es «la moneda del diario»: desde 0013 cada plato guarda la suya, porque
+ * un diario que se lleva de viaje mezcla platos de Bogotá y de Madrid en la
+ * misma lista y con una sola moneda la mitad de los números decían otra cosa de
+ * la que costaron.
  *
- * Se dice en la propia fila que cambiarla **no convierte** lo ya escrito: sin
- * esa frase, ver de golpe todo el diario en euros se lee como que la app ha
- * hecho una conversión, y no la ha hecho. Convertir de verdad necesitaría un
- * tipo de cambio por fecha, que es una API de pago (docs/11).
+ * Lo que queda aquí es el **punto de partida**, y ese matiz es lo que la fila
+ * tiene que decir: estando en Europa se deja en euros y lo que se apunte nace en
+ * euros; al volver a Colombia se cambia y lo nuevo nace en pesos. Cambiarla no
+ * toca ni un plato ya escrito, ni siquiera el símbolo con el que se pinta.
+ *
+ * Ojo con la analogía fácil: **no funciona como la visibilidad por defecto**.
+ * Aquella se resuelve en vivo —cambiar el ajuste mueve todo lo que estaba en
+ * `default`— y ésta se copia al crear. Son dos comportamientos distintos a
+ * propósito: mover una visibilidad es reversible, reinterpretar un precio en
+ * otra moneda es inventárselo.
  */
 export function CurrencyCard() {
   const { colors } = useTheme();
@@ -37,7 +44,7 @@ export function CurrencyCard() {
         <View className="flex-row items-center justify-between">
           <View className="flex-row items-center">
             <Ionicons name="pricetag" size={24} color={colors.primary} />
-            <Text className="ml-4 text-lg font-bold text-ink">Moneda</Text>
+            <Text className="ml-4 text-lg font-bold text-ink">Moneda por defecto</Text>
           </View>
           <View className="flex-row items-center">
             <Text className="mr-2 text-ink-muted">{currency}</Text>
@@ -46,15 +53,16 @@ export function CurrencyCard() {
         </View>
         <Text className="mt-1 text-ink-muted">
           {current ? `${current.label} · ` : ''}
-          {formatPrice(SAMPLE, currency)}. Cambiarla no convierte los precios ya escritos.
+          {formatPrice(SAMPLE, currency)}. Con la que nacen los platos nuevos; cada plato guarda la
+          suya y esto no cambia ninguno.
         </Text>
       </TouchableOpacity>
 
       <Sheet
         visible={open}
         onClose={() => setOpen(false)}
-        title="Moneda"
-        subtitle="Con la que se enseñan los precios de tus platos"
+        title="Moneda por defecto"
+        subtitle="La que se propone al apuntar un plato nuevo"
       >
         <ScrollView
           className="px-5"

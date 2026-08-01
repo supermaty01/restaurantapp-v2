@@ -93,6 +93,20 @@ export const dishes = sqliteTable('dishes', {
   // despues, al empujar contra Postgres, que si aplica tipos. El espejo usa
   // `numeric(12,2)`. Ver la migracion 0011.
   price: real('price'),
+  /**
+   * En qué moneda está `price`.
+   *
+   * Por plato y no por diario: un diario que se lleva de viaje mezcla platos de
+   * Bogotá y de Madrid en la misma lista, y con una sola moneda la mitad de los
+   * números dicen otra cosa de la que costaron. El ajuste general sigue
+   * existiendo, pero como **punto de partida** de lo nuevo (ver
+   * `useDefaultCurrency`), no como respuesta para todo.
+   *
+   * Nulo exactamente cuando `price` lo es: un precio sin moneda es un número sin
+   * unidad, y una moneda sin precio no dice nada. Lo sujeta `dish-schema.ts` al
+   * escribir y `dish-price.node.test.ts` al vigilarlo. Ver la migración 0013.
+   */
+  currency: text('currency'),
   rating: integer('rating'),
   comments: text('comments'),
   restaurantId: integer('restaurant_id').references(() => restaurants.id),

@@ -32,7 +32,24 @@ export default function Index() {
         // Marcar primero: si la persona vuelve atrás desde la pantalla de
         // cuenta sin registrarse, ha entrado igual y el onboarding ya cumplió.
         void markSeen();
-        if (account) router.push('/(main)/account');
+        if (!account) return;
+
+        /*
+         * El diario debajo, y la cuenta encima.
+         *
+         * Con un `push` a secas, la pantalla de cuenta quedaba sobre el
+         * onboarding —que ya no existe— así que no había ni «atrás» hacia
+         * ningún sitio ni forma de llegar al diario: se entraba, empezaba a
+         * sincronizar, y ahí se acababa el camino. Es lo que se vivía como «no
+         * hay opción para entrar directo al Inicio».
+         *
+         * Con `replace` primero, detrás de la pantalla de cuenta ya está el
+         * diario. `?welcome=1` es lo que hace que además lo diga con un botón,
+         * porque un gesto de volver atrás no se le ocurre a nadie en una
+         * pantalla a la que acaba de llegar.
+         */
+        router.replace('/(main)/(tabs)');
+        router.push('/(main)/account?welcome=1');
       }}
     />
   );

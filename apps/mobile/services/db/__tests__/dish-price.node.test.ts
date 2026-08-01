@@ -48,6 +48,7 @@ describe('el precio de un plato', () => {
     const id = await createDish(db, {
       name: 'Croqueta',
       price: 3.5,
+      currency: 'COP',
       rating: null,
       comments: null,
       restaurantId: restaurant,
@@ -66,6 +67,7 @@ describe('el precio de un plato', () => {
     await createDish(db, {
       name: 'Tortilla',
       price: 12,
+      currency: 'COP',
       rating: 5,
       comments: 'de patata',
       restaurantId: restaurant,

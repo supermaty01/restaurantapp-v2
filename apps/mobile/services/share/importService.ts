@@ -9,6 +9,7 @@ import { parseShareFile as parseShareFileContents } from '@restaurantapp/shared'
 import { and, eq, sql } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system/legacy';
 
+import { dishCurrency } from '@/features/dishes/currency';
 import { IMAGES_DIR } from '@/lib/helpers/fs-paths';
 import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange } from '@/services/db/sync-write';
@@ -275,6 +276,9 @@ export async function importDish(
       .values({
         name: dish.name,
         price: dish.price,
+        // Un fichero escrito antes de 0013 trae el precio sin moneda; se le
+        // aplica la misma regla que a lo que ya había en disco.
+        currency: dishCurrency(dish.price, dish.currency),
         rating: dish.rating,
         comments: dish.comments,
         restaurantId,

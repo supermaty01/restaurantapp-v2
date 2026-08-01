@@ -6,7 +6,7 @@ import {
   regionOf,
 } from './currency';
 
-describe('la moneda del diario', () => {
+describe('la moneda por defecto', () => {
   describe('adivinarla desde el dispositivo', () => {
     it('mira la región, no el idioma', () => {
       // `es` a secas no dice nada: lo hablan veinte países con veinte monedas.

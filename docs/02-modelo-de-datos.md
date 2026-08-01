@@ -112,5 +112,14 @@ users/profiles ──< friendships
       └──< share_links / embeddings / ai_usage
 ```
 
-**Resuelto:** el precio del plato admite decimales. SQLite no obliga el tipo de columna y guardaba `3.5` en una INTEGER sin protestar; Postgres rechazaba la fila entera al sincronizar con `invalid input syntax for type integer: "3.5"`. De las dos formas de reconciliarlo se eligió la que no pierde datos: `numeric(12,2)` en el espejo (migración 0008). La moneda sigue sin modelarse.
+**Resuelto:** el precio del plato admite decimales. SQLite no obliga el tipo de columna y guardaba `3.5` en una INTEGER sin protestar; Postgres rechazaba la fila entera al sincronizar con `invalid input syntax for type integer: "3.5"`. De las dos formas de reconciliarlo se eligió la que no pierde datos: `numeric(12,2)` en el espejo (migración 0008).
+
+**Resuelto:** la moneda, que era lo que faltaba de esa misma columna. `dishes.currency` **por plato** (0013 local, 0023 en el espejo), no por diario: un diario que se lleva de viaje mezcla platos de Bogotá y de Madrid en la misma lista, y con una sola moneda la mitad de los números decían otra cosa de la que costaron.
+
+Dos reglas que sujetan la columna, y ninguna vive en el esquema:
+
+- **Precio y moneda van juntos.** Un precio sin moneda es un número sin unidad; una moneda sin precio no dice nada. Lo aplica `dishWriteValues` en el único sitio por donde pasan los dos formularios. **No hay `check` en Postgres a propósito**: la reconciliación escribe fila a fila desde clientes que pueden ir por delante o por detrás de la migración, y una fila rechazada por el espejo no es un aviso — es un push que falla entero.
+- **Lo que ya estaba escrito se reparte por el propio número**: por debajo de mil, euros; de mil en adelante, pesos. Es una heurística, vale porque la app solo se ha usado en Colombia y en Europa, y deja de valer el día que se importe un diario de otro sitio. Vive en las dos migraciones **y** en `features/dishes/currency.ts`, que es lo que cubre las filas que lleguen por sync desde un móvil con la versión anterior.
+
+El ajuste de Ajustes sobrevive, con otro significado: es el **valor de partida** de lo que se crea. Ojo con la analogía fácil — no funciona como la visibilidad por defecto, que se resuelve al leer. Mover una visibilidad es reversible; reinterpretar un precio en otra moneda es inventárselo.
 **Abierto:** purga de soft-deletes y de imágenes huérfanas en R2 (job periódico del Worker con cron trigger, fase 4+).

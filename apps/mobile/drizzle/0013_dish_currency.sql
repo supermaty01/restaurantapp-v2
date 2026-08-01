@@ -1,0 +1,41 @@
+-- La moneda deja de ser del diario y pasa a ser de cada plato.
+--
+-- El comentario de `features/settings/currency.ts` argumentaba lo contrario --
+-- una moneda por diario, porque una por fila seria "un campo mas que llenar en
+-- cada comida". El argumento tenia razon en el coste y se equivocaba en el
+-- efecto: un diario que se lleva de viaje mezcla platos de Bogota y de Madrid en
+-- la misma lista, y con una sola moneda **la mitad de los numeros dicen otra
+-- cosa de la que costaron**. No es un simbolo mal puesto, es un precio falso.
+--
+-- El coste de rellenarlo no se paga porque el ajuste general sigue existiendo:
+-- pasa a ser el valor de partida de lo que se crea a partir de ahora. Estando en
+-- Europa se deja en euros y todo lo nuevo nace en euros; al volver a Colombia se
+-- cambia y lo nuevo nace en pesos. Lo ya escrito **no se mueve**, que es
+-- justamente lo que antes no se podia prometer.
+--
+-- ## El reparto de lo que ya hay
+--
+-- La app solo se ha usado en Colombia y en Europa, asi que el propio numero
+-- basta para repartirlo: por debajo de mil, euros; de mil en adelante, pesos. No
+-- hay ningun plato de mil euros y no hay ninguno de novecientos pesos, asi que
+-- la frontera no parte ningun caso real. Es una heuristica y esta escrito que lo
+-- es: si algun dia se importa un diario de otro sitio, esta regla no vale y hay
+-- que preguntarle a quien lo escribio.
+--
+-- El limite exacto (1000) cae del lado de los pesos. Mil euros por un plato no
+-- existe; mil pesos por un cafe, todos los dias.
+--
+-- ## Precio y moneda van juntos
+--
+-- Un precio sin moneda es un numero sin unidad -- que es exactamente lo que
+-- habia y lo que se pintaba siempre en pesos. Y una moneda sin precio no dice
+-- nada: seria decorar una fila vacia. Las dos condiciones se mantienen en la
+-- escritura (`dish-schema.ts`) y aqui se dejan cumplidas para lo que ya existe.
+--
+-- `ALTER TABLE ADD COLUMN` y no reconstruir la tabla: SQLite lo admite para una
+-- columna nullable sin default. La 0011 si reconstruyo `dishes`, pero eso era
+-- para cambiar el **tipo** de una columna, que es lo unico que obliga.
+ALTER TABLE `dishes` ADD COLUMN `currency` text;--> statement-breakpoint
+UPDATE `dishes`
+  SET `currency` = CASE WHEN `price` < 1000 THEN 'EUR' ELSE 'COP' END
+  WHERE `price` IS NOT NULL AND `currency` IS NULL;

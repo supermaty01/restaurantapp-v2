@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 
+import { dishCurrency } from '@/features/dishes/currency';
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
@@ -119,6 +120,9 @@ async function fetchDishData(db: DrizzleDb, dishId: number): Promise<ShareableDi
     return {
       name: dish.name,
       price: dish.price,
+      // Con su moneda: un precio suelto en un fichero que va a otro móvil es un
+      // número que el receptor pinta con la suya.
+      currency: dishCurrency(dish.price, dish.currency),
       rating: dish.rating,
       comments: dish.comments,
       tags,

@@ -131,6 +131,7 @@ describe('el .restoshare va y vuelve', () => {
     const dishId = await createDish(origin.db, {
       name: 'Croqueta',
       price: 3.5,
+      currency: 'COP',
       rating: 4,
       comments: 'Crujiente',
       restaurantId,
@@ -159,6 +160,7 @@ describe('el .restoshare va y vuelve', () => {
     const dishId = await createDish(origin.db, {
       name: 'Amatriciana',
       price: 12,
+      currency: 'COP',
       rating: 5,
       comments: null,
       restaurantId,

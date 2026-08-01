@@ -8,6 +8,7 @@ import { Txt } from '@/components/ui/Txt';
 import { useFriends } from '@/features/social/hooks/useFriends';
 import { useTheme } from '@/lib/context/ThemeContext';
 
+import { useAccountAvatars } from '../hooks/useAccountAvatars';
 import { useKnownPeople } from '../hooks/useKnownPeople';
 
 import type { PersonTag } from '../repositories/peopleRepository';
@@ -46,6 +47,9 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
 
   const recent = useKnownPeople();
   const { friends, enabled } = useFriends();
+  // Quien tiene cuenta se dibuja con su cara. Sin esto, etiquetar a Caro y
+  // escribir «Caro» se veían idénticos: dos iniciales sobre un color.
+  const avatarFor = useAccountAvatars();
 
   const add = (tag: PersonTag) => {
     if (!tag.name.trim()) return;
@@ -139,7 +143,7 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
               scaleTo={0.94}
               className="flex-row items-center gap-2 rounded-pill border border-line-strong bg-surface py-1.5 pl-1.5 pr-3"
             >
-              <Avatar name={tag.name} size={24} />
+              <Avatar name={tag.name} uri={avatarFor(tag.accountUuid)} size={24} />
               <View>
                 <Txt variant="caption" weight="semi" serif={false}>
                   {tag.name}
@@ -221,7 +225,7 @@ export function PeopleTagInput({ value, onChange, label }: PeopleTagInputProps) 
                 scaleTo={0.94}
                 className="flex-row items-center gap-1.5 rounded-pill border border-line-strong bg-surface py-1.5 pl-1.5 pr-3"
               >
-                <Avatar name={tag.name} size={22} />
+                <Avatar name={tag.name} uri={avatarFor(tag.accountUuid)} size={22} />
                 <Txt variant="caption" weight="semi" serif={false} numberOfLines={1}>
                   {tag.name}
                 </Txt>

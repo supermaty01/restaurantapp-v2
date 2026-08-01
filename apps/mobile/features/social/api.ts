@@ -246,6 +246,77 @@ export async function fetchUserEntries(userId: string, before?: string): Promise
   return (rows ?? []).map(toFeedEntry);
 }
 
+// ── El perfil de alguien, por secciones ──────────────────────────────────────
+
+/** Cuántas entradas de cada clase puede ver quien llama. Lo que decide las pestañas. */
+export type UserEntryCounts = Record<FeedKind, number>;
+
+/**
+ * El recuento por clase, antes de pintar nada.
+ *
+ * Hace falta para no enseñar una pestaña vacía: a quien no es tu amigo y solo
+ * tiene sitios públicos se le enseña **una** pestaña, no tres con dos vacías.
+ * Una pestaña vacía se lee como «no ha compartido nada», y aquí significaría
+ * «esto no te toca», que es otra cosa.
+ *
+ * El servidor devuelve siempre las tres filas, con cero donde no haya nada, así
+ * que no hay que distinguir «vino un cero» de «no vino la fila».
+ */
+export async function fetchUserEntryCounts(userId: string): Promise<UserEntryCounts> {
+  const rows = await callRpc<{ kind: string; total: number | string }[]>('user_entry_counts', {
+    target: userId,
+  });
+
+  const counts: UserEntryCounts = { visit: 0, dish: 0, restaurant: 0 };
+  for (const row of rows ?? []) {
+    if (row.kind === 'visit' || row.kind === 'dish' || row.kind === 'restaurant') {
+      // bigint llega como cadena desde PostgREST.
+      counts[row.kind] = Number(row.total ?? 0);
+    }
+  }
+  return counts;
+}
+
+export type UserEntrySort = 'date' | 'name' | 'rating';
+
+export interface UserEntriesQuery {
+  kind: FeedKind;
+  sort: UserEntrySort;
+  descending: boolean;
+  /** Solo para platos y lugares: una visita no tiene nota propia. */
+  minRating: number | null;
+  offset: number;
+  pageSize: number;
+}
+
+/**
+ * Una página de una sección del perfil de alguien.
+ *
+ * Por desplazamiento y no por cursor, al revés que el feed (`usePagedResource`
+ * explica por qué allí es al revés): aquí el orden lo elige quien mira, así que
+ * un cursor necesitaría una clave distinta por criterio. La lista de una sección
+ * es corta —lo que una persona ha compartido— y el servidor desempata siempre
+ * por fecha y uuid, así que dos páginas seguidas no repiten ni se saltan nada.
+ *
+ * El servidor decide cuánto se ve. El cliente nunca filtra esto: hacerlo
+ * significaría que el dato ya se envió.
+ */
+export async function fetchUserEntriesPage(
+  userId: string,
+  query: UserEntriesQuery,
+): Promise<FeedEntry[]> {
+  const rows = await callRpc<Record<string, unknown>[]>('user_entries_page', {
+    target: userId,
+    kind_filter: query.kind,
+    sort_by: query.sort,
+    descending: query.descending,
+    min_rating: query.minRating,
+    page_offset: query.offset,
+    page_size: query.pageSize,
+  });
+  return (rows ?? []).map(toFeedEntry);
+}
+
 // ── Una visita compartida ────────────────────────────────────────────────────
 
 export interface SharedDish {

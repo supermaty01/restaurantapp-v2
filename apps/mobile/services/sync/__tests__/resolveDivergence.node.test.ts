@@ -5,7 +5,11 @@ import { makeTestDb } from '@/services/db/__tests__/test-db';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
 import { SyncEngine } from '@/services/sync/engine';
-import { applyDivergenceChoice } from '@/services/sync/resolveDivergence';
+import {
+  applyDivergenceChoice,
+  needsDivergenceChoice,
+  rememberAccountLinked,
+} from '@/services/sync/resolveDivergence';
 
 import { FakeServer } from './fake-transport';
 
@@ -122,5 +126,86 @@ describe('elegir qué manda cuando los dos lados divergen', () => {
 
     const outcome = await applyDivergenceChoice(device.db, server.transport(), 'device-wins');
     expect(outcome.queued).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * Cuándo se pregunta, que es donde estaba el fallo que se vivía.
+ *
+ * La pregunta salía a alguien que solo ha usado la app en un teléfono, y volvía
+ * a salir en cada arranque. La señal era «hay algo sin subir», que lo cumple
+ * cualquiera que guarde una comida y cierre la app antes de que corra el sync.
+ */
+describe('cuándo se pregunta quién manda', () => {
+  it('no pregunta a un móvil que ya sincronizó con esta cuenta, aunque quede algo por subir', async () => {
+    const server = new FakeServer();
+    const cloud = makeTestDb();
+    await addRestaurant(cloud.db, 'Ichiran');
+    await engineFor(cloud.db, server).push();
+
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+    await engineFor(device.db, server).sync();
+    await rememberAccountLinked(device.db, ACCOUNT);
+
+    // Y ahora escribe algo y cierra la app antes de que corra el sync: la
+    // bandeja tiene una entrada sin subir, que es el estado normal de cualquier
+    // móvil. Antes esto bastaba para anunciar «hay dos diarios» en el siguiente
+    // arranque.
+    await addRestaurant(device.db, 'La Puerta Falsa');
+    const pending = await device.db
+      .select()
+      .from(schema.changeLog)
+      .where(eq(schema.changeLog.synced, false));
+    expect(pending.length).toBeGreaterThan(0);
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(false);
+  });
+
+  it('sí pregunta la primera vez que un móvil con diario entra en una cuenta con otro', async () => {
+    const { server, device } = await (async () => {
+      const server = new FakeServer();
+      const cloud = makeTestDb();
+      await addRestaurant(cloud.db, 'Ichiran');
+      await engineFor(cloud.db, server).push();
+
+      const device = makeTestDb();
+      await addRestaurant(device.db, 'Guadalupe');
+      return { server, device };
+    })();
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(true);
+  });
+
+  it('no pregunta a un móvil vacío: restaurar es la única respuesta posible', async () => {
+    const server = new FakeServer();
+    const cloud = makeTestDb();
+    await addRestaurant(cloud.db, 'Ichiran');
+    await engineFor(cloud.db, server).push();
+
+    const device = makeTestDb();
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(false);
+  });
+
+  it('no pregunta con la nube vacía: subir es la única respuesta posible', async () => {
+    const server = new FakeServer();
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+
+    expect(await needsDivergenceChoice(device.db, server.transport(), ACCOUNT)).toBe(false);
+  });
+
+  it('la marca es por cuenta: entrar con otra vuelve a ser un encuentro nuevo', async () => {
+    const server = new FakeServer();
+    const cloud = makeTestDb();
+    await addRestaurant(cloud.db, 'Ichiran');
+    await engineFor(cloud.db, server).push();
+
+    const device = makeTestDb();
+    await addRestaurant(device.db, 'Guadalupe');
+    await rememberAccountLinked(device.db, ACCOUNT);
+
+    const other = '22222222-2222-4222-8222-222222222222';
+    expect(await needsDivergenceChoice(device.db, server.transport(), other)).toBe(true);
   });
 });

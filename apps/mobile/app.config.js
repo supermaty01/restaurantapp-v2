@@ -66,6 +66,16 @@ export default {
   icon: './assets/burger-logo-fondo.png',
   scheme: 'restaurantapp',
   userInterfaceStyle: 'automatic',
+  /*
+   * El fondo de la ventana nativa, que es lo que se cuela **entre** la pantalla
+   * de arranque y el primer fotograma de React.
+   *
+   * Sin esto es blanco, y abrir la app de noche daba un destello a pantalla
+   * completa justo antes de que apareciera la interfaz oscura. Es el lienzo del
+   * modo claro; el oscuro va abajo, en `android.backgroundColor`, porque el
+   * campo de arriba no admite variante.
+   */
+  backgroundColor: '#F2F2E7',
   // New Architecture is the only supported mode from SDK 55 onwards.
   newArchEnabled: true,
   ios: {
@@ -99,6 +109,8 @@ export default {
       foregroundImage: './assets/burger-logo-fondo.png',
       backgroundColor: '#DFE2CF',
     },
+    // El fondo de ventana del modo oscuro. Ver `backgroundColor` de arriba.
+    backgroundColor: '#1B1A14',
     package: BUNDLE_ID,
     versionCode: VERSION_CODE,
     // Registro de la app en Firebase, que es de donde FCM saca a quién entregar
@@ -131,13 +143,31 @@ export default {
     'expo-router',
     'expo-sqlite',
     'expo-secure-store',
+    /*
+     * La pantalla de arranque, en los dos modos.
+     *
+     * Antes solo había una, con el verde pálido del icono, así que abrir la app
+     * de noche empezaba con un destello claro a pantalla completa y seguía con
+     * una interfaz oscura. `dark` es la variante que el sistema elige solo
+     * cuando el móvil está en modo oscuro; los colores son los dos lienzos de
+     * `lib/design/tokens.ts`.
+     *
+     * **Es configuración nativa: hace falta una build nueva.** Recargar el
+     * JavaScript no cambia una pantalla que se dibuja antes de que exista.
+     */
     [
       'expo-splash-screen',
       {
         image: './assets/burger-logo.png',
         imageWidth: 200,
         resizeMode: 'contain',
-        backgroundColor: '#DFE2CF',
+        backgroundColor: '#F2F2E7',
+        dark: {
+          image: './assets/burger-logo.png',
+          imageWidth: 200,
+          resizeMode: 'contain',
+          backgroundColor: '#1B1A14',
+        },
       },
     ],
     [
@@ -160,7 +190,9 @@ export default {
       'expo-notifications',
       {
         icon: './assets/burger-logo.png',
-        color: '#C2603C',
+        // El primario de la paleta (lib/design/tokens.ts). Era el terracota
+        // anterior, que ya no existe en ninguna pantalla.
+        color: '#5F7A43',
       },
     ],
   ],

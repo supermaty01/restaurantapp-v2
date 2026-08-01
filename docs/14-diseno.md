@@ -1,14 +1,27 @@
-# 14 · Sistema de diseño «Clay»
+# 14 · Sistema de diseño
 
 Referencia de la capa visual. El código la cita como `docs/14`.
 
-El punto de partida fue el proyecto de Claude Design **«RestaurantApp Refresh»**, pero solo como referencia de estilo: la estructura cambió mucho para dar sitio a la mitad social, y el mockup deja sin especificar la mayor parte de las pantallas. Todo lo que no estaba definido se ha decidido aquí.
+La estructura salió del proyecto de Claude Design **«RestaurantApp Refresh»**, usado solo como referencia: cambió mucho para dar sitio a la mitad social, y el mockup deja sin especificar la mayor parte de las pantallas.
 
 ## La idea
 
-Papel y arcilla. Fondos cálidos en lugar de blancos y grises, un único acento (terracota) que marca lo accionable, y una serif editorial para lo que se mira frente a una sans para lo que se lee.
+Papel y cocina. Fondos cálidos en lugar de blancos y grises, un único acento que marca lo accionable, y una serif con carácter para lo que se mira frente a una sans para lo que se lee.
 
 Un diario gastronómico se compone de fotos de comida, y esas fotos ya traen todo el color que una pantalla puede soportar. La interfaz se aparta: superficies neutras cálidas, un solo acento, y color saturado únicamente donde lo pone el usuario (etiquetas, valoraciones).
+
+### La paleta anterior, y por qué se cambió
+
+La primera versión («Clay») era **terracota `#C0623D` sobre crema `#F7F1E8`** con Newsreader y Plus Jakarta Sans. Es, casi exactamente, la identidad de Claude Code: el mismo coral sobre el mismo papel y un par tipográfico del mismo gusto. Se cambió por eso — una app propia no puede parecer la herramienta con la que se escribió.
+
+Lo nuevo sale entero **del logo**, que es lo único de la app que ya era suyo: el trazo cacao es la tinta, la lechuga es el color de acción, la corteza del pan son las valoraciones, la carne es el rojo destructivo, y el verde pálido del fondo del icono, aclarado hasta ser papel, es el lienzo.
+
+Consecuencias que conviene saber antes de tocar nada:
+
+- **`primary` y `sage` comparten familia de tono.** El logo solo tiene un tono saturado. Lo que los separa es la forma —relleno de botón frente a tinte de pastilla— y la luminosidad, no el matiz.
+- **`onPrimary` no es blanco en oscuro.** El primario de modo oscuro tiene que leerse _como texto_ sobre el lienzo, así que es un verde claro, y encima de él el blanco da 3,1:1. Un `#fff` escrito a mano sobre `bg-primary` está mal; se lee de `colors.onPrimary`.
+- **`tokens.node.test.ts` mide los contrastes** y no deja que la próxima paleta baje del listón que cumplía la anterior.
+- **Los neutros del modo oscuro no llevan tinte.** El primer intento los tiñó hacia el verde del logo, como el lienzo del modo claro, y cada tarjeta salió marrón: en oscuro hay mucha más superficie por la que un tinte se acumula. El color lo pone el acento y nada más.
 
 ## Color
 
@@ -42,8 +55,8 @@ La dirección depende del tema: oscurecer es lo correcto sobre papel y hace desa
 
 ## Tipografía
 
-- **Newsreader** (serif) para lo editorial: titulares, cifras, nombres de sitio.
-- **Plus Jakarta Sans** para todo lo que se lee de corrido.
+- **Fraunces** (serif) para lo editorial: titulares, cifras, nombres de sitio. Es de contraste alto y formas deliberadamente raras — lo contrario de discreta, que es el punto: esto es un cuaderno de comidas, no un panel de control.
+- **Manrope** para todo lo que se lee de corrido. Geométrica pero de aperturas cerradas, así que aguanta los tamaños pequeños de una lista sin competir con la serif.
 
 Ambas son paquetes de solo assets (`@expo-google-fonts/*`), sin código nativo, así que no añaden riesgo en las actualizaciones de Expo — la preocupación central de [docs/11](11-dependencias.md).
 

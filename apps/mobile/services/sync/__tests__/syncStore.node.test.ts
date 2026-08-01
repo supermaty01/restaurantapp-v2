@@ -3,6 +3,7 @@ import {
   getSyncState,
   requestSync,
   resetSyncStateForTests,
+  setAwaitingDivergenceChoice,
   subscribeToSync,
   SYNC_LABEL,
 } from '@/services/sync/syncStore';
@@ -44,7 +45,7 @@ describe('sync store', () => {
     expect(getSyncState().status).toBe('ok');
   });
 
-  it('joins an in-flight pass instead of starting a second one', async () => {
+  it('nunca corre dos pasadas a la vez', async () => {
     // Regression: useSync is mounted twice (SyncRunner + account screen); a
     // per-hook guard let two syncs run at once (double push, racing cursors).
     const { db } = makeTestDb();
@@ -61,6 +62,76 @@ describe('sync store', () => {
 
     release({ ok: true, error: null, at: 'now' });
     await Promise.all([first, second]);
+  });
+
+  it('repite la pasada cuando se pidió una mientras corría otra', async () => {
+    /*
+     * Lo que se veía roto: etiquetar a alguien mientras subían las fotos de la
+     * entrada anterior —minutos— y que la persona etiquetada no se enterara
+     * hasta que quien la etiquetó volvía a abrir la app. La pasada en curso ya
+     * había hecho su push antes de que existiera la etiqueta, así que unirse a
+     * ella era esperar por algo que no la incluía.
+     */
+    const { db } = makeTestDb();
+    let release: (v: unknown) => void = () => {};
+    mockRunSync
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      )
+      .mockResolvedValue({ ok: true, error: null, at: 'now' });
+
+    const first = requestSync(db, ACCOUNT);
+    void requestSync(db, ACCOUNT);
+    expect(mockRunSync).toHaveBeenCalledTimes(1);
+
+    release({ ok: true, error: null, at: 'now' });
+    await first;
+    // La repetición se lanza sin esperarla, así que hay que dejar correr la
+    // cola de microtareas antes de mirar.
+    await Promise.resolve();
+
+    expect(mockRunSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('tres peticiones durante la misma pasada son una repetición, no tres', async () => {
+    const { db } = makeTestDb();
+    let release: (v: unknown) => void = () => {};
+    mockRunSync
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          release = resolve;
+        }),
+      )
+      .mockResolvedValue({ ok: true, error: null, at: 'now' });
+
+    const first = requestSync(db, ACCOUNT);
+    void requestSync(db, ACCOUNT);
+    void requestSync(db, ACCOUNT);
+    void requestSync(db, ACCOUNT);
+
+    release({ ok: true, error: null, at: 'now' });
+    await first;
+    await Promise.resolve();
+
+    expect(mockRunSync).toHaveBeenCalledTimes(2);
+  });
+
+  it('no sincroniza mientras hay una pregunta de «qué diario manda» abierta', async () => {
+    // Sincronizar *es* combinar. Si una pasada de fondo corriera con la pantalla
+    // de elección abierta, contestaría la pregunta por su cuenta.
+    const { db } = makeTestDb();
+    mockRunSync.mockResolvedValue({ ok: true, error: null, at: 'now' });
+
+    setAwaitingDivergenceChoice(true);
+    const outcome = await requestSync(db, ACCOUNT);
+
+    expect(mockRunSync).not.toHaveBeenCalled();
+    expect(outcome.ok).toBe(false);
+
+    setAwaitingDivergenceChoice(false);
+    await requestSync(db, ACCOUNT);
     expect(mockRunSync).toHaveBeenCalledTimes(1);
   });
 

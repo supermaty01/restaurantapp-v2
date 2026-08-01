@@ -48,13 +48,23 @@ export function resetCurrencyForTests(): void {
 }
 
 /**
- * La moneda del diario, y cómo cambiarla.
+ * La moneda con la que **nacen** los platos nuevos, y cómo cambiarla.
+ *
+ * Desde 0013 la moneda vive en cada plato; esto es solo el punto de partida.
+ * Cambiarlo no toca ni un plato ya escrito, ni siquiera el símbolo con el que se
+ * pinta: estando en Europa se deja en euros y lo que se apunte nace en euros; al
+ * volver a Colombia se cambia y lo nuevo nace en pesos.
  *
  * Guardada en `app_settings`, igual que las visibilidades por defecto: es una
  * preferencia local que entra en la copia de seguridad y que nadie más necesita
- * saber. **No viaja en el sync**: dos móviles de la misma persona pueden estar
- * en países distintos, y el diario no cambia de moneda por abrirlo en otro
- * sitio.
+ * saber. **No viaja en el sync**, y ahora eso importa menos que antes — dos
+ * móviles de la misma persona pueden estar en países distintos, y lo que cada
+ * uno proponga al crear un plato es cosa suya.
+ *
+ * Ojo con la analogía fácil: **no funciona como la visibilidad por defecto**.
+ * Aquella se resuelve al leer, así que cambiarla mueve todo lo que estaba en
+ * `default`; ésta se copia al crear. Mover una visibilidad es reversible;
+ * reinterpretar un precio en otra moneda es inventárselo.
  */
 export function useCurrency(): { currency: string; setCurrency: (next: string) => Promise<void> } {
   const sqlite = useSQLiteContext();

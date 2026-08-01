@@ -1,11 +1,13 @@
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
+import { useMemo } from 'react';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
 import * as schema from '@/services/db/schema';
 
 import { mapVisitListRows } from '../mappers/mapVisitListRows';
+import { byNewestFirst } from '../utils/order';
 
 import type { VisitListRow } from '../mappers/mapVisitListRows';
 
@@ -35,5 +37,11 @@ export const useVisitsByRestaurant = (restaurantId: number | undefined) => {
     [restaurantId],
   );
 
-  return mapVisitListRows((rawData ?? []) as VisitListRow[]);
+  // El orden va aquí y no en un `orderBy`: la consulta trae una fila por
+  // (visita × foto) y el mapeador las pliega, así que ordenar en SQL ordenaría
+  // las filas planas y no las visitas.
+  return useMemo(
+    () => mapVisitListRows((rawData ?? []) as VisitListRow[]).sort(byNewestFirst),
+    [rawData],
+  );
 };

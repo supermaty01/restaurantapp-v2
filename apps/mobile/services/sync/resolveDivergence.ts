@@ -152,27 +152,67 @@ export async function applyDivergenceChoice(
 /** Marca que esta cuenta ya eligió en este dispositivo, para no volver a preguntar. */
 const ASKED_KEY = 'sync_divergence_asked_for';
 
-export async function rememberChoiceMade(db: AppDatabase, accountUuid: string): Promise<void> {
+/**
+ * Marca que este dispositivo ya sincronizó con esta cuenta alguna vez.
+ *
+ * Es lo que convierte la pregunta en lo que decía ser —«dos diarios que se
+ * encuentran por primera vez»—. Después de una pasada completa ya no hay dos
+ * diarios, hay uno, y volver a preguntar quién manda solo puede terminar mal.
+ */
+const LINKED_KEY = 'sync_linked_account';
+
+async function remember(db: AppDatabase, key: string, accountUuid: string): Promise<void> {
   const updatedAt = new Date().toISOString();
   await db
     .insert(schema.appSettings)
-    .values({ key: ASKED_KEY, value: accountUuid, updatedAt })
+    .values({ key, value: accountUuid, updatedAt })
     .onConflictDoUpdate({
       target: schema.appSettings.key,
       set: { value: accountUuid, updatedAt },
     });
 }
 
+export async function rememberChoiceMade(db: AppDatabase, accountUuid: string): Promise<void> {
+  await remember(db, ASKED_KEY, accountUuid);
+}
+
+/**
+ * Lo llama el gestor de sync tras cada pasada de filas que termina bien.
+ *
+ * Comprueba antes de escribir porque se llama en **cada** pasada, y una
+ * escritura por sincronización sobre `app_settings` es un cambio que despierta a
+ * `addDatabaseChangeListener` y, con él, a media pantalla.
+ */
+export async function rememberAccountLinked(db: AppDatabase, accountUuid: string): Promise<void> {
+  if (await readMarker(db, LINKED_KEY, accountUuid)) return;
+  await remember(db, LINKED_KEY, accountUuid);
+}
+
 /**
  * ¿Hay que preguntar?
  *
- * Solo cuando hay entradas **a los dos lados** y nadie ha elegido todavía en
- * este dispositivo para esta cuenta. Los otros casos no son ambiguos y
+ * Solo la **primera vez** que este dispositivo y esta cuenta se encuentran, y
+ * solo si hay entradas a los dos lados. Los otros casos no son ambiguos y
  * preguntarlos sería peor que no hacerlo: un móvil vacío que entra en una cuenta
  * con diario solo puede querer restaurar, y un móvil con diario que entra en una
  * cuenta vacía solo puede querer subirlo. Una pregunta cuya respuesta es obvia
  * enseña a contestar sin leer, y esta es la única pantalla de la app capaz de
  * borrar un diario entero.
+ *
+ * ## Por qué «la primera vez» no se puede leer de la bandeja de salida
+ *
+ * Antes la señal era «hay cambios sin subir», tomada como sustituto de «este
+ * móvil ya escribía antes de conocer esta cuenta». No lo es: la bandeja tiene
+ * algo **cada vez que se escribe una entrada y todavía no ha corrido el sync**.
+ * Basta con guardar una comida y cerrar la app —o que la pasada fallara por
+ * falta de red— para que el siguiente arranque le anunciara «hay dos diarios» a
+ * alguien que solo ha usado la app en un teléfono. Y como la otra marca solo se
+ * escribía al *elegir*, cerrar la pantalla sin contestar hacía que volviera a
+ * salir en cada arranque.
+ *
+ * La pregunta correcta es si este dispositivo ha llegado a sincronizar alguna
+ * vez con esta cuenta, y eso lo responde una marca propia que pone el sync al
+ * terminar bien (`rememberAccountLinked`).
  */
 export async function needsDivergenceChoice(
   db: AppDatabase,
@@ -180,6 +220,7 @@ export async function needsDivergenceChoice(
   accountUuid: string,
 ): Promise<boolean> {
   if (await choiceAlreadyMade(db, accountUuid)) return false;
+  if (await readMarker(db, LINKED_KEY, accountUuid)) return false;
 
   const local = await db
     .select({ n: sql<number>`count(*)` })
@@ -187,23 +228,19 @@ export async function needsDivergenceChoice(
     .where(eq(schema.restaurants.deleted, false));
   if (Number(local[0]?.n ?? 0) === 0) return false;
 
-  // Solo se pregunta a un dispositivo que ya tenía algo escrito *antes* de esta
-  // cuenta. Si todo lo que tiene llegó por sync, no hay dos diarios: hay uno.
-  const unsynced = await db
-    .select({ n: sql<number>`count(*)` })
-    .from(schema.changeLog)
-    .where(eq(schema.changeLog.synced, false));
-  if (Number(unsynced[0]?.n ?? 0) === 0) return false;
-
   const cloud = await transport.counts();
   return Object.values(cloud).some((n) => n > 0);
 }
 
 export async function choiceAlreadyMade(db: AppDatabase, accountUuid: string): Promise<boolean> {
+  return readMarker(db, ASKED_KEY, accountUuid);
+}
+
+async function readMarker(db: AppDatabase, key: string, accountUuid: string): Promise<boolean> {
   const rows = await db
     .select({ value: schema.appSettings.value })
     .from(schema.appSettings)
-    .where(eq(schema.appSettings.key, ASKED_KEY))
+    .where(eq(schema.appSettings.key, key))
     .limit(1);
   return rows[0]?.value === accountUuid;
 }

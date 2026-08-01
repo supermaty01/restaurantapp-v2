@@ -83,6 +83,19 @@ export const shareableRestaurantSchema = z.object({
 export const shareableDishSchema = z.object({
   name: shortText,
   price: optionalNumber,
+  /**
+   * En qué moneda está el precio.
+   *
+   * Opcional para poder **leer** los ficheros que ya existen, que no la traen:
+   * un `.restoshare` escrito antes de 0013 lleva un número sin unidad, y ahí la
+   * app que lo importa aplica la misma regla que la migración (por debajo de
+   * mil, euros). Lo que se escribe a partir de ahora sí la lleva.
+   *
+   * `shortText` y no una lista cerrada: este fichero viene de fuera y la lista
+   * de monedas de la app puede crecer. Un código que no se reconozca cae a la
+   * regla de siempre en vez de rechazar el fichero entero.
+   */
+  currency: shortText.nullish().transform((value) => value ?? null),
   rating: rating.nullish().transform((value) => value ?? null),
   comments: optionalText,
   tags: z.array(shareableTagSchema).max(MAX_TAGS).default([]),

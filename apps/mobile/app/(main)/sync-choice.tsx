@@ -21,6 +21,7 @@ import {
   type Divergence,
 } from '@/services/sync/resolveDivergence';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
+import { setAwaitingDivergenceChoice } from '@/services/sync/syncStore';
 
 /**
  * Quién manda, cuando el móvil y la nube traen diarios distintos.
@@ -98,6 +99,10 @@ export default function SyncChoiceScreen() {
 
       await applyDivergenceChoice(db, createSupabaseTransport(accountUuid), choice);
       await rememberChoiceMade(db, accountUuid);
+      // El sync está bloqueado hasta que se conteste, justo para que ninguna
+      // pasada de fondo combine mientras esta pantalla estaba abierta. Ya está
+      // contestada.
+      setAwaitingDivergenceChoice(false);
       await syncNow();
       router.back();
     } catch (error) {

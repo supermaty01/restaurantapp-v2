@@ -8,16 +8,19 @@ import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
+import { PriceField } from '@/features/dishes/components/PriceField';
+import { dishCurrency } from '@/features/dishes/currency';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import { updateDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
-import { dishSchema } from '@/features/dishes/schemas/dish-schema';
+import { dishSchema, dishWriteValues } from '@/features/dishes/schemas/dish-schema';
 import type { ImageItem } from '@/features/images/components/ImagesUploader';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VisibilityControl } from '@/features/privacy/VisibilityControl';
 import { setVisibility } from '@/features/privacy/visibilityRepository';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
+import { useCurrency } from '@/features/settings/useCurrency';
 import { TagField } from '@/features/tags/components/TagField';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -34,17 +37,26 @@ export default function DishEditScreen() {
   const { id } = useGlobalSearchParams<{ id: string }>();
   const { colors } = useTheme();
 
+  /*
+   * Solo para un plato **sin** moneda todavia: los que llegaron por sync desde
+   * un movil con la version anterior, o los que nunca tuvieron precio. Un plato
+   * que ya la tiene no la cambia por abrir el formulario en otro pais.
+   */
+  const { currency: startingCurrency } = useCurrency();
+
   const {
     control,
     handleSubmit,
     setValue,
     reset,
+    watch,
     formState: { errors },
   } = useForm<DishFormData>({
     resolver: zodResolver(dishSchema),
     defaultValues: {
       name: '',
       comments: '',
+      currency: startingCurrency,
     },
   });
 
@@ -65,11 +77,15 @@ export default function DishEditScreen() {
         comments: dish.comments || '',
         rating: dish.rating !== null ? dish.rating : undefined,
         price: dish.price !== null ? dish.price : undefined,
+        // `dishCurrency` deduce la de un precio antiguo sin moneda, con la misma
+        // regla que la migracion 0013. Abrir el formulario no puede ser lo que
+        // reinterprete un precio.
+        currency: dishCurrency(dish.price, dish.currency) ?? startingCurrency,
       });
       setSelectedTags(dish.tags);
       setSelectedImages(dish.images);
     }
-  }, [dish, reset]);
+  }, [dish, reset, startingCurrency]);
 
   const onSubmit: SubmitHandler<DishFormData> = async (data) => {
     setLoading(true);
@@ -78,7 +94,7 @@ export default function DishEditScreen() {
         name: data.name.trim(),
         restaurantId: data.restaurantId,
         comments: data.comments?.trim() || '',
-        price: data.price || null,
+        ...dishWriteValues(data),
         rating: data.rating || null,
       };
 
@@ -139,12 +155,11 @@ export default function DishEditScreen() {
       </FormSection>
 
       <FormSection title="Detalles" hint="Opcional">
-        <FormInput
+        <PriceField
           control={control}
-          name="price"
-          label="Precio"
-          placeholder="0"
-          keyboardType="numeric"
+          priceName="price"
+          currency={watch('currency')}
+          onCurrencyChange={(next) => setValue('currency', next)}
         />
         <FormInput
           control={control}

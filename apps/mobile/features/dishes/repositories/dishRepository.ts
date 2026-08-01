@@ -10,6 +10,15 @@ export interface DishWriteInput {
   visibility?: Visibility;
   name: string;
   price: number | null;
+  /**
+   * En qué moneda está el precio.
+   *
+   * Van juntos y no por separado: un precio sin moneda es un número sin unidad
+   * —lo que había, pintado siempre en pesos— y una moneda sin precio no dice
+   * nada. Quien llama es responsable de mandarlos coherentes; `dish-schema.ts`
+   * es lo que lo garantiza en los dos formularios.
+   */
+  currency: string | null;
   rating: number | null;
   comments: string | null;
   restaurantId: number;

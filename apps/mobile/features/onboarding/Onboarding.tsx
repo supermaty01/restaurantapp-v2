@@ -32,5 +32,16 @@ export function Onboarding({ onDone }: { onDone: (options: { account: boolean })
     );
   }
 
-  return <PermissionsScreen onDone={() => onDone({ account })} />;
+  return (
+    <PermissionsScreen
+      onDone={() => onDone({ account })}
+      // Volver tiene que **deshacer también la elección**, no solo cambiar de
+      // pantalla: si no, quien pulsó «ya tengo cuenta» sin querer, volviera o
+      // no, acababa igual en la pantalla de cuenta.
+      onBack={() => {
+        setAccount(false);
+        setStep('welcome');
+      }}
+    />
+  );
 }

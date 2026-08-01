@@ -65,6 +65,18 @@ export default function HomeScreen() {
     session?.user.email?.split('@')[0] ??
     null;
 
+  /*
+   * Con sesión pero sin perfil todavía, el avatar no enseña nada.
+   *
+   * Es el último paso del desfile que se veía al arrancar: hueco → iniciales del
+   * correo → foto. Los dos primeros ya no ocurren casi nunca —el perfil se
+   * guarda entre arranques, ver `myProfile.ts`— pero la primera vez tras entrar
+   * no hay copia que leer, y ahí es mejor un hueco liso que unas iniciales que
+   * van a cambiar. El saludo sí usa el nombre de la sesión: un nombre
+   * aproximado se lee bien, dos caras distintas no.
+   */
+  const resolvingAvatar = Boolean(session) && !profile;
+
   return (
     <Screen scroll tabBar contentClassName="pt-3">
       <FadeInUp index={0}>
@@ -85,7 +97,12 @@ export default function HomeScreen() {
             accessibilityLabel="Tu perfil"
             onPress={() => router.push('/(main)/(tabs)/profile')}
           >
-            <Avatar name={displayName ?? 'Tú'} uri={profile?.avatarUrl ?? null} size={38} />
+            <Avatar
+              name={displayName ?? 'Tú'}
+              uri={profile?.avatarUrl ?? null}
+              pending={resolvingAvatar}
+              size={38}
+            />
           </Pressable>
         </View>
       </FadeInUp>
