@@ -40,14 +40,37 @@ Contrato del Worker:
 - `POST /ai/chat` — streaming, reenvía al modelo instruct con function calling del catálogo, con las tools que envía el cliente.
 - `POST /ai/embed` — embeddings por lotes (modelo multilingüe del catálogo) para indexación local y pgvector.
 - `POST /ai/transcribe` — audio → texto (Whisper) como fallback del STT nativo.
-- **Cuotas en dos capas:** rate limiting del AI Gateway en el borde + presupuesto por usuario en `ai_usage` (Supabase) con hard-stop y mensaje claro. Caché del Gateway para que las repeticiones no consuman nada.
+- **Cuotas en tres capas.** Dos estaban planeadas y una es de julio de 2026:
+  1. **Topes en el propio Worker** (`MAX_MESSAGES`, `MAX_CHARS`, `MAX_TEXTS`,
+     `MAX_AUDIO_BYTES`) y validación de la forma de cada mensaje. Esta capa se
+     añadió porque las otras dos no estaban: `AI_GATEWAY` viene **vacío** en
+     `wrangler.toml`, así que el rate limiting del gateway era opcional y venía
+     apagado, y `Array.isArray(messages)` dejaba pasar cualquier contenido.
+     Estos topes no sustituyen al gateway; hacen que su ausencia signifique «sin
+     caché ni métricas» en vez de «ilimitado».
+  2. Rate limiting y caché del AI Gateway en el borde, cuando se configure.
+  3. Presupuesto por usuario en `ai_usage` (Supabase) con hard-stop. **Pendiente.**
 - Objetivo de factura: **$0**, dentro del free tier de neuronas.
 
 ## 3. Imágenes (R2)
 
-- `POST /images/upload-url` → URL firmada de subida a R2 (`{user_id}/{image_id}.jpg`). La app comprime antes de subir.
-- Lectura: URLs firmadas de corta duración, o público-cacheado solo para imágenes referenciadas por share links.
-- Cron: garbage collection de objetos huérfanos (sin fila `images` viva).
+- `PUT /images/:id` — el cuerpo son los bytes; el Worker antepone el uuid de la
+  cuenta a la clave (`{user_id}/{image_id}`). No hay URL firmada: los bindings de
+  R2 no las emiten, así que la subida pasa por el Worker.
+  - **El tipo lo deciden los bytes, no la cabecera.** Solo jpeg, png, webp y
+    heic, comprobados por firma, con tope de 15 MB. Antes se guardaba el
+    `content-type` que mandara quien subía, y como la lectura es pública eso
+    permitía servir `text/html` desde el mismo origen que las
+    previsualizaciones de `/s/:id`, cacheado un año por el `immutable`.
+- `GET /images/:userId/:id` — **público a propósito**: el segmento del dueño es
+  la capacidad, y es lo que hace que la previsualización de un enlace compartido
+  pueda enseñar la foto sin sesión. Sale con `nosniff`, una CSP de sandbox, y
+  como descarga si el objeto guardado lleva un tipo que no está en la lista
+  (los que se subieron antes de que existiera la comprobación).
+- `DELETE /images/:id` — solo el dueño.
+- Cron nocturno: purga de enlaces caducados. La recogida de objetos huérfanos de
+  R2 **sigue pendiente** — hasta julio de 2026 el `scheduled` no miraba
+  `event.cron`, así que ninguna de las dos existía.
 
 ## Límites free tier a vigilar
 

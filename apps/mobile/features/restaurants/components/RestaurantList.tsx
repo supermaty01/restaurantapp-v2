@@ -1,36 +1,22 @@
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { FlatList, View, Text, useWindowDimensions } from 'react-native';
 
 import type { FilterSortOptions } from '@/components/filters/FilterSheet';
 import { FilterSheet, defaultFilterSortOptions } from '@/components/filters/FilterSheet';
-import GridPeekItem from '@/components/GridPeekItem';
 import RatingStars from '@/components/RatingStars';
 import { ListHeader } from '@/components/ui/ListHeader';
+import { PressableScale } from '@/components/ui/Motion';
+import { Photo } from '@/components/ui/Photo';
 import RestaurantItem from '@/features/restaurants/components/RestaurantItem';
 import { useRestaurantList } from '@/features/restaurants/hooks/useRestaurantList';
 import type { RestaurantListDTO } from '@/features/restaurants/types/restaurant-dto';
-import { usePeekState } from '@/lib/context/PeekContext';
 import { useListPreferences } from '@/lib/hooks/useListPreferences';
 
 const keyExtractor = (item: RestaurantListDTO) => item.id.toString();
 
-const buildPreviewData = (item: RestaurantListDTO) => {
-  return {
-    type: 'restaurant',
-    id: item.id,
-    name: item.name,
-    comments: item.comments,
-    rating: item.rating,
-    tags: item.tags || [],
-    imageUrl: item.images?.[0]?.uri,
-  } as const;
-};
-
 export function RestaurantList() {
   const router = useRouter();
-  const { isPeeking } = usePeekState();
 
   const restaurants = useRestaurantList(false);
   const prefs = useListPreferences('restaurant');
@@ -131,8 +117,7 @@ export function RestaurantList() {
 
   const renderListItem = useCallback(
     ({ item }: { item: RestaurantListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri;
-      const previewData = buildPreviewData(item);
+      const image = item.images?.[0];
 
       return (
         <RestaurantItem
@@ -140,8 +125,8 @@ export function RestaurantList() {
           comments={item.comments}
           rating={item.rating}
           tags={item.tags || []}
-          imageUrl={imageUrl}
-          previewData={previewData}
+          imageUrl={image?.uri}
+          imageRemoteKey={image?.remoteKey}
           onPress={() => navigateToRestaurant(item.id)}
         />
       );
@@ -151,18 +136,19 @@ export function RestaurantList() {
 
   const renderGridItem = useCallback(
     ({ item }: { item: RestaurantListDTO }) => {
-      const imageUrl = item.images?.[0]?.uri;
-      const previewData = buildPreviewData(item);
+      const image = item.images?.[0];
 
       return (
-        <GridPeekItem
+        <PressableScale
           style={{ flex: 1 / numColumns }}
-          previewData={previewData}
+          scaleTo={0.97}
+          className="mb-2 overflow-hidden rounded-xl bg-surface"
           onPress={() => navigateToRestaurant(item.id)}
         >
-          {imageUrl ? (
-            <Image
-              source={imageUrl}
+          {image ? (
+            <Photo
+              uri={image.uri}
+              remoteKey={image.remoteKey}
               style={{ width: '100%', height: 100 }}
               contentFit="cover"
               recyclingKey={`grid-rest-${item.id}`}
@@ -179,7 +165,7 @@ export function RestaurantList() {
               <RatingStars value={item.rating} size={12} gap={1} readOnly />
             </View>
           </View>
-        </GridPeekItem>
+        </PressableScale>
       );
     },
     [navigateToRestaurant, numColumns],
@@ -230,7 +216,6 @@ export function RestaurantList() {
         showsVerticalScrollIndicator={false}
         contentContainerClassName="pb-28"
         ListEmptyComponent={listEmptyComponent}
-        scrollEnabled={!isPeeking}
         initialNumToRender={8}
         maxToRenderPerBatch={6}
         windowSize={5}

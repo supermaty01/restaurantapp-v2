@@ -47,7 +47,17 @@ export type NotificationKind =
 export interface PendingNotification {
   id: number;
   userId: string;
-  kind: NotificationKind | string;
+  /**
+   * `string`, no `NotificationKind`, y a propósito.
+   *
+   * Estaba escrito `NotificationKind | string`, que **es** `string`: TypeScript
+   * absorbe la unión y el tipo no dice nada de lo que quería decir. La intención
+   * era documentar que la lista es abierta —la migración se aplica antes que el
+   * despliegue, así que hay una ventana real en la que la base emite clases que
+   * este Worker no conoce—, y eso es lo que dice este comentario. Quien
+   * discrimina es el `switch` de `bodyFor`, que tiene su rama por defecto.
+   */
+  kind: string;
   visitUuid: string | null;
   /** Quién lo provocó, para abrir su perfil cuando no hay comida que abrir. */
   actorId: string | null;
@@ -288,7 +298,7 @@ export function expoSender(): PushSender {
         throw new Error(`expo push: HTTP ${response.status}`);
       }
 
-      const payload = (await response.json()) as { data?: ExpoPushTicket[] };
+      const payload = await response.json<{ data?: ExpoPushTicket[] }>();
       return payload.data ?? [];
     },
   };
@@ -328,11 +338,13 @@ export function createSupabasePushStore(env: Env): PushStore {
     );
     if (!response.ok) return new Map();
 
-    const rows = (await response.json()) as {
-      user_id: string;
-      username: string | null;
-      display_name: string | null;
-    }[];
+    const rows = await response.json<
+      {
+        user_id: string;
+        username: string | null;
+        display_name: string | null;
+      }[]
+    >();
 
     const names = new Map<string, string>();
     for (const row of rows) {
@@ -360,10 +372,12 @@ export function createSupabasePushStore(env: Env): PushStore {
     );
     if (!response.ok) return new Map();
 
-    const rows = (await response.json()) as {
-      uuid: string;
-      restaurant: { name: string } | null;
-    }[];
+    const rows = await response.json<
+      {
+        uuid: string;
+        restaurant: { name: string } | null;
+      }[]
+    >();
 
     const titles = new Map<string, string>();
     for (const row of rows) {
@@ -384,13 +398,15 @@ export function createSupabasePushStore(env: Env): PushStore {
       const response = await fetch(url, { headers });
       if (!response.ok) throw new Error(`push pending: HTTP ${response.status}`);
 
-      const rows = (await response.json()) as {
-        id: number;
-        user_id: string;
-        kind: string;
-        visit_uuid: string | null;
-        actor_id: string | null;
-      }[];
+      const rows = await response.json<
+        {
+          id: number;
+          user_id: string;
+          kind: string;
+          visit_uuid: string | null;
+          actor_id: string | null;
+        }[]
+      >();
 
       // En paralelo: son dos búsquedas por clave sobre como mucho doscientas
       // filas, y encadenarlas solo suma latencia.
@@ -421,7 +437,7 @@ export function createSupabasePushStore(env: Env): PushStore {
       );
       if (!response.ok) throw new Error(`push tokens: HTTP ${response.status}`);
 
-      const rows = (await response.json()) as { user_id: string; token: string }[];
+      const rows = await response.json<{ user_id: string; token: string }[]>();
       return rows.map((row) => ({ userId: row.user_id, token: row.token }));
     },
 

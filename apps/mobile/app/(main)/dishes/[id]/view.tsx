@@ -18,17 +18,13 @@ import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VisibilityControl } from '@/features/privacy/VisibilityControl';
 import { setVisibility } from '@/features/privacy/visibilityRepository';
+import { formatPrice } from '@/features/settings/currency';
+import { useCurrency } from '@/features/settings/useCurrency';
 import Tag from '@/features/tags/components/Tag';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { exportDish } from '@/services/share/exportService';
-
-const priceFormat = new Intl.NumberFormat('es-CO', {
-  style: 'currency',
-  currency: 'COP',
-  minimumFractionDigits: 0,
-});
 
 export default function DishDetailScreen() {
   const sharing = useSharingAvailable();
@@ -37,6 +33,7 @@ export default function DishDetailScreen() {
   const drizzleDb = useDatabase();
   const { colors } = useTheme();
   const dish = useDishById(Number(id));
+  const { currency } = useCurrency();
   const [isSharing, setIsSharing] = useState(false);
   const { ask } = useDialog();
 
@@ -156,7 +153,7 @@ export default function DishDetailScreen() {
         {dish.price ? (
           <DetailField label="Precio">
             <Txt variant="title" tone="primary" serif>
-              {priceFormat.format(dish.price)}
+              {formatPrice(dish.price, currency)}
             </Txt>
           </DetailField>
         ) : null}

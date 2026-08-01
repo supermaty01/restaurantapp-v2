@@ -1,4 +1,6 @@
 import { runTool, toolSpecs } from '@/features/assistant/tools';
+import { chatCompletion } from '@/services/api/ai';
+import type { ChatMessage } from '@/services/api/ai';
 import type { AppDatabase } from '@/services/db/types';
 
 /**
@@ -11,28 +13,19 @@ import type { AppDatabase } from '@/services/db/types';
  * execution it drives (runTool) is covered by tools.node.test.ts.
  */
 
-export interface ChatMessage {
-  role: 'system' | 'user' | 'assistant' | 'tool';
-  content: string;
-  tool_call_id?: string;
-}
-
-interface ToolCall {
-  id: string;
-  function: { name: string; arguments: string };
-}
-
-interface ChatResponse {
-  response?: string;
-  tool_calls?: ToolCall[];
-}
+export type { ChatMessage };
 
 const MAX_TURNS = 5;
 
 export interface AgentConfig {
-  apiUrl: string;
-  token: string;
-  /** Extra context (date, location, nearby restaurants) for the system prompt. */
+  /**
+   * El prompt de sistema con el contexto de la pasada (fecha, ubicación,
+   * restaurantes cerca).
+   *
+   * `apiUrl` y `token` ya no están: los resolvía quien llamaba y se los pasaba
+   * al agente, que es pedirle a la pantalla que sepa de sesiones y de URLs del
+   * Worker. Ahora los resuelve `services/api`, que es de donde salen.
+   */
   systemPrompt: string;
 }
 
@@ -44,16 +37,9 @@ export async function runAssistant(
   const messages: ChatMessage[] = [{ role: 'system', content: config.systemPrompt }, ...history];
 
   for (let turn = 0; turn < MAX_TURNS; turn++) {
-    const res = await fetch(`${config.apiUrl}/ai/chat`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        authorization: `Bearer ${config.token}`,
-      },
-      body: JSON.stringify({ messages, tools: toolSpecs() }),
-    });
-    if (!res.ok) throw new Error(`ai/chat: ${res.status}`);
-    const data = (await res.json()) as ChatResponse;
+    // La llamada vive en services/api: aquí queda la orquestación, que es lo
+    // propio de esta feature (docs/12 — solo services habla con la red).
+    const data = await chatCompletion({ messages, tools: toolSpecs() });
 
     const toolCalls = data.tool_calls ?? [];
     if (toolCalls.length === 0) {

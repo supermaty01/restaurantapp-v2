@@ -3,14 +3,34 @@ import 'dotenv/config';
 const BUNDLE_ID = 'com.supermaty01.restaurantapp';
 
 /**
- * Android instala una actualización solo si el versionCode sube.
+ * Android instala una actualización solo si el versionCode **sube**.
  *
- * La v1.3 salió con `versionCode: 1`, y aquí no había ninguno — Expo pone 1 por
- * defecto, así que la build se habría negado a instalarse encima con un "App
- * not installed" que no explica nada. Es un número aparte de `version` a
- * propósito: el de la tienda tiene que crecer aunque la versión visible no.
+ * Aquí no había ninguno y Expo pone 1 por defecto, así que la build se negaba a
+ * instalarse encima de la v1 con un "App not installed" que no explica nada.
+ * Hasta ahí, bien. Lo que estaba mal era el número.
+ *
+ * **Este comentario decía que la v1.3 salió con `versionCode: 1`. Es falso:
+ * salió con 6.** Comprobado contra el histórico de builds del propio proyecto:
+ *
+ * ```bash
+ * eas build:list --platform android --limit 25
+ * ```
+ *
+ * v1.1.0 y v1.2.x fueron con 5 y la v1.3.0 con 6, todas en este mismo proyecto
+ * de EAS. O sea que subir a 2 no arreglaba nada: 2 sigue siendo menor que 6, y
+ * Android rechaza el downgrade con exactamente el mismo mensaje. El síntoma no
+ * cambió y por eso parecía que el arreglo no había servido — había servido para
+ * pasar de 1 a 2, que era el problema equivocado.
+ *
+ * Es un número aparte de `version` a propósito: el de la tienda tiene que
+ * crecer aunque la versión visible no. Y **solo puede subir**; lo vigila
+ * `version-code.node.test.ts`.
+ *
+ * No se usa `autoIncrement` de EAS, que sería lo ideal: con
+ * `appVersionSource: "local"` tendría que reescribir este fichero, y no sabe
+ * hacerlo en una configuración dinámica (`app.config.js`), solo en `app.json`.
  */
-const VERSION_CODE = 2;
+const VERSION_CODE = 7;
 
 /**
  * Lo que la app necesita saber en tiempo de compilación.

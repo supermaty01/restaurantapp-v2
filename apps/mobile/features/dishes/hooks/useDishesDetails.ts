@@ -26,6 +26,7 @@ export const useDishesDetails = (dishIds: number[]) => {
             tagColor: schema.tags.color,
             imageId: schema.images.id,
             imagePath: schema.images.path,
+            imageRemoteKey: schema.images.remoteKey,
           })
           .from(schema.dishes)
           .where(inArray(schema.dishes.id, dishIds))
@@ -33,7 +34,7 @@ export const useDishesDetails = (dishIds: number[]) => {
           .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
           .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId))
       : drizzleDb.select().from(schema.dishes).where(eq(schema.dishes.id, -1)), // Query vacía si no hay dishIds
-    ['dishes', 'dishTags', 'tags', 'images'],
+    [schema.dishes, schema.dishTags, schema.tags, schema.images],
     [dishIds.join(',')],
   );
 

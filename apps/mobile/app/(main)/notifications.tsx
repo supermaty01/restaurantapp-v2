@@ -12,10 +12,10 @@ import { fetchNotifications, markNotificationsRead } from '@/features/social/api
 import type { AppNotification } from '@/features/social/api';
 import { AuthorHeader } from '@/features/social/components/AuthorHeader';
 import { usePagedResource } from '@/features/social/hooks/usePagedResource';
-import { remoteImageUri } from '@/features/social/remote-image';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
+import { remoteImageUri } from '@/lib/helpers/remote-image';
 
 /**
  * Novedades.

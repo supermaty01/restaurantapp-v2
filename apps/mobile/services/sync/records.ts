@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm';
 
+import { getCurrentAccount } from '@/services/db/account-store';
 import * as schema from '@/services/db/schema';
 import type { AppDatabase } from '@/services/db/types';
+import type { IdentityMap } from '@/services/sync/identityMap';
 import type { SyncTableConfig } from '@/services/sync/tables';
 import { column, findTable } from '@/services/sync/tables';
 import type { RemoteRecord } from '@/services/sync/transport';
@@ -54,6 +56,14 @@ export async function toRemoteRecord(
   cfg: SyncTableConfig,
   local: LocalRowShape,
   accountUuid: string,
+  /**
+   * El traductor de la pasada, ya precargado.
+   *
+   * Opcional para que el motor pueda dárselo y los tests puedan no dárselo: sin
+   * él cada clave ajena vuelve a costar una consulta, que es como estaba y sigue
+   * siendo correcto, solo que lento. Ver `identityMap.ts`.
+   */
+  identity?: IdentityMap,
 ): Promise<RemoteRecord> {
   // The bookkeeping columns are as absent from imported v1 rows as any other:
   // they were added by later migrations, and importing a backup replaces the
@@ -97,8 +107,15 @@ export async function toRemoteRecord(
   for (const fk of cfg.foreignKeys) {
     const localFkId = local[fk.local] as number | null | undefined;
     const target = findTable(fk.references);
-    record[fk.remote] =
-      localFkId != null && target ? await uuidForLocalId(db, target, localFkId) : null;
+
+    if (localFkId == null || !target) {
+      record[fk.remote] = null;
+      continue;
+    }
+
+    record[fk.remote] = identity
+      ? identity.uuidFor(target, localFkId)
+      : await uuidForLocalId(db, target, localFkId);
   }
 
   return record;
@@ -114,6 +131,8 @@ export async function applyRemoteRecord(
   db: AppDatabase,
   cfg: SyncTableConfig,
   record: RemoteRecord,
+  /** El traductor de la pasada, ya precargado. Ver `identityMap.ts`. */
+  identity?: IdentityMap,
 ): Promise<void> {
   const values: Record<string, unknown> = {
     uuid: record.uuid,
@@ -129,7 +148,15 @@ export async function applyRemoteRecord(
   for (const fk of cfg.foreignKeys) {
     const remoteUuid = record[fk.remote] as string | null | undefined;
     const target = findTable(fk.references);
-    values[fk.local] = remoteUuid && target ? await localIdForUuid(db, target, remoteUuid) : null;
+
+    if (!remoteUuid || !target) {
+      values[fk.local] = null;
+      continue;
+    }
+
+    values[fk.local] = identity
+      ? identity.idFor(target, remoteUuid)
+      : await localIdForUuid(db, target, remoteUuid);
   }
 
   const existing = await db
@@ -145,7 +172,16 @@ export async function applyRemoteRecord(
       .insert(cfg.table)
       // Solo al insertar: lo que es de este dispositivo y no viaja por la red.
       // Ver `localDefaults` en tables.ts.
-      .values({ ...values, ...(cfg.localDefaults?.({ uuid: record.uuid }) ?? {}) })
+      //
+      // `accountUuid` es de esa clase: lo que baja del servidor es, por
+      // definición, de la cuenta que ha hecho el pull — RLS no deja bajar otra
+      // cosa. No viene en el registro remoto y no debería: quién es el dueño lo
+      // decide el servidor, no un campo que manda un cliente.
+      .values({
+        ...values,
+        accountUuid: getCurrentAccount(),
+        ...(cfg.localDefaults?.({ uuid: record.uuid }) ?? {}),
+      })
       .returning({ id: column(cfg.table, 'id') })) as { id: number }[];
 
     // Mark it as already-synced in the outbox.
@@ -159,6 +195,14 @@ export async function applyRemoteRecord(
     // row's provenance visible without pushing anything.
     const id = inserted[0]?.id;
     if (id !== undefined) {
+      // El traductor tiene que enterarse de la fila que acaba de nacer. Las
+      // tablas se recorren en orden de dependencia, así que hoy el padre ya está
+      // escrito cuando llega el hijo y una consulta lo encontraría igual — pero
+      // una caché que solo es correcta mientras nadie cambie ese orden es una
+      // trampa esperando, y lo que produce al fallar no es un error: es una
+      // clave ajena apuntando a otro sitio, en disco y en silencio.
+      identity?.remember(cfg, id, record.uuid);
+
       await db.insert(schema.changeLog).values({
         tableName: cfg.name,
         rowId: id,

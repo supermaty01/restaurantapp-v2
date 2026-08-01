@@ -42,14 +42,18 @@ export function PressableScale({
   className?: string;
   style?: ViewStyle | ViewStyle[];
   accessibilityLabel?: string;
-  accessibilityRole?: 'button' | 'link' | 'none';
+  accessibilityRole?: 'button' | 'link' | 'none' | 'checkbox';
   /**
    * For a control that is one of a set, like a segmented tab.
    *
    * Without `selected`, a screen reader reads every option in a segmented
    * control identically and the person has no way to tell which one is on.
+   *
+   * `checked` es lo mismo para lo que se enciende y se apaga por su cuenta —una
+   * etiqueta en un filtro, por ejemplo—, que es `checkbox` y no `radio`: elegir
+   * una no descarta las demás.
    */
-  accessibilityState?: { selected?: boolean; disabled?: boolean } | undefined;
+  accessibilityState?: { selected?: boolean; checked?: boolean; disabled?: boolean } | undefined;
 }) {
   const pressed = useSharedValue(0);
 

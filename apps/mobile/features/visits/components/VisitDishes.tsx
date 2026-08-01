@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 
+import { Photo } from '@/components/ui/Photo';
 import { useDishesDetails } from '@/features/dishes/hooks/useDishesDetails';
 import type { VisitDetailsDTO } from '@/features/visits/types/visit-dto';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -28,7 +28,7 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
         keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => {
           // Toma la primera imagen del array si existe
-          const imageUrl = item.images?.[0]?.uri ?? null;
+          const image = item.images?.[0];
           return (
             <TouchableOpacity
               className="flex-row items-center py-3 border-b border-line"
@@ -37,9 +37,10 @@ export default function VisitDishes({ visit }: VisitDishesProps) {
               }
               style={{ opacity: item.deleted ? 0.7 : 1 }}
             >
-              {imageUrl ? (
-                <Image
-                  source={imageUrl}
+              {image ? (
+                <Photo
+                  uri={image.uri}
+                  remoteKey={image.remoteKey}
                   style={{ width: 56, height: 56, borderRadius: 4, marginRight: 12 }}
                   contentFit="cover"
                   cachePolicy="memory-disk"

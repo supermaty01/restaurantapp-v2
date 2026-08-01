@@ -12,18 +12,35 @@ restaurant-app-v2/
 │   ├── mobile/      # App Expo / React Native (SQLite local, Drizzle, NativeWind)
 │   └── api/         # Cloudflare Worker (Hono): share links, proxy IA, imágenes R2
 ├── packages/
-│   └── shared/      # Schemas zod y tipos compartidos entre mobile y api
-├── supabase/        # Migraciones SQL, políticas RLS, seeds
+│   └── shared/      # Lo que comparten app y Worker: el esquema del .restoshare
+├── supabase/        # Migraciones SQL, políticas RLS, tests contra Postgres
 └── docs/            # Documentación de diseño y plan de trabajo ← empezar por aquí
 ```
 
+Los proyectos nativos (`android/`, `ios/`) **no están en el repo**: los genera
+EAS desde `apps/mobile/app.config.js`, que es la única fuente de verdad de la
+configuración nativa.
+
 ## Documentación
 
-El plan completo vive en [`docs/`](docs/README.md). Documentos clave:
+El plan completo vive en [`docs/`](docs/README.md). Por dónde empezar:
 
+- [ESTADO](docs/ESTADO.md) — dónde estamos y qué sigue. **Lo primero.**
+- [AGENTS.md](AGENTS.md) — cómo se trabaja aquí: puertas de calidad, convenciones
+  y los errores que ya salieron caros una vez
 - [Visión y principios](docs/00-vision-y-principios.md)
 - [Arquitectura](docs/01-arquitectura.md)
-- [Roadmap por fases](docs/10-roadmap.md)
+
+## Puesta en marcha
+
+```bash
+npm ci
+cp apps/mobile/.env.example apps/mobile/.env   # y rellenar
+npm run mobile
+```
+
+Antes de empujar, `npm run check` (formato, lint, tipos y tests de los tres
+workspaces). El hook de pre-push ya lo hace.
 
 ## Stack
 
@@ -37,4 +54,10 @@ El plan completo vive en [`docs/`](docs/README.md). Documentos clave:
 
 ## Estado
 
-🚧 Fase de diseño. El código de la v1 vive en `C:\Universidad\Movil\restaurantapp-application` y se migrará por fases según el [roadmap](docs/10-roadmap.md).
+Implementado y funcionando: diario local, sincronización, cuentas, amigos, feed,
+etiquetado, notificaciones push y compartir por enlace. 19 migraciones aplicadas
+contra un proyecto real.
+
+Sin publicar todavía. Lo que falta y lo que se está haciendo ahora vive en
+[docs/ESTADO.md](docs/ESTADO.md), que es el documento que se actualiza al cerrar
+cada bloque de trabajo.

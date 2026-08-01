@@ -59,7 +59,7 @@ describe('share routes', () => {
       preview: { title: 'Guadalupe', type: 'restaurant' },
     });
     expect(res.status).toBe(200);
-    const json = (await res.json()) as { id: string; url: string };
+    const json = await res.json<{ id: string; url: string }>();
     expect(json.url).toBe(`https://x.app/s/${json.id}`);
     expect(store.records.size).toBe(1);
   });
@@ -113,9 +113,75 @@ describe('share routes', () => {
     const id = (created as { id: string }).id;
 
     const res = await request(store, 'GET', `/share/${id}/data`);
-    const json = (await res.json()) as { type: string; content: { name: string } };
+    const json = await res.json<{ type: string; content: { name: string } }>();
     expect(json.type).toBe('dish');
     expect(json.content.name).toBe('Chihuahua');
+  });
+});
+
+describe('revocar', () => {
+  it('no dice que sí cuando el almacén falla', async () => {
+    // El fallo original: `revoke` lanzaba el fetch, tiraba la respuesta y la
+    // ruta contestaba `{ok:true}` pasara lo que pasara. La app enseñaba «enlace
+    // revocado» mientras el enlace seguía sirviendo el contenido.
+    const store: ShareStore = {
+      create: () => Promise.resolve(),
+      get: () => Promise.resolve(null),
+      revoke: () => Promise.reject(new Error('supabase dijo que no')),
+    };
+
+    const res = await request(store, 'DELETE', '/share/loquesea');
+    expect(res.status).toBe(502);
+  });
+
+  it('confirma cuando sí se retiró', async () => {
+    const store = fakeStore();
+    store.records.set('mio', {
+      id: 'mio',
+      ownerId: 'user-1',
+      type: 'restaurant',
+      content: {},
+      preview: { id: 'mio', type: 'restaurant', title: 'x' },
+      createdAt: new Date().toISOString(),
+      expiresAt: null,
+      revoked: false,
+    });
+
+    expect((await request(store, 'DELETE', '/share/mio')).status).toBe(200);
+    expect(store.records.get('mio')?.revoked).toBe(true);
+    expect((await request(store, 'GET', '/s/mio')).status).toBe(404);
+  });
+});
+
+describe('crear', () => {
+  it('rechaza una caducidad que no es una fecha', async () => {
+    // Guardada, `isLive` la leía como `NaN` y `NaN < Date.now()` es `false`:
+    // el enlace no caducaba nunca. Justo el fallo que no se quiere.
+    const res = await request(fakeStore(), 'POST', '/share', {
+      type: 'restaurant',
+      content: { name: 'x' },
+      preview: { title: 'x', type: 'restaurant' },
+      expiresAt: 'el mes que viene',
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza un tipo inventado', async () => {
+    const res = await request(fakeStore(), 'POST', '/share', {
+      type: 'postre',
+      content: { name: 'x' },
+      preview: { title: 'x', type: 'postre' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('rechaza un contenido desmesurado', async () => {
+    const res = await request(fakeStore(), 'POST', '/share', {
+      type: 'restaurant',
+      content: { blob: 'A'.repeat(2_100_000) },
+      preview: { title: 'x', type: 'restaurant' },
+    });
+    expect(res.status).toBe(413);
   });
 });
 
@@ -134,5 +200,11 @@ describe('isLive', () => {
     expect(isLive(base)).toBe(true);
     expect(isLive({ ...base, revoked: true })).toBe(false);
     expect(isLive({ ...base, expiresAt: '2000-01-01T00:00:00Z' })).toBe(false);
+  });
+
+  it('trata una fecha ilegible como caducada, no como eterna', () => {
+    // Por si alguna fila ya guardada trae basura de antes de la validación.
+    expect(isLive({ ...base, expiresAt: 'mañana' })).toBe(false);
+    expect(isLive({ ...base, expiresAt: '' })).toBe(true); // vacío = sin caducidad
   });
 });

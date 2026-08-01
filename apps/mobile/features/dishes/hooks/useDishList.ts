@@ -25,6 +25,7 @@ export const useDishList = (includeDeleted: boolean = false) => {
       tagColor: schema.tags.color,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
     })
     .from(schema.dishes);
 
@@ -39,7 +40,7 @@ export const useDishList = (includeDeleted: boolean = false) => {
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['dishes', 'dishTags', 'tags', 'images'],
+    [schema.dishes, schema.dishTags, schema.tags, schema.images],
     [includeDeleted],
   );
 

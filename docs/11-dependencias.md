@@ -27,28 +27,29 @@ Lo que **no** se reimplementa (siguen siendo módulos oficiales de Expo, actuali
 
 ## Inventario de dependencias v1 y decisión
 
-| Dependencia                                                                                                         | Decisión v2                  | Motivo                                                                                                                         |
-| ------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| Carrusel / visor / zoom de imágenes                                                                                 | ❌ **Fuera — código propio** | Causa raíz del dolor de upgrades                                                                                               |
-| `axios`                                                                                                             | ❌ Fuera                     | `fetch` nativo basta; se va con la API legacy                                                                                  |
-| `@react-native-async-storage/async-storage`                                                                         | ❌ Fuera                     | `expo-secure-store` para tokens; el resto de settings ya vive en SQLite (`app_settings`)                                       |
-| `expo-drizzle-studio-plugin`                                                                                        | ⚠️ Solo dev                  | Útil; mantener como devDependency                                                                                              |
-| `jszip`                                                                                                             | ⚠️ Solo tests                | Se probó para backups y **no aguanta el tamaño real** (ver abajo); queda para construir archivos de prueba                     |
-| `react-native-zip-archive`                                                                                          | ✅ Vuelve (nativo)           | Zip por streaming para backups: es la única forma de manejar copias de cientos de MB. Es lo que ya usaba v1                    |
-| `date-fns`                                                                                                          | ✅ Se queda                  | Puro JS; alternativa `Intl` nativo — **abierto**, evaluar en fase 0                                                            |
-| `react-hook-form` + `zod` + `@hookform/resolvers`                                                                   | ✅ Se quedan                 | Núcleo de los formularios, puro JS, buena salud                                                                                |
-| `nativewind` + `tailwindcss`                                                                                        | ✅ Se queda                  | Base del sistema de diseño                                                                                                     |
-| `drizzle-orm`                                                                                                       | ✅ Se queda                  | Puro JS sobre `expo-sqlite`                                                                                                    |
-| `react-native-gesture-handler`, `react-native-reanimated`, `react-native-safe-area-context`, `react-native-screens` | ✅ Se quedan                 | Stack base de Expo/expo-router; se versionan con el SDK                                                                        |
-| `react-native-maps`                                                                                                 | ✅ Se queda                  | Sin alternativa razonable; módulo con soporte de Expo                                                                          |
-| `@react-navigation/*`                                                                                               | ⚠️ Solo transitivas          | Desde SDK 56 expo-router prohíbe usar react-navigation directamente; no se importa desde el código                             |
-| `react-native-pager-view`, `react-native-tab-view`                                                                  | ❌ Fuera                     | Salieron con `material-top-tabs` al migrar a expo-router + `SegmentedTabs` propio                                              |
-| Módulos `expo-*` (location, haptics, blur, constants, linking, splash…)                                             | ✅ Se quedan                 | Versionados por el SDK, `expo install` los alinea                                                                              |
-| `@supabase/supabase-js`                                                                                             | ➕ Nuevo (fase 2)            | Auth + sync                                                                                                                    |
-| `expo-secure-store`                                                                                                 | ➕ Nuevo (fase 2)            | Tokens                                                                                                                         |
-| `expo-background-task`                                                                                              | ➕ Nuevo (fase 3)            | Sync periódico                                                                                                                 |
-| `expo-speech-recognition`                                                                                           | ➕ Nuevo (fase 7)            | STT nativo; **abierto**: verificar salud y compatibilidad con el SDK antes de adoptar (si es frágil → solo Whisper vía Worker) |
-| `hono`                                                                                                              | ➕ Nuevo (fase 4)            | Worker                                                                                                                         |
+| Dependencia                                                                                                         | Decisión v2                  | Motivo                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Carrusel / visor / zoom de imágenes                                                                                 | ❌ **Fuera — código propio** | Causa raíz del dolor de upgrades                                                                                                |
+| `axios`                                                                                                             | ❌ Fuera                     | `fetch` nativo basta; se va con la API legacy                                                                                   |
+| `@react-native-async-storage/async-storage`                                                                         | ❌ Fuera                     | `expo-secure-store` para tokens; el resto de settings ya vive en SQLite (`app_settings`)                                        |
+| `expo-drizzle-studio-plugin`                                                                                        | ⚠️ Solo dev                  | Útil; mantener como devDependency                                                                                               |
+| `jszip`                                                                                                             | ⚠️ Solo tests                | Se probó para backups y **no aguanta el tamaño real** (ver abajo); queda para construir archivos de prueba                      |
+| `react-native-zip-archive`                                                                                          | ✅ Vuelve (nativo)           | Zip por streaming para backups: es la única forma de manejar copias de cientos de MB. Es lo que ya usaba v1                     |
+| `date-fns`                                                                                                          | ✅ Se queda                  | Puro JS; alternativa `Intl` nativo — **abierto**, evaluar en fase 0                                                             |
+| `react-hook-form` + `zod` + `@hookform/resolvers`                                                                   | ✅ Se quedan                 | Núcleo de los formularios, puro JS, buena salud                                                                                 |
+| `nativewind` + `tailwindcss`                                                                                        | ✅ Se queda                  | Base del sistema de diseño                                                                                                      |
+| `drizzle-orm`                                                                                                       | ✅ Se queda                  | Puro JS sobre `expo-sqlite`                                                                                                     |
+| `react-native-gesture-handler`, `react-native-reanimated`, `react-native-safe-area-context`, `react-native-screens` | ✅ Se quedan                 | Stack base de Expo/expo-router; se versionan con el SDK                                                                         |
+| `react-native-maps`                                                                                                 | ✅ Se queda                  | Sin alternativa razonable; módulo con soporte de Expo                                                                           |
+| `react-native-keyboard-controller`                                                                                  | ➕ Nuevo (ronda 7)           | El `KeyboardAvoidingView` del core no funciona en Android edge-to-edge (ver abajo). Va en los `bundledNativeModules` del SDK 57 |
+| `@react-navigation/*`                                                                                               | ⚠️ Solo transitivas          | Desde SDK 56 expo-router prohíbe usar react-navigation directamente; no se importa desde el código                              |
+| `react-native-pager-view`, `react-native-tab-view`                                                                  | ❌ Fuera                     | Salieron con `material-top-tabs` al migrar a expo-router + `SegmentedTabs` propio                                               |
+| Módulos `expo-*` (location, haptics, blur, constants, linking, splash…)                                             | ✅ Se quedan                 | Versionados por el SDK, `expo install` los alinea                                                                               |
+| `@supabase/supabase-js`                                                                                             | ➕ Nuevo (fase 2)            | Auth + sync                                                                                                                     |
+| `expo-secure-store`                                                                                                 | ➕ Nuevo (fase 2)            | Tokens                                                                                                                          |
+| `expo-background-task`                                                                                              | ➕ Nuevo (fase 3)            | Sync periódico                                                                                                                  |
+| `expo-speech-recognition`                                                                                           | ➕ Nuevo (fase 7)            | STT nativo; **abierto**: verificar salud y compatibilidad con el SDK antes de adoptar (si es frágil → solo Whisper vía Worker)  |
+| `hono`                                                                                                              | ➕ Nuevo (fase 4)            | Worker                                                                                                                          |
 
 ## Excepción razonada: el zip de los backups
 
@@ -77,6 +78,32 @@ un zip con streaming en JS no es viable. Coste asumido: hay que vigilarla en
 cada subida de SDK, y **ya no se puede probar el zip en node**; los tests fijan
 el _layout_ del archivo, que es el contrato de compatibilidad con v1.
 
+## Segunda excepción: el teclado en Android
+
+`react-native-keyboard-controller` es la otra dependencia nativa que entra, y
+por el mismo tipo de motivo: **la alternativa del core no funciona**, no es que
+sea menos cómoda.
+
+El `KeyboardAvoidingView` de React Native, en Android, no esquiva nada. Sin
+`behavior` pinta un `View` normal y delega en que la ventana se encoja con
+`adjustResize`. Eso valía antes de edge-to-edge; desde el SDK 57 edge-to-edge
+es obligatorio (`edgeToEdgeEnabled` desapareció de la configuración de Expo),
+la ventana ocupa la pantalla entera y **el teclado llega como un inset**. Con
+`behavior="padding"` tampoco sirve: la altura la calcula desde el `screenY` que
+el core deriva de `getWindowVisibleDisplayFrame`, que en edge-to-edge tampoco se
+mueve.
+
+Se descartó `useAnimatedKeyboard` de `react-native-reanimated`, que sí lee los
+insets de la IME y **ya estaba instalado**: está deprecado desde la 4.5 y su
+propio aviso remite a esta librería. Construir encima habría sido deuda desde el
+primer día.
+
+Coste asumido: es un módulo nativo, así que un cambio aquí no se prueba
+recargando JavaScript — hace falta APK. A cambio va en los
+`bundledNativeModules` de Expo SDK 57 (1.21.9), es decir que la versión la fija
+el SDK y `expo install --fix` la mantiene alineada, igual que reanimated o
+gesture-handler.
+
 ## Procedimiento de upgrade de SDK (fase 0 y en adelante)
 
 1. `npx expo install --fix` como base; **nunca** subir versiones de módulos nativos a mano fuera de lo que dicta el SDK.
@@ -89,7 +116,6 @@ el _layout_ del archivo, que es el contrato de compatibilidad con v1.
 
 - Actualizar SDK **cada release** (saltarse SDKs es lo que convierte el upgrade en un proyecto).
 - Antes de añadir una dependencia nativa: ¿está en el ecosistema Expo? ¿tiene commits recientes? ¿qué pasa si muere? Si la respuesta a la última es "reescribirla es un fin de semana" → escribirla ya.
-
 
 ## Los binarios de lightningcss en el lock
 

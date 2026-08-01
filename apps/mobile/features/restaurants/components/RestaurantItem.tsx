@@ -1,9 +1,8 @@
 import React from 'react';
 import { Text, View } from 'react-native';
 
-import type { PeekPreviewData } from '@/components/peek/types';
-import PeekablePressable from '@/components/PeekablePressable';
 import RatingStars from '@/components/RatingStars';
+import { PressableScale } from '@/components/ui/Motion';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import Tag from '@/features/tags/components/Tag';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
@@ -15,7 +14,8 @@ interface RestaurantItemProps {
   tags: TagDTO[];
   rating: number | null;
   imageUrl?: string | undefined;
-  previewData: PeekPreviewData;
+  /** Clave en R2 de esa foto: la reserva si el fichero local no está. */
+  imageRemoteKey?: string | null | undefined;
   onPress?: (() => void) | undefined;
 }
 
@@ -28,18 +28,17 @@ interface RestaurantItemProps {
  * is better said with space than with a line of italic apology.
  */
 const RestaurantItem = React.memo<RestaurantItemProps>(
-  ({ name, comments, tags, rating, imageUrl, previewData, onPress }) => {
+  ({ name, comments, tags, rating, imageUrl, imageRemoteKey, onPress }) => {
     const uri = imageUrl ? imagePathToUri(imageUrl) : undefined;
 
     return (
-      <PeekablePressable
-        previewData={previewData}
+      <PressableScale
         onPress={onPress}
-        scaleValue={1.02}
+        scaleTo={0.98}
         className="mb-3 rounded-xl border border-line bg-surface p-2.5"
       >
         <View className="flex-row gap-3">
-          <Thumbnail name={name} uri={uri} size={66} icon="restaurant" />
+          <Thumbnail name={name} uri={uri} remoteKey={imageRemoteKey} size={66} icon="restaurant" />
 
           <View className="min-w-0 flex-1 justify-center">
             <Text className="font-bold text-[15px] text-ink" numberOfLines={1}>
@@ -68,7 +67,7 @@ const RestaurantItem = React.memo<RestaurantItemProps>(
             ))}
           </View>
         ) : null}
-      </PeekablePressable>
+      </PressableScale>
     );
   },
 );

@@ -11,6 +11,7 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { useHomeSummary } from '@/features/home/hooks/useHomeSummary';
 import type { RecentEntry } from '@/features/home/hooks/useHomeSummary';
+import { useMyProfile } from '@/features/social/context/MyProfileContext';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
@@ -43,10 +44,23 @@ export default function HomeScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuth();
+  const { profile } = useMyProfile();
   const { restaurants, dishes, visits, recent } = useHomeSummary();
 
   const hour = new Date().getHours();
+
+  /*
+   * El perfil manda sobre la sesión.
+   *
+   * La sesión trae lo que dijo el proveedor de identidad al entrar —o nada, si
+   * fue por correo—; el perfil es lo que la persona ha escrito en la app y lo
+   * que ve todo el mundo. Cuando no hay perfil todavía (sin cuenta, o la
+   * primera carga), se cae a la sesión antes que a «Tú», que al menos acierta
+   * las iniciales.
+   */
   const displayName =
+    profile?.displayName ??
+    profile?.username ??
     (session?.user.user_metadata?.['full_name'] as string | undefined) ??
     session?.user.email?.split('@')[0] ??
     null;
@@ -71,7 +85,7 @@ export default function HomeScreen() {
             accessibilityLabel="Tu perfil"
             onPress={() => router.push('/(main)/(tabs)/profile')}
           >
-            <Avatar name={displayName ?? 'Tú'} size={38} />
+            <Avatar name={displayName ?? 'Tú'} uri={profile?.avatarUrl ?? null} size={38} />
           </Pressable>
         </View>
       </FadeInUp>
@@ -245,7 +259,13 @@ function RecentEntryCard({ entry, onPress }: { entry: RecentEntry; onPress: () =
 
   return (
     <Card onPress={onPress} className="flex-row items-center gap-3.5">
-      <Thumbnail name={entry.title} uri={uri} size={64} icon={ICON_FOR[entry.kind]} />
+      <Thumbnail
+        name={entry.title}
+        uri={uri}
+        remoteKey={entry.imageRemoteKey}
+        size={64}
+        icon={ICON_FOR[entry.kind]}
+      />
       <View className="min-w-0 flex-1">
         <Txt variant="heading" weight="bold" serif={false} numberOfLines={1}>
           {entry.title}

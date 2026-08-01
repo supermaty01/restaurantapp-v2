@@ -25,6 +25,7 @@ interface Hit {
   title: string;
   subtitle: string | null;
   imageUri: string | null;
+  imageRemoteKey: string | null;
 }
 
 /**
@@ -63,6 +64,7 @@ export default function SearchScreen() {
         title: r.name,
         subtitle: r.comments,
         imageUri: r.images?.[0]?.uri ?? null,
+        imageRemoteKey: r.images?.[0]?.remoteKey ?? null,
       }));
 
     const plates: Hit[] = dishes
@@ -74,6 +76,7 @@ export default function SearchScreen() {
         title: d.name,
         subtitle: d.comments,
         imageUri: d.images?.[0]?.uri ?? null,
+        imageRemoteKey: d.images?.[0]?.remoteKey ?? null,
       }));
 
     // Places first: a half-remembered name is usually a place.
@@ -117,6 +120,7 @@ export default function SearchScreen() {
             <Thumbnail
               name={item.title}
               uri={item.imageUri}
+              remoteKey={item.imageRemoteKey}
               size={52}
               icon={item.kind === 'dish' ? 'fast-food' : 'restaurant'}
             />

@@ -67,7 +67,7 @@ visit_participant (N:M)
 
 - `linked_account_uuid` es el uuid remoto de `auth.users`, no un id local: quien te acompaña vive en el móvil de otra persona, y su fila aquí es una etiqueta con un puntero. En el espejo de Postgres la columna se llama `linked_user_id`.
 - El `username` se **copia** en vez de consultarse. Una etiqueta tiene que dibujarse sin conexión y años después; un handle que desde entonces cambió es un problema menor que un chip que no sabe pintarse.
-- `tag_status` distingue si la etiqueta *puede* viajar (`pending`, hay cuenta a la que llegar) de si es solo un nombre anotado (`local`). **No es un flujo de aprobación**: a nadie se le pide permiso para etiquetarlo. El consentimiento es posterior y vive en `tag_rejections`, una tabla solo de servidor. Ver [06](06-social.md).
+- `tag_status` distingue si la etiqueta _puede_ viajar (`pending`, hay cuenta a la que llegar) de si es solo un nombre anotado (`local`). **No es un flujo de aprobación**: a nadie se le pide permiso para etiquetarlo. El consentimiento es posterior y vive en `tag_rejections`, una tabla solo de servidor. Ver [06](06-social.md).
 - Identidad: la cuenta cuando la hay, el nombre cuando no. Dos amigas pueden llamarse Ana, pero una cuenta es una persona.
 
 ### Visibilidad por entidad

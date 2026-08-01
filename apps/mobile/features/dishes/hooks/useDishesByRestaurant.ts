@@ -35,6 +35,7 @@ export const useDishesByRestaurant = (
       tagDeleted: schema.tags.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
     })
     .from(schema.dishes)
     .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
@@ -44,7 +45,7 @@ export const useDishesByRestaurant = (
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['dishes', 'dishTags', 'tags', 'images'],
+    [schema.dishes, schema.dishTags, schema.tags, schema.images],
     [restaurantId, includeDeleted],
   );
 

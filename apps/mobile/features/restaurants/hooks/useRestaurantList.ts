@@ -26,6 +26,7 @@ export const useRestaurantList = (includeDeleted: boolean = false) => {
       tagDeleted: schema.tags.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
     })
     .from(schema.restaurants);
 
@@ -40,7 +41,7 @@ export const useRestaurantList = (includeDeleted: boolean = false) => {
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['restaurants', 'restaurantTags', 'tags', 'images'],
+    [schema.restaurants, schema.restaurantTags, schema.tags, schema.images],
     [includeDeleted],
   );
 

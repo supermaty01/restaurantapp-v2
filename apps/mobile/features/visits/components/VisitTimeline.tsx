@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import { SectionList, useWindowDimensions, View } from 'react-native';
 
-import PeekablePressable from '@/components/PeekablePressable';
+import { PressableScale } from '@/components/ui/Motion';
 import { EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { type as typeScale } from '@/lib/design/tokens';
-import { formatDate, formatVisitDate } from '@/lib/helpers/date';
+import { formatDate } from '@/lib/helpers/date';
 
 import { groupByMonth } from '../utils/groupByMonth';
 
@@ -230,26 +230,19 @@ function VisitTile({
   onPress: () => void;
 }) {
   const name = visit.restaurant?.name ?? 'Sin restaurante';
-  const uri = visit.images?.[0]?.uri ?? null;
+  const image = visit.images?.[0];
+  const uri = image?.uri ?? null;
 
   return (
-    // Mismo peek que la vista de lista. Faltaba aquí, y no es un detalle: una
-    // retícula de fotos es justo donde más falta hace poder mirar una entrada
-    // sin abrirla, porque la miniatura sola no dice casi nada.
-    <PeekablePressable
-      previewData={{
-        type: 'visit',
-        id: visit.id,
-        date: formatVisitDate(visit.visited_at),
-        restaurantName: name,
-        comments: visit.comments,
-        ...(uri ? { imageUrl: uri } : {}),
-      }}
-      onPress={onPress}
-      scaleValue={1.02}
-      style={{ width: size }}
-    >
-      <Thumbnail name={name} uri={uri} size={size} radius={12} icon="restaurant" />
+    <PressableScale onPress={onPress} scaleTo={0.98} style={{ width: size }}>
+      <Thumbnail
+        name={name}
+        uri={uri}
+        remoteKey={image?.remoteKey}
+        size={size}
+        radius={12}
+        icon="restaurant"
+      />
       <View className="pt-1.5">
         <Txt variant="callout" weight="bold" serif={false} numberOfLines={1}>
           {name}
@@ -259,6 +252,6 @@ function VisitTile({
           {visit.comments ? ` · ${visit.comments}` : ''}
         </Txt>
       </View>
-    </PeekablePressable>
+    </PressableScale>
   );
 }

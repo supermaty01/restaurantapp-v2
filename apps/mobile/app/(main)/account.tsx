@@ -1,19 +1,16 @@
 import { Ionicons } from '@expo/vector-icons';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-} from 'react-native';
+import { useForm } from 'react-hook-form';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 
+import FormInput from '@/components/FormInput';
 import { useDialog } from '@/components/ui/Dialog';
 import { useToast } from '@/components/ui/Toast';
 import { useAuth, type OAuthProvider } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { credentialsSchema, type Credentials } from '@/lib/helpers/credentials-schema';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { useSync } from '@/lib/hooks/useSync';
 import { linkLocalData } from '@/services/sync/linkLocalData';
@@ -41,9 +38,17 @@ export default function AccountScreen() {
   const { ask, tell } = useDialog();
   const toast = useToast();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+
+  const { control, handleSubmit } = useForm<Credentials>({
+    resolver: zodResolver(credentialsSchema),
+    defaultValues: { email: '', password: '' },
+    // Al enviar y luego en cada tecla: el primer aviso no llega mientras se
+    // escribe algo que todavía no está terminado, y una vez avisado el error se
+    // apaga en cuanto se corrige.
+    mode: 'onSubmit',
+    reValidateMode: 'onChange',
+  });
 
   if (!isConfigured) {
     return (
@@ -164,25 +169,29 @@ export default function AccountScreen() {
           Opcional. Sincroniza tus datos entre dispositivos y habilita amigos y compartir.
         </Text>
 
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
+        <FormInput
+          control={control}
+          name="email"
           placeholder="Correo"
           autoCapitalize="none"
+          autoComplete="email"
           keyboardType="email-address"
-          className="min-h-12 px-4 mb-3 border border-line rounded-lg bg-surface text-ink"
+          containerClassName="mb-3"
         />
-        <TextInput
-          value={password}
-          onChangeText={setPassword}
+        <FormInput
+          control={control}
+          name="password"
           placeholder="Contraseña"
           secureTextEntry
-          className="min-h-12 px-4 mb-4 border border-line rounded-lg bg-surface text-ink"
+          autoComplete="password"
+          containerClassName="mb-4"
         />
 
         <TouchableOpacity
           disabled={busy}
-          onPress={() => void runAuth(() => signInWithEmail(email.trim(), password))}
+          onPress={handleSubmit(({ email, password }) =>
+            runAuth(() => signInWithEmail(email, password)),
+          )}
           className="bg-primary rounded-md py-3 items-center mb-2"
         >
           {busy ? (
@@ -193,7 +202,9 @@ export default function AccountScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           disabled={busy}
-          onPress={() => void runAuth(() => signUpWithEmail(email.trim(), password))}
+          onPress={handleSubmit(({ email, password }) =>
+            runAuth(() => signUpWithEmail(email, password)),
+          )}
           className="py-2 items-center mb-4"
         >
           <Text className="text-primary">Crear cuenta nueva</Text>

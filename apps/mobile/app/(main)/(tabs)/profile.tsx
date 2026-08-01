@@ -9,16 +9,21 @@ import { PressableScale } from '@/components/ui/Motion';
 import { Screen } from '@/components/ui/Screen';
 import { Card, SectionHeader } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
-import { fetchMyProfile } from '@/features/social/api';
 import type { Profile } from '@/features/social/api';
-import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
+import { useMyProfile } from '@/features/social/context/MyProfileContext';
 import { useFriends } from '@/features/social/hooks/useFriends';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
 import { useSync } from '@/lib/hooks/useSync';
+import type { RowProgress } from '@/services/sync/engine';
 import type { PhotoProgress } from '@/services/sync/photos';
-import { photoProgressLabel, SYNC_LABEL, type SyncStatus } from '@/services/sync/syncStore';
+import {
+  photoProgressLabel,
+  rowProgressLabel,
+  SYNC_LABEL,
+  type SyncStatus,
+} from '@/services/sync/syncStore';
 
 import type { ComponentProps } from 'react';
 
@@ -27,14 +32,11 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 export default function ProfileScreen() {
   const router = useRouter();
   const { session, isConfigured, signOut } = useAuth();
-  const { status, lastOutcome, photos, syncNow } = useSync();
+  const { status, lastOutcome, rows, photos, syncNow } = useSync();
   const { tell } = useDialog();
   const { incoming } = useFriends();
 
-  const { data: profile } = useAsyncResource<Profile>(fetchMyProfile, {
-    enabled: Boolean(session),
-    deps: [session?.user.id],
-  });
+  const { profile } = useMyProfile();
 
   return (
     <Screen scroll tabBar contentClassName="pt-3">
@@ -45,6 +47,7 @@ export default function ProfileScreen() {
           profile={profile}
           email={session.user.email ?? ''}
           syncStatus={status}
+          syncRows={rows}
           syncPhotos={photos}
           syncError={lastOutcome?.ok === false ? (lastOutcome.error ?? undefined) : undefined}
           syncedAt={lastOutcome?.ok === true ? lastOutcome.at : undefined}
@@ -105,6 +108,7 @@ function AccountCard({
   profile,
   email,
   syncStatus,
+  syncRows,
   syncPhotos,
   syncError,
   syncedAt,
@@ -115,6 +119,7 @@ function AccountCard({
   profile: Profile | null;
   email: string;
   syncStatus: SyncStatus;
+  syncRows: RowProgress | null;
   syncPhotos: PhotoProgress | null;
   syncError?: string | undefined;
   syncedAt?: string | undefined;
@@ -167,13 +172,17 @@ function AccountCard({
             numberOfLines={1}
             className="flex-1"
           >
-            {/* Las fotos son lo lento, y la frase la escribe el store: aquí se
-                escribía a mano y decía "Subiendo" también mientras bajaba. */}
+            {/* Las frases las escribe el store, no esta pantalla: aquí se
+                escribían a mano y decían "Subiendo" también mientras bajaba.
+                Las filas van primero porque son la primera fase; las fotos
+                borran ese estado al empezar, así que no compiten. */}
             {syncStatus === 'syncing' && syncPhotos && syncPhotos.done < syncPhotos.total
               ? photoProgressLabel(syncPhotos)
-              : syncStatus === 'ok' && syncedAt
-                ? `Al día · ${formatRelativeDate(syncedAt)}`
-                : SYNC_LABEL[syncStatus]}
+              : syncStatus === 'syncing' && syncRows
+                ? rowProgressLabel(syncRows)
+                : syncStatus === 'ok' && syncedAt
+                  ? `Al día · ${formatRelativeDate(syncedAt)}`
+                  : SYNC_LABEL[syncStatus]}
           </Txt>
           {syncError ? (
             <Ionicons name="information-circle-outline" size={15} color={colors.inkSubtle} />

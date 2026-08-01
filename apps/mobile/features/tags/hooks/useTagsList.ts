@@ -17,7 +17,7 @@ export const useTagsList = (includeDeleted: boolean = false) => {
     query.where(eq(schema.tags.deleted, false));
   }
 
-  const { data: rawData } = useLiveTablesQuery(query, ['tags'], [includeDeleted]);
+  const { data: rawData } = useLiveTablesQuery(query, [schema.tags], [includeDeleted]);
 
   return (
     rawData?.map<TagDTO>((row) => ({

@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 
 import { applyMigrations } from './apply-migrations';
+import JOURNAL from '../../../drizzle/meta/_journal.json';
 
 /**
  * These tests are the safety net docs/12 mandates for schema migrations: they
@@ -203,12 +204,53 @@ describe('actualización v1.3 → v2', () => {
     expect(cols).toEqual(expect.arrayContaining(['linked_account_uuid', 'username']));
   });
 
-  it('es idempotente: correrla dos veces no rompe nada', () => {
-    // Un arranque interrumpido a mitad de migración deja el registro sin
-    // escribir, y la siguiente apertura vuelve a intentarlo.
+  /*
+   * Antes aquí había una prueba de **idempotencia**: correr otra vez las
+   * migraciones ya aplicadas no debía romper nada, «porque un arranque
+   * interrumpido a mitad deja el registro sin escribir y la siguiente apertura
+   * vuelve a intentarlo».
+   *
+   * **La premisa era falsa**, y la 0012 (`ALTER TABLE ADD COLUMN`, que no se
+   * puede escribir de forma idempotente en SQLite) obligó a comprobarla.
+   * `SQLiteDialect.migrate` —`node_modules/drizzle-orm/sqlite-core/dialect.js`—
+   * hace `BEGIN`, aplica **todas** las migraciones pendientes *y* sus filas de
+   * `__drizzle_migrations`, y `COMMIT`; si algo lanza, `ROLLBACK`. En SQLite el
+   * DDL es transaccional, así que una migración no puede quedarse a medias: o
+   * está aplicada y registrada, o no está ninguna de las dos cosas. Y si el
+   * proceso muere en mitad de la transacción, SQLite la deshace al abrir.
+   *
+   * Lo que sí protege de verdad —que volver a abrir la app no reaplique nada—
+   * es el registro, y eso es lo que se comprueba ahora. Exigir idempotencia a
+   * cada migración era exigir algo que nadie iba a necesitar y que habría
+   * obligado a reconstruir seis tablas en vez de añadir seis columnas.
+   */
+  it('volver a abrir la app no reaplica lo ya aplicado', () => {
     upgrade();
-    const rows = db.prepare('SELECT count(*) n FROM restaurants').get();
-    expect(() => applyMigrations(db, { from: 10 })).not.toThrow();
-    expect(db.prepare('SELECT count(*) n FROM restaurants').get()).toEqual(rows);
+    const antes = db.prepare('SELECT count(*) n FROM restaurants').get();
+
+    // Con el registro puesto, drizzle salta todo lo anterior. Se simula con el
+    // mismo criterio que usa él: nada por debajo de la última aplicada.
+    const ultima = JOURNAL.entries.at(-1)!.idx;
+    expect(() => applyMigrations(db, { from: ultima + 1 })).not.toThrow();
+    expect(db.prepare('SELECT count(*) n FROM restaurants').get()).toEqual(antes);
+  });
+
+  it('todo lo que la 0012 añade está, y vacío', () => {
+    // La columna de cuenta llega a las seis tablas sincronizables sin tocar una
+    // sola fila: un diario que venía de la v1 no es de ninguna cuenta, que es
+    // exactamente lo que significa `null`.
+    upgrade();
+
+    for (const table of ['restaurants', 'dishes', 'visits', 'tags', 'people', 'images']) {
+      const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map(
+        (c) => c.name,
+      );
+      expect(cols).toContain('account_uuid');
+
+      const sinDuenyo = db
+        .prepare(`SELECT count(*) n FROM ${table} WHERE account_uuid IS NOT NULL`)
+        .get();
+      expect(sinDuenyo).toEqual({ n: 0 });
+    }
   });
 });

@@ -6,7 +6,6 @@ import Animated, {
   useDerivedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useTheme } from '@/lib/context/ThemeContext';
 import { elevation } from '@/lib/design/tokens';
@@ -57,13 +56,13 @@ export function FloatingTabBar({
   onCreate,
 }: TabBarProps & { onCreate: () => void }) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
     <View
       pointerEvents="box-none"
-      style={{ paddingBottom: Math.max(insets.bottom, 10) }}
-      className="absolute inset-x-0 bottom-0 items-center px-5 pt-2"
+      // El hueco de la barra de navegación ya lo pone el SafeAreaView de
+      // `(main)/_layout`; aquí solo queda el aire entre el carril y ese borde.
+      className="absolute inset-x-0 bottom-0 items-center px-5 pb-2.5 pt-2"
     >
       <View
         style={[elevation.medium, { backgroundColor: colors.surfaceAlt }]}

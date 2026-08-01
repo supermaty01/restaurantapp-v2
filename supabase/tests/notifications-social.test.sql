@@ -62,6 +62,10 @@ select expect_eq(
 -- ── Registrar una comida entera produce UN aviso ─────────────────────────────
 -- Tres filas seguidas -- restaurante, visita, plato -- que es exactamente lo que
 -- escribe el movil al guardar una comida.
+-- Envejecer filas es andamio de la prueba, no algo que haga un cliente: el
+-- trigger de 0020 solo deja que el cliente toque read_at. Sin uid es como
+-- entra el servidor, que es quien de verdad escribe estas columnas.
+reset test.uid;
 update notifications set created_at = created_at - interval '1 hour';
 
 \set place '''bbbbbbbb-0000-4000-8000-000000000001'''
@@ -94,6 +98,10 @@ select expect_eq(
   'no apunta a una fila concreta: resume una rafaga, y lleva al perfil');
 
 -- ── Pasado el silencio, otra comida vuelve a avisar ──────────────────────────
+-- Envejecer filas es andamio de la prueba, no algo que haga un cliente: el
+-- trigger de 0020 solo deja que el cliente toque read_at. Sin uid es como
+-- entra el servidor, que es quien de verdad escribe estas columnas.
+reset test.uid;
 update notifications set created_at = created_at - interval '1 hour';
 
 \set place2 '''bbbbbbbb-0000-4000-8000-000000000004'''
@@ -109,6 +117,10 @@ select expect_eq(
 -- ── Un diario historico recien subido no despierta a nadie ───────────────────
 -- `created_at` lo pone el movil al crear la fila, asi que iniciar sesion por
 -- primera vez sube años de comidas de golpe.
+-- Envejecer filas es andamio de la prueba, no algo que haga un cliente: el
+-- trigger de 0020 solo deja que el cliente toque read_at. Sin uid es como
+-- entra el servidor, que es quien de verdad escribe estas columnas.
+reset test.uid;
 update notifications set created_at = created_at - interval '1 hour';
 
 \set old '''bbbbbbbb-0000-4000-8000-000000000005'''

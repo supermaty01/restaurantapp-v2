@@ -14,6 +14,7 @@ export interface VisitListRow {
   restaurantDeleted?: boolean | null;
   imageId?: number | null;
   imagePath?: string | null;
+  imageRemoteKey?: string | null;
 }
 
 export function mapVisitListRows(rows: VisitListRow[]): VisitListDTO[] {
@@ -45,6 +46,7 @@ export function mapVisitListRows(rows: VisitListRow[]): VisitListDTO[] {
       visit.images.push({
         id: row.imageId,
         uri: imagePathToUri(row.imagePath),
+        remoteKey: row.imageRemoteKey ?? null,
       });
     }
   }

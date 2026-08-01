@@ -34,7 +34,7 @@ export const useRestaurantMapList = () => {
       ),
     );
 
-  const { data: rawData } = useLiveTablesQuery(query, ['restaurants']);
+  const { data: rawData } = useLiveTablesQuery(query, [schema.restaurants]);
 
   const restaurants: RestaurantMapDTO[] = (rawData ?? []).map((row) => ({
     id: row.id,

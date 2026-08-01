@@ -8,9 +8,9 @@ import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
+import { remoteImageUri } from '@/lib/helpers/remote-image';
 
 import { companionsLabel } from '../companions';
-import { remoteImageUri } from '../remote-image';
 import { AuthorHeader } from './AuthorHeader';
 
 import type { TaggedVisit } from '../api';

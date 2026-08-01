@@ -16,6 +16,7 @@ export interface RestaurantListRow {
   tagDeleted?: boolean | null;
   imageId: number | null;
   imagePath: string | null;
+  imageRemoteKey?: string | null;
 }
 
 export function mapRestaurantListRows(rows: RestaurantListRow[]): RestaurantListDTO[] {
@@ -55,6 +56,7 @@ export function mapRestaurantListRows(rows: RestaurantListRow[]): RestaurantList
       restaurant.images.push({
         id: row.imageId,
         uri: imagePathToUri(row.imagePath),
+        remoteKey: row.imageRemoteKey ?? null,
       });
     }
   }

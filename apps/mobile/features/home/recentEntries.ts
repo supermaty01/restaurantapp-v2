@@ -9,6 +9,8 @@ export interface RecentEntry {
   /** La línea de debajo: lo que la entrada añade sobre su título. */
   detail: string | null;
   imagePath: string | null;
+  /** Clave en R2 de esa foto, si ya está subida: la reserva de `Photo`. */
+  imageRemoteKey: string | null;
   /** Para poder absorber: de qué restaurante cuelga, si cuelga de alguno. */
   restaurantId: number | null;
   /** Solo en visitas: los platos que quedaron anotados en ella. */

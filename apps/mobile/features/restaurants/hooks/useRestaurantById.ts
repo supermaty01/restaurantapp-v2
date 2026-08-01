@@ -29,6 +29,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
       tagDeleted: schema.tags.deleted,
       imageId: schema.images.id,
       imagePath: schema.images.path,
+      imageRemoteKey: schema.images.remoteKey,
     })
     .from(schema.restaurants);
 
@@ -46,7 +47,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
 
   const { data: rawData } = useLiveTablesQuery(
     query,
-    ['restaurants', 'restaurantTags', 'tags', 'images'],
+    [schema.restaurants, schema.restaurantTags, schema.tags, schema.images],
     [id, includeDeleted],
   );
 
@@ -82,6 +83,7 @@ export const useRestaurantById = (id: number, includeDeleted: boolean = true) =>
         restaurant.images.push({
           id: row.imageId,
           uri: imagePathToUri(row.imagePath!),
+          remoteKey: row.imageRemoteKey ?? null,
         });
       }
 

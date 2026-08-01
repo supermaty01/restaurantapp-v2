@@ -1,0 +1,87 @@
+# Qué NO sube a EAS.
+#
+# Va aquí, junto a eas.json, que es desde donde se lanza `eas build`.
+#
+# Los patrones son a propósito **sin anclar** (nombre de directorio y barra, sin
+# barra interior), así que casan a cualquier profundidad. En un monorepo EAS
+# comprime desde la raíz del workspace y no desde este directorio —hace falta
+# el node_modules de arriba y packages/shared—, y así el fichero vale igual se
+# resuelva desde un sitio o desde el otro.
+#
+# Lo que NO va en esta lista, y es intencionado:
+#
+#   - `packages/shared`: lo importa la app en runtime desde
+#     services/share/importService.ts. Excluirlo rompe la build. Solo caen sus
+#     tests, por las reglas de abajo.
+
+# ANDROID/ E IOS/, Y ESTA ES LA LÍNEA MÁS IMPORTANTE DEL FICHERO.
+#
+# No es solo peso. EAS decide si el proyecto es *bare* mirando si existe
+# `android/app/build.gradle` **y no está ignorado**. La lógica está replicada en
+# node_modules/@expo/fingerprint/build/ProjectWorkflow.js:
+#
+#     if (pathExists(marker) && !isIgnoredPath(...) && !vcsClient.isFileIgnored(marker))
+#         return 'generic';
+#
+# Y el `Ignore` de eas-cli consulta este fichero: node_modules/expo-updates/
+# utils/src/vcs.ts:85 dice literalmente que su copia «differs from the eas-cli
+# Ignore class by not using `.easignore`».
+#
+# Es decir: si `android/` reaparece por un `expo prebuild` local y este fichero
+# no lo ignora, EAS pasa a bare, deja de leer app.config.js y `runtimeVersion`
+# con policy revienta la build. `.gitignore` ya lo ignoraba — pero al existir un
+# `.easignore` deja de contar. Esta entrada devuelve esa protección.
+android/
+ios/
+
+# SECRETOS. Esto no es decoración: en cuanto existe un .easignore, EAS deja de
+# mirar .gitignore, así que todo lo que solo estaba protegido allí pasaría a
+# viajar en el archivo. La clave privada del service account de Firebase
+# (*-firebase-adminsdk-*.json) vive sin trackear en apps/mobile y era
+# exactamente ese caso.
+*-firebase-adminsdk-*.json
+.env
+.env.*
+!.env.example
+.dev.vars
+
+# Dependencias: las instala EAS, y sin .gitignore de por medio hay que decirlo
+node_modules/
+
+# Historia de git. Ojo: **no** es lo pesado. Medido el 26 de julio, `.git` son
+# 8,7 MB. Los 334/376 MB del archivo eran `apps/mobile/android` (1,4 GB, de los
+# cuales 1,2 GB de `app/build`). La nota de D2 en ESTADO.md culpaba a `.git` y
+# se equivocaba.
+.git/
+
+# Documentación
+docs/
+*.md
+
+# Backend y base de datos: se despliegan aparte
+apps/api/
+supabase/
+scripts/
+
+# Salida de Gradle, por si un `expo prebuild` local vuelve a crearla
+.gradle/
+.cxx/
+
+# Cobertura y artefactos de test
+coverage/
+__tests__/
+*.test.ts
+*.test.tsx
+*.test.sql
+*.node.test.ts
+jest.config.js
+jest.setup.ts
+jest.setup.node.ts
+
+# Configuración de editor / herramientas
+.idea/
+.vscode/
+.husky/
+.github/
+.expo/
+.wrangler/

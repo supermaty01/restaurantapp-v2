@@ -109,6 +109,7 @@ function DishPicker<
               <Thumbnail
                 name={dish.name}
                 uri={dish.images?.[0]?.uri ?? photoFor(dish.id)}
+                remoteKey={dish.images?.[0]?.remoteKey}
                 size={40}
                 radius={9}
                 icon="fast-food"

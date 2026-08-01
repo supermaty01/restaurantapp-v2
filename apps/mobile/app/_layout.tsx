@@ -14,6 +14,7 @@ import { SQLiteProvider, useSQLiteContext } from 'expo-sqlite';
 import React, { Suspense, useState, createContext, useEffect } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { IntentHandler } from '@/components/IntentHandler';
@@ -23,6 +24,7 @@ import { CrashScreen } from '@/components/ui/CrashScreen';
 import { DialogProvider } from '@/components/ui/Dialog';
 import { ToastProvider } from '@/components/ui/Toast';
 import migrations from '@/drizzle/migrations';
+import { MyProfileProvider } from '@/features/social/context/MyProfileContext';
 import '../global.css';
 import { AuthProvider } from '@/lib/context/AuthContext';
 import { NewDishProvider } from '@/lib/context/NewDishContext';
@@ -122,37 +124,56 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <DBVersionContext.Provider value={() => setDbVersion((v) => v + 1)}>
-          <Suspense fallback={<Booting />}>
-            <SQLiteProvider
-              key={dbVersion}
-              databaseName={DATABASE_NAME}
-              options={{ enableChangeListener: true }}
-              useSuspense
-            >
-              <MigrationsRunner>
-                <AuthProvider>
-                  <ThemeProvider>
-                    <DialogProvider>
-                      <ToastProvider>
-                        <NewRestaurantProvider>
-                          <NewDishProvider>
-                            <IntentHandler />
-                            <SyncRunner />
-                            <PushRunner />
-                            <Slot />
-                          </NewDishProvider>
-                        </NewRestaurantProvider>
-                      </ToastProvider>
-                    </DialogProvider>
-                  </ThemeProvider>
-                </AuthProvider>
-              </MigrationsRunner>
-            </SQLiteProvider>
-          </Suspense>
-        </DBVersionContext.Provider>
-      </GestureHandlerRootView>
+      {/*
+       * Quien sabe dónde está el teclado. Va en la raíz porque instala un
+       * listener de insets sobre la ventana, no sobre una pantalla.
+       *
+       * **Sin banderas de translucidez, a propósito.** El primer intento le
+       * pasó `statusBarTranslucent`, `navigationBarTranslucent` y
+       * `preserveEdgeToEdge`, que es lo que haría falta en una app que gestiona
+       * las barras por su cuenta. Esta no: desde el SDK 57 el edge-to-edge lo
+       * pone `react-native-edge-to-edge`, la librería lo detecta y **ignora las
+       * tres** — lo dice ella misma en un aviso de dev que salió en el primer
+       * arranque en el emulador. Unas props que no hacen nada son peores que no
+       * ponerlas: parecen la explicación de por qué funciona.
+       */}
+      <KeyboardProvider>
+        <GestureHandlerRootView style={{ flex: 1 }}>
+          <DBVersionContext.Provider value={() => setDbVersion((v) => v + 1)}>
+            <Suspense fallback={<Booting />}>
+              <SQLiteProvider
+                key={dbVersion}
+                databaseName={DATABASE_NAME}
+                options={{ enableChangeListener: true }}
+                useSuspense
+              >
+                <MigrationsRunner>
+                  <AuthProvider>
+                    {/* Dentro de AuthProvider: el perfil se pide con la sesión
+                        y se vacía sin ella. */}
+                    <MyProfileProvider>
+                      <ThemeProvider>
+                        <DialogProvider>
+                          <ToastProvider>
+                            <NewRestaurantProvider>
+                              <NewDishProvider>
+                                <IntentHandler />
+                                <SyncRunner />
+                                <PushRunner />
+                                <Slot />
+                              </NewDishProvider>
+                            </NewRestaurantProvider>
+                          </ToastProvider>
+                        </DialogProvider>
+                      </ThemeProvider>
+                    </MyProfileProvider>
+                  </AuthProvider>
+                </MigrationsRunner>
+              </SQLiteProvider>
+            </Suspense>
+          </DBVersionContext.Provider>
+        </GestureHandlerRootView>
+      </KeyboardProvider>
     </SafeAreaProvider>
   );
 }

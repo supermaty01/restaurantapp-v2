@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar';
 import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { PeekProvider } from '@/lib/context/PeekContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { ASSISTANT_ENABLED } from '@/lib/features';
 
@@ -43,57 +42,72 @@ function ScreenHeader({ title, canGoBack }: { title: string; canGoBack: boolean 
 export default function MainLayout() {
   const { isDarkMode, colors } = useTheme();
 
+  /*
+   * `bottom` entró aquí y no en `Screen`, que era el plan escrito.
+   *
+   * El diagnóstico decía «que `Screen` aplique el inset inferior», y `Screen`
+   * es la base de casi todas las pantallas — pero **siete no lo usan**:
+   * `journal`, `account`, `map`, `assistant` y los tres detalles
+   * (`dishes/[id]/view`, `restaurants/[id]/view`, `visits/[id]/view`).
+   * Arreglarlo ahí habría dejado fuera justo las pantallas donde más se ve,
+   * y habría dejado la puerta abierta a la octava.
+   *
+   * Desde el SDK 57 edge-to-edge es obligatorio: la ventana llega hasta el
+   * borde físico y la barra de navegación se dibuja encima. Sin este `edge`
+   * el último elemento de cualquier lista queda debajo de los tres botones.
+   *
+   * Los dos sitios que sí gestionaban el inferior por su cuenta —
+   * `FloatingTabBar` y el pie de `FormScaffold`— dejaron de hacerlo en el
+   * mismo cambio: sumarlo dos veces deja un hueco, que era el otro síntoma.
+   * `Sheet` y `Toast` siguen con el suyo porque se pintan en un `Modal`,
+   * que es otra ventana y no hereda esto.
+   */
   return (
-    <PeekProvider>
-      <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'left', 'right']}>
-        <StatusBar style={isDarkMode ? 'light' : 'dark'} />
-        <Stack
-          screenOptions={{
-            contentStyle: { backgroundColor: colors.canvas },
-            header: ({ navigation, options, route }) => (
-              <ScreenHeader
-                title={options.title ?? route.name}
-                canGoBack={navigation.canGoBack()}
-              />
-            ),
-          }}
-        >
-          {/* The tab bar carries its own headers. */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'bottom', 'left', 'right']}>
+      <StatusBar style={isDarkMode ? 'light' : 'dark'} />
+      <Stack
+        screenOptions={{
+          contentStyle: { backgroundColor: colors.canvas },
+          header: ({ navigation, options, route }) => (
+            <ScreenHeader title={options.title ?? route.name} canGoBack={navigation.canGoBack()} />
+          ),
+        }}
+      >
+        {/* The tab bar carries its own headers. */}
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
 
-          <Stack.Screen name="search" options={{ title: 'Buscar' }} />
-          <Stack.Screen name="tags/index" options={{ title: 'Etiquetas' }} />
-          <Stack.Screen name="friends/index" options={{ title: 'Amigos' }} />
-          <Stack.Screen name="friends/search" options={{ title: 'Buscar personas' }} />
-          <Stack.Screen name="friends/[id]" options={{ title: 'Perfil' }} />
-          <Stack.Screen name="notifications" options={{ title: 'Novedades' }} />
-          <Stack.Screen name="sync-status" options={{ title: 'Estado de la copia' }} />
-          <Stack.Screen name="sync-choice" options={{ title: 'Dos diarios' }} />
-          {/* Sin cabecera: la pantalla trae la suya, con el botón de volver y
+        <Stack.Screen name="search" options={{ title: 'Buscar' }} />
+        <Stack.Screen name="tags/index" options={{ title: 'Etiquetas' }} />
+        <Stack.Screen name="friends/index" options={{ title: 'Amigos' }} />
+        <Stack.Screen name="friends/search" options={{ title: 'Buscar personas' }} />
+        <Stack.Screen name="friends/[id]" options={{ title: 'Perfil' }} />
+        <Stack.Screen name="notifications" options={{ title: 'Novedades' }} />
+        <Stack.Screen name="sync-status" options={{ title: 'Estado de la copia' }} />
+        <Stack.Screen name="sync-choice" options={{ title: 'Dos diarios' }} />
+        {/* Sin cabecera: la pantalla trae la suya, con el botón de volver y
               el rótulo "Visita compartida". Sin registrarla aquí, expo-router
               usa el nombre del fichero y sale un título "shared/[visit]". */}
-          <Stack.Screen name="shared/[visit]" options={{ headerShown: false }} />
-          <Stack.Screen name="profile-edit" options={{ title: 'Editar perfil' }} />
-          <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
-          <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />
-          <Stack.Screen name="map" options={{ title: 'Mapa' }} />
-          {/* Sin pantalla registrada no hay a dónde navegar: una función
+        <Stack.Screen name="shared/[visit]" options={{ headerShown: false }} />
+        <Stack.Screen name="profile-edit" options={{ title: 'Editar perfil' }} />
+        <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
+        <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />
+        <Stack.Screen name="map" options={{ title: 'Mapa' }} />
+        {/* Sin pantalla registrada no hay a dónde navegar: una función
               apagada no debe dejar una puerta a la que llegue un enlace viejo. */}
-          {ASSISTANT_ENABLED ? (
-            <Stack.Screen name="assistant" options={{ title: 'Asistente' }} />
-          ) : null}
+        {ASSISTANT_ENABLED ? (
+          <Stack.Screen name="assistant" options={{ title: 'Asistente' }} />
+        ) : null}
 
-          <Stack.Screen name="restaurants/new" options={{ title: 'Nuevo restaurante' }} />
-          <Stack.Screen name="restaurants/[id]/view" options={{ title: 'Restaurante' }} />
-          <Stack.Screen name="restaurants/[id]/edit" options={{ title: 'Editar restaurante' }} />
-          <Stack.Screen name="dishes/new" options={{ title: 'Nuevo plato' }} />
-          <Stack.Screen name="dishes/[id]/view" options={{ title: 'Plato' }} />
-          <Stack.Screen name="dishes/[id]/edit" options={{ title: 'Editar plato' }} />
-          <Stack.Screen name="visits/new" options={{ title: 'Nueva visita' }} />
-          <Stack.Screen name="visits/[id]/view" options={{ title: 'Visita' }} />
-          <Stack.Screen name="visits/[id]/edit" options={{ title: 'Editar visita' }} />
-        </Stack>
-      </SafeAreaView>
-    </PeekProvider>
+        <Stack.Screen name="restaurants/new" options={{ title: 'Nuevo restaurante' }} />
+        <Stack.Screen name="restaurants/[id]/view" options={{ title: 'Restaurante' }} />
+        <Stack.Screen name="restaurants/[id]/edit" options={{ title: 'Editar restaurante' }} />
+        <Stack.Screen name="dishes/new" options={{ title: 'Nuevo plato' }} />
+        <Stack.Screen name="dishes/[id]/view" options={{ title: 'Plato' }} />
+        <Stack.Screen name="dishes/[id]/edit" options={{ title: 'Editar plato' }} />
+        <Stack.Screen name="visits/new" options={{ title: 'Nueva visita' }} />
+        <Stack.Screen name="visits/[id]/view" options={{ title: 'Visita' }} />
+        <Stack.Screen name="visits/[id]/edit" options={{ title: 'Editar visita' }} />
+      </Stack>
+    </SafeAreaView>
   );
 }

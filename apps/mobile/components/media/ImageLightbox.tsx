@@ -30,6 +30,8 @@ const DISMISS_THRESHOLD = 120;
 export interface LightboxImage {
   id: string | number;
   uri: string;
+  /** Clave en R2, si la hay: la reserva cuando el fichero local no está. */
+  remoteKey?: string | null | undefined;
 }
 
 interface ImageLightboxProps {
@@ -117,7 +119,13 @@ export function ImageLightbox({ images, initialIndex, visible, onClose }: ImageL
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<LightboxImage>) => (
-      <ZoomableImage uri={item.uri} width={width} height={height} onZoomChange={setIsZoomed} />
+      <ZoomableImage
+        uri={item.uri}
+        remoteKey={item.remoteKey}
+        width={width}
+        height={height}
+        onZoomChange={setIsZoomed}
+      />
     ),
     [width, height],
   );

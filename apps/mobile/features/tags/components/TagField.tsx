@@ -7,10 +7,10 @@ import { Sheet } from '@/components/ui/Sheet';
 import { EmptyState } from '@/components/ui/Surface';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
-import { onColor, readableInk, withAlpha } from '@/lib/design/colour';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import CreateTagModal from './CreateTagModal';
+import { TagChip } from './TagChip';
 import { useTagsList } from '../hooks/useTagsList';
 import { useTagUsage } from '../hooks/useTagUsage';
 import { createTag } from '../repositories/tagRepository';
@@ -213,50 +213,5 @@ export function TagField({
         onAdd={(tag) => void handleCreate(tag)}
       />
     </View>
-  );
-}
-
-/**
- * A tag as a toggle.
- *
- * Selected reads as filled in the tag's own colour; unselected as an outline of
- * it. The state is carried by fill, not by a tick — a checkbox next to a
- * coloured pill is two competing signals for one bit of information.
- */
-function TagChip({
-  tag,
-  selected,
-  onPress,
-}: {
-  tag: TagDTO;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const { colors } = useTheme();
-  const ink = readableInk(tag.color, colors.surface);
-
-  return (
-    <PressableScale
-      accessibilityLabel={tag.name}
-      onPress={onPress}
-      scaleTo={0.94}
-      className="flex-row items-center gap-1.5 rounded-pill px-3 py-1.5"
-      style={{
-        backgroundColor: selected ? withAlpha(tag.color, 0.9) : withAlpha(tag.color, 0.14),
-        borderWidth: 1,
-        borderColor: selected ? 'transparent' : withAlpha(tag.color, 0.35),
-      }}
-    >
-      <Txt
-        variant="caption"
-        weight="bold"
-        serif={false}
-        numberOfLines={1}
-        style={{ color: selected ? onColor(tag.color) : ink }}
-      >
-        {tag.name}
-      </Txt>
-      {selected ? <Ionicons name="close" size={12} color={onColor(tag.color)} /> : null}
-    </PressableScale>
   );
 }

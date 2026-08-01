@@ -132,6 +132,10 @@ export function useHomeSummary(recentLimit = 3) {
       drizzleDb
         .select({
           path: schema.images.path,
+          // La clave remota viaja con la ruta: la fila existe antes que el
+          // fichero, así que sin ella un diario recién sincronizado enseña
+          // huecos hasta que termina la descarga — y para siempre si falló.
+          remoteKey: schema.images.remoteKey,
           visitId: schema.images.visitId,
           dishId: schema.images.dishId,
           restaurantId: schema.images.restaurantId,
@@ -140,18 +144,29 @@ export function useHomeSummary(recentLimit = 3) {
     [drizzleDb],
   );
 
-  const { data: restaurantRows } = useLiveTablesQuery(countsQuery, ['restaurants']);
-  const { data: dishRows } = useLiveTablesQuery(dishCountQuery, ['dishes']);
-  const { data: visitRows } = useLiveTablesQuery(visitCountQuery, ['visits']);
-  const { data: recentVisits } = useLiveTablesQuery(recentVisitsQuery, ['visits', 'restaurants']);
-  const { data: recentDishes } = useLiveTablesQuery(recentDishesQuery, ['dishes', 'restaurants']);
-  const { data: recentRestaurants } = useLiveTablesQuery(recentRestaurantsQuery, ['restaurants']);
-  const { data: dishLinks } = useLiveTablesQuery(dishLinksQuery, ['dish_visit']);
-  const { data: imageRows } = useLiveTablesQuery(imagesQuery, ['images']);
+  const { data: restaurantRows } = useLiveTablesQuery(countsQuery, [schema.restaurants]);
+  const { data: dishRows } = useLiveTablesQuery(dishCountQuery, [schema.dishes]);
+  const { data: visitRows } = useLiveTablesQuery(visitCountQuery, [schema.visits]);
+  const { data: recentVisits } = useLiveTablesQuery(recentVisitsQuery, [
+    schema.visits,
+    schema.restaurants,
+  ]);
+  const { data: recentDishes } = useLiveTablesQuery(recentDishesQuery, [
+    schema.dishes,
+    schema.restaurants,
+  ]);
+  const { data: recentRestaurants } = useLiveTablesQuery(recentRestaurantsQuery, [
+    schema.restaurants,
+  ]);
+  const { data: dishLinks } = useLiveTablesQuery(dishLinksQuery, [schema.dishVisits]);
+  const { data: imageRows } = useLiveTablesQuery(imagesQuery, [schema.images]);
 
   const recent = useMemo(() => {
-    const firstImage = (key: 'visitId' | 'dishId' | 'restaurantId', id: number) =>
-      (imageRows ?? []).find((image) => image[key] === id)?.path ?? null;
+    /** Ruta y clave remota de la primera foto de una entidad; la primera vale. */
+    const firstImage = (key: 'visitId' | 'dishId' | 'restaurantId', id: number) => {
+      const image = (imageRows ?? []).find((row) => row[key] === id);
+      return { imagePath: image?.path ?? null, imageRemoteKey: image?.remoteKey ?? null };
+    };
 
     // `dish_visit` permite nulos en el esquema local (viene de v1), así que un
     // enlace a medias se ignora en vez de reventar el agrupado.
@@ -171,7 +186,7 @@ export function useHomeSummary(recentLimit = 3) {
         detail: [row.visitedAt ? formatDate(row.visitedAt) : null, row.comments]
           .filter(Boolean)
           .join(' · '),
-        imagePath: firstImage('visitId', row.id),
+        ...firstImage('visitId', row.id),
         restaurantId: row.restaurantId,
         dishIds: dishesOfVisit.get(row.id) ?? [],
       })),
@@ -181,7 +196,7 @@ export function useHomeSummary(recentLimit = 3) {
         createdAt: row.createdAt,
         title: row.name,
         detail: row.restaurantName,
-        imagePath: firstImage('dishId', row.id),
+        ...firstImage('dishId', row.id),
         restaurantId: row.restaurantId,
         dishIds: [],
       })),
@@ -191,7 +206,7 @@ export function useHomeSummary(recentLimit = 3) {
         createdAt: row.createdAt,
         title: row.name,
         detail: null,
-        imagePath: firstImage('restaurantId', row.id),
+        ...firstImage('restaurantId', row.id),
         restaurantId: row.id,
         dishIds: [],
       })),
