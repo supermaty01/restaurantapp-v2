@@ -2,20 +2,36 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
 
 import { Button } from '@/components/ui/Button';
+import { useDialog } from '@/components/ui/Dialog';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, SectionHeader } from '@/components/ui/Surface';
 import type { UserSummary } from '@/features/social/api';
 import { UserRow } from '@/features/social/components/UserRow';
+import { cancelRequestDialog, removeFriendDialog } from '@/features/social/confirmations';
 import { useFriends } from '@/features/social/hooks/useFriends';
 import { useTheme } from '@/lib/context/ThemeContext';
 
 export default function FriendsScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { ask } = useDialog();
   const { friends, incoming, outgoing, loading, error, reload, enabled, accept, decline, remove } =
     useFriends();
 
   const openProfile = (userId: string) => router.push(`/(main)/friends/${userId}`);
+
+  /*
+   * `remove` sirve para dos cosas distintas y solo una da miedo: deshacer una
+   * amistad, que la otra persona nota, y retirar una solicitud que aún no ha
+   * contestado nadie. Se preguntan las dos, con textos distintos, porque el
+   * mismo aviso rojo para las dos es el aviso que se descarta sin leer.
+   */
+  const confirmRemove = async (list: UserSummary[], userId: string) => {
+    const user = list.find((candidate) => candidate.userId === userId);
+    const name = user?.displayName ?? user?.username ?? 'esta persona';
+    const request = user?.state === 'request_sent' ? cancelRequestDialog : removeFriendDialog;
+    if (await ask(request(name))) await remove(userId);
+  };
 
   if (!enabled) {
     return (
@@ -78,8 +94,18 @@ export default function FriendsScreen() {
         onDecline={decline}
         onOpen={openProfile}
       />
-      <Group title="Amigos" users={friends} onRemove={remove} onOpen={openProfile} />
-      <Group title="Solicitudes enviadas" users={outgoing} onRemove={remove} onOpen={openProfile} />
+      <Group
+        title="Amigos"
+        users={friends}
+        onRemove={(id) => void confirmRemove(friends, id)}
+        onOpen={openProfile}
+      />
+      <Group
+        title="Solicitudes enviadas"
+        users={outgoing}
+        onRemove={(id) => void confirmRemove(outgoing, id)}
+        onOpen={openProfile}
+      />
     </ScrollView>
   );
 }

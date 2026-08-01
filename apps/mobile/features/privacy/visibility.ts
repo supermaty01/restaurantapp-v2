@@ -25,7 +25,16 @@ export function isExplicit(value: Visibility): value is ExplicitVisibility {
   return value !== 'default';
 }
 
-export type ShareableEntity = 'restaurant' | 'dish' | 'visit';
+/**
+ * Las tres clases de entrada que se pueden compartir.
+ *
+ * Como lista y no solo como unión de tipos porque hay que **recorrerlas**: el
+ * cargador de `loadDefaults` tiene que leer las tres del disco antes de que el
+ * sync publique nada, y una lista escrita a mano en ese fichero se olvidaría de
+ * la cuarta el día que la haya.
+ */
+export const SHAREABLE_ENTITIES = ['restaurant', 'dish', 'visit'] as const;
+export type ShareableEntity = (typeof SHAREABLE_ENTITIES)[number];
 
 export function isVisibility(value: string): value is Visibility {
   return (VISIBILITIES as readonly string[]).includes(value);

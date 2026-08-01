@@ -5,6 +5,7 @@ import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { Photo } from '@/components/ui/Photo';
 import { useDishesByRestaurant } from '@/features/dishes/hooks/useDishesByRestaurant';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
+import { useTheme } from '@/lib/context/ThemeContext';
 
 interface RestaurantDishesProps {
   restaurant: RestaurantDetailsDTO;
@@ -13,6 +14,7 @@ interface RestaurantDishesProps {
 export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) {
   const router = useRouter();
   const dishes = useDishesByRestaurant(restaurant.id, true);
+  const { colors } = useTheme();
 
   return (
     <View className="p-4 h-full bg-surface">
@@ -69,7 +71,7 @@ export default function RestaurantDishes({ restaurant }: RestaurantDishesProps) 
           router.push({ pathname: '/dishes/new', params: { restaurantId: restaurant.id } })
         }
       >
-        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Ionicons name="add-circle-outline" size={20} color={colors.onPrimary} />
         <Text className="text-on-primary font-bold ml-2">Añadir Plato</Text>
       </TouchableOpacity>
     </View>

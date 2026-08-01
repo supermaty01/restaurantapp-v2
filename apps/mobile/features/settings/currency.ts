@@ -7,13 +7,19 @@
  * enseñarlos todos con el símbolo equivocado no es un detalle estético: dice un
  * número falso.
  *
- * **Una moneda por diario, no una por plato.** Guardar la moneda en cada fila
- * sería lo correcto en un gestor de gastos y aquí sería un campo más que llenar
- * en cada comida, para una app cuya regla es que apuntar sea rápido. La
- * conversión histórica —convertir precios viejos a otra moneda— haría falta un
- * tipo de cambio por fecha, y eso es una API de pago. Queda anotado en vez de
- * fingido: cambiar la moneda **no** reinterpreta lo ya escrito, solo cambia el
- * símbolo.
+ * **Este fichero es la lista de monedas y cómo se escribe un precio; ya no es
+ * "la moneda del diario".** Aquí decía que una moneda por fila sería lo correcto
+ * en un gestor de gastos y aquí un campo más que llenar en cada comida. El coste
+ * era real y el efecto estaba mal medido: un diario que se lleva de viaje mezcla
+ * platos de Bogotá y de Madrid en la misma lista, y con una sola moneda la mitad
+ * de los números decían otra cosa de la que costaron. Desde 0013 la moneda vive
+ * en el plato (`services/db/schema.ts`), y `useCurrency` es solo el valor de
+ * partida de lo nuevo.
+ *
+ * Lo que sigue siendo verdad: **nada convierte importes**. Hacerlo necesitaría
+ * un tipo de cambio por fecha, que es una API de pago (docs/11). Cambiar la
+ * moneda de un plato cambia la unidad, no el número — y eso es lo correcto
+ * cuando lo que se está arreglando es un precio mal etiquetado.
  */
 export interface Currency {
   code: string;

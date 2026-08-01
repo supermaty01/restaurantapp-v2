@@ -1,6 +1,6 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-27 (ronda 7 — los hallazgos de usar la app)
+**Última actualización:** 2026-07-31 (ronda 8 — una semana de uso diario)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
@@ -14,9 +14,9 @@ fuente**. Marcar aquí al cerrar algo.
 
 ### 🚀 Despliegue — bloquea a casi todo lo demás
 
-- [ ] **APK nuevo** (`eas build -p android --profile preview`). Paso cero de las últimas tres rondas
-- [ ] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
-- [ ] Aplicar migraciones pendientes a Supabase (`supabase db push`): **0018, 0019, 0020 y 0021 — cuatro, no tres**. Medido el 27 de julio con `supabase migration list --linked`: el proyecto remoto está en **0017**. La 0018 se daba por aplicada desde la ronda 4 y nunca se subió
+- [x] **APK nuevo** (`eas build -p android --profile preview`). Paso cero de las últimas tres rondas
+- [x] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
+- [x] Aplicar migraciones pendientes a Supabase (`supabase db push`): **de la 0018 a la 0023 — seis**. La 0022 (secciones del perfil) y la 0023 (moneda del plato) entran en la ronda 8, y **sin la 0022 el perfil de otra persona no carga**. Medido el 27 de julio con `supabase migration list --linked`: el proyecto remoto está en **0017**. La 0018 se daba por aplicada desde la ronda 4 y nunca se subió
 - [x] ~~Desplegar el Worker~~ — **desplegado el 27 de julio a las 21:57 UTC**, con el código actual (el `scheduled` incluido). Confirmado por el push llegando de verdad al dispositivo
 
 > **Y una corrección, porque el error de método es lo que interesa.** Esa misma
@@ -28,10 +28,38 @@ fuente**. Marcar aquí al cerrar algo.
 > la realidad contra una deducción de una lista mal leída. Para mirarlo hay que
 > ordenar: `wrangler deployments list | grep '^Created:' | sort | tail -1`.
 
-- [ ] Confirmar la clave FCM subida a EAS (`eas credentials`)
+- [x] Confirmar la clave FCM subida a EAS (`eas credentials`)
 - [x] ~~Añadir `.easignore`~~ — en `apps/mobile/`, junto a `eas.json`. **El diagnóstico de [D2](#d2-el-archivo-de-eas-pesa-334-mb) era falso**: `.git` son 8,7 MB, no 334. Lo pesado era `apps/mobile/android/` (1,4 GB). Y no excluye `packages/`: `packages/shared` lo importa la app en runtime
 - [x] ~~Borrar el `android/` regenerado~~ — había vuelto a aparecer en disco (ignorado por git, así que invisible en `git status`). Es lo que tumbó la build del 27 de julio
-- [ ] Fusionar la rama a `main`: no tiene nada de las últimas seis sesiones
+- [x] Fusionar la rama a `main`: no tiene nada de las últimas seis sesiones
+
+### 🐛 De una semana de uso (31 jul) — detalle en [Ronda 8](#-aquí-se-retoma--31-de-julio-de-2026-ronda-8)
+
+Los dieciséis cerrados en la ronda 8. **Ninguno visto en un dispositivo.**
+
+- [x] ~~Las visitas de un amigo desaparecen~~ — el sync publicaba `private/private/private` al arrancar
+- [x] ~~Lo etiquetado no llega hasta que la otra persona reabre la app~~ — la petición de sync se descartaba
+- [x] ~~«Hay dos diarios» con un solo móvil~~ — la señal era «hay algo sin subir»
+- [x] ~~La píldora de «Ordenar por» se queda cuadrada~~ — el radio va en `style`
+- [x] ~~Registro y login con correo~~ + Apple oculto
+- [x] ~~El onboarding no deja entrar al diario~~
+- [x] ~~Visor grande de la foto de perfil~~
+- [x] ~~Perfil de otra persona por secciones, con filtros~~ (necesita la migración 0022)
+- [x] ~~Confirmación al quitar a un amigo~~ — la de quitarse de una etiqueta ya estaba
+- [x] ~~Moneda por plato~~ (0013 local, 0023 espejo)
+- [x] ~~Los drawers con buscador quedan bajo el teclado~~
+- [x] ~~Orden de visitas y platos dentro de un restaurante~~
+- [x] ~~Iniciales en vez de foto al etiquetar~~ y el desfile de avatares en Inicio
+- [x] ~~Paleta y tipografía demasiado parecidas a Claude Code~~
+- [x] ~~El splash no sigue el tema~~
+
+Y lo que queda por mirar de esta ronda, todo en un dispositivo:
+
+- [ ] Que el amigo vuelva a ver las visitas **sin abrir Ajustes** (es la prueba del arreglo 1)
+- [ ] Etiquetar a alguien mientras suben fotos, y que le llegue sin reabrir
+- [ ] Que «hay dos diarios» no vuelva a salir con un solo móvil
+- [ ] Que la hoja de etiquetas suba justo encima del teclado, sin hueco ni solape
+- [ ] Que el reparto de monedas haya acertado en el diario real
 
 ### 🐛 De probar la app (26 jul) — detalle en [Hallazgos](#-hallazgos-del-autor-probando-la-app--26-de-julio-de-2026)
 
@@ -270,7 +298,133 @@ Sigue sin verificarse, y esto sí necesita cuenta o dos dispositivos:
 
 ---
 
-## 🔴 AQUÍ SE RETOMA — 27 de julio de 2026 (ronda 7)
+## 🔴 AQUÍ SE RETOMA — 31 de julio de 2026 (ronda 8)
+
+Una semana usando la app en el día a día, con otra persona en el otro lado. Los
+dieciséis puntos de la lista están cerrados. Después de una primera prueba en
+dispositivo se corrigieron dos cosas —la píldora y el modo oscuro—, **esas dos sí
+verificadas en el emulador**; el resto sigue sin verse en un móvil de verdad.
+
+### Los tres que perdían datos, y qué los causaba
+
+Ninguno de los tres daba un error, y ninguno era lo que parecía desde fuera. Los
+tres se localizaron leyendo el código de `main` antes de tocar nada.
+
+**1 · «Un amigo cambió su foto y dejé de ver todas sus visitas.»** No era ningún
+bloqueo de tablas ni una carrera entre dos móviles. `defaultsStore` nace en
+blanco —las tres visibilidades a `private`, que es el fallback seguro para
+_pintar_— y solo lo rellenaba `useDefaultVisibility`, que es un hook: corre al
+montar un formulario o Ajustes, y no antes. Pero `syncManager` publica esos
+ajustes en **cada pasada**, y la primera ocurre al arrancar. Así que abrir la app
+y no tocar nada mandaba `private/private/private` encima de lo elegido, y desde
+ese momento los amigos dejaban de ver **todo** lo guardado como `default`.
+
+Lo que lo hacía indistinguible de una avería es que no falla nada: el dato se
+pierde en el servidor y queda así hasta que por casualidad alguien abre Ajustes.
+Eso explica además el detalle que descartaba la teoría del bloqueo — que
+siguiera sin verse nada horas después, con la otra persona desconectada.
+
+Ahora `ensureDefaultsLoaded` los lee del disco fuera de React y el sync lo
+espera; si la lectura falla **no se publica nada**, porque el servidor no
+distingue «no lo sé» de «no comparto» y la segunda respuesta esconde el diario.
+
+**2 · «Me etiquetaron, refresqué y no aparecía hasta que la otra persona reabrió
+la app.»** `requestSync` descartaba la petición que llegara con una pasada en
+marcha y devolvía la que ya estaba corriendo. Es idempotente, sí, pero contesta a
+otra pregunta: esa pasada **ya hizo su push** antes de que existiera la etiqueta.
+Con las fotos subiendo —la parte lenta, que dura minutos— la ventana es enorme.
+Ahora se anota una repetición y se corre al terminar.
+
+**3 · «Le apareció que había incoherencias en los datos usando un solo móvil.»**
+La señal para preguntar «¿qué diario manda?» era «hay algo sin subir», tomada
+como sustituto de «este móvil ya escribía antes de esta cuenta». No lo es: la
+bandeja tiene algo cada vez que se guarda una entrada y todavía no ha corrido el
+sync. Guardar una comida y cerrar la app bastaba. Y como la marca de «ya
+contesté» solo se escribía al _elegir_, cerrar la pantalla hacía que volviera a
+salir en cada arranque. Ahora la marca la pone el sync al terminar bien, y
+mientras la pregunta esté abierta **el sync no corre** — porque sincronizar es
+combinar, y una pasada de fondo la contestaba sola.
+
+### Lo demás de la lista
+
+| Punto                                | Qué se hizo                                                                                                                                         |
+| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Píldora de «Ordenar por» cuadrada    | Lo que no se recortaba era el fondo, no el radio: `overflow: 'hidden'`. Reproducido y verificado en el emulador                                     |
+| Registro y login                     | Se elige primero entrar o crear cuenta; registrarse dejaba de decir nada cuando hace falta confirmar el correo. Apple, apagado en `lib/features.ts` |
+| Onboarding                           | Puntos de paso, botón de volver que **deshace la elección**, y salida al diario tras entrar (`?welcome=1`)                                          |
+| Visor de foto de perfil              | `ImageLightbox`, solo desde el perfil de la persona                                                                                                 |
+| Perfil de otra persona por secciones | Visitas / lugares / platos, con filtros, y **solo las pestañas que tienen algo** (0022)                                                             |
+| Confirmación al quitar amigo         | Con texto distinto para «cancelar solicitud», que no es lo mismo. La de quitarse de una etiqueta **ya existía**                                     |
+| Moneda por plato                     | 0013 local y 0023 en el espejo, con el reparto histórico de lo ya escrito                                                                           |
+| Drawers y teclado                    | La hoja se apoya en el teclado. **No lo arreglaba `react-native-keyboard-controller`**: un `Modal` es otra ventana nativa                           |
+| Orden dentro de un restaurante       | Visitas de la más reciente; platos por nombre, con `localeCompare('es')`                                                                            |
+| Avatares                             | Cara en vez de iniciales al etiquetar, y el perfil propio guardado entre arranques para que no haya desfile en Inicio                               |
+| Paleta y tipografía                  | Sacadas del logo. Fraunces + Manrope. Con un test que mide contrastes                                                                               |
+| Splash                               | Variante oscura, y el fondo de la ventana nativa a juego                                                                                            |
+
+### 🔁 Lo que cambió al probarlo (1 de agosto)
+
+Dos correcciones sobre lo anterior, las dos vistas en el emulador con datos
+reales.
+
+**La píldora de «Ordenar por»: el primer diagnóstico era falso.** Se supuso que
+NativeWind perdía `rounded-pill` al cambiar la cadena de clases, y se movió el
+redondeo al `style`. **No cambió nada**, porque el radio nunca fue el problema.
+Puesto un borde de color de prueba, las mismas píldoras salían perfectamente
+redondas: el radio siempre estuvo aplicado.
+
+Lo que no se recortaba era **el fondo**. Al pasar de seleccionada a normal, el
+`backgroundColor` cambia de un color con alfa (`bg-primary/12`) a uno opaco
+(`bg-sunken`), y Android lo repinta sin volver a recortarlo contra el contorno
+redondeado — un rectángulo debajo de una vista que sí tiene radio. Por eso solo
+les pasaba a las píldoras que **habían estado** seleccionadas, y las de la
+sección «Restaurante», que nunca lo estuvieron, salían bien: la pista estaba en
+la propia pantalla y no se miró. `overflow: 'hidden'` lo arregla, y está
+comprobado cambiando la selección de ida y de vuelta.
+
+La lección, que es la de siempre en este proyecto: **el síntoma se reprodujo en
+diez minutos con el emulador que ya estaba encendido**, y la ronda anterior se
+cerró con una teoría en su lugar.
+
+**El modo oscuro: las cajas salían café.** Los seis neutros oscuros se habían
+teñido hacia el verde del logo, igual que el lienzo del modo claro. En claro
+funciona —sobre papel casi blanco, una pizca de color se lee como calidez—; en
+oscuro hay mucha más superficie por la que ese tinte se acumula, y cada tarjeta
+acababa siendo un bloque marrón. Ahora son neutros, con dos o tres puntos de
+calidez entre canales para que no se vean azulados al lado del modo claro.
+
+Con el fondo arreglado se ofrecieron cuatro acentos con capturas delante —verde,
+ámbar tostado, verde azulado y cobre— y **se eligió mantener el verde**: la queja
+era el café, no el color de acción.
+
+### ⚠️ Lo que no se pudo comprobar, y las dudas que quedan
+
+- **Nada de esto se ha visto en un dispositivo.** Sigue siendo el paso cero.
+- **`sage` y `primary` comparten familia de tono.** Se ofreció cambiar el acento
+  (ámbar, verde azulado, cobre) con capturas del emulador delante y **se eligió
+  mantener el verde**: la queja del modo oscuro era el café de las cajas, no el
+  color de acción. Queda como estaba, con su razonamiento en `tokens.ts`.
+- **El teclado bajo los drawers va con los eventos de `Keyboard` del core**, no
+  con la librería que usa el resto de la app, y el porqué está escrito en
+  `Sheet.tsx`. En Android edge-to-edge, `endCoordinates.height` puede incluir o
+  no el hueco de la barra de navegación según la versión; si al probarlo la hoja
+  queda unos píxeles alta o baja, es eso, y se corrige con `insets.bottom`.
+- **¿La frontera de las mil unidades reparte bien este diario?** La migración de
+  moneda asume que solo hay precios de Colombia y de Europa. Si existe algún
+  plato europeo de más de mil euros o alguno colombiano de menos de mil pesos,
+  saldrá con la moneda equivocada — y se arregla desde el propio plato, sin
+  tocar nada más.
+- **El paso de avisos del onboarding se le sigue enseñando a quien elige «sin
+  cuenta»**, y a esa persona los avisos no pueden llegarle todavía. Se dejó como
+  estaba porque el razonamiento de `PermissionsScreen` lo defiende a propósito
+  (quien empieza sin cuenta puede crearla después), pero queda anotado por si al
+  usarlo chirría.
+- **Sin la migración 0022 aplicada, el perfil de otra persona no carga.** Llama a
+  `user_entry_counts` y `user_entries_page`, que allí todavía no existen.
+
+---
+
+## 🔵 Ronda 7 — 27 de julio de 2026
 
 Rama `fix/auditoria-ronda-6`. Se atacan los hallazgos de **usar** la app, no los
 de leer el código. Cinco cerrados, y ninguno se ha visto todavía en un

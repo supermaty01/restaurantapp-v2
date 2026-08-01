@@ -1,26 +1,47 @@
 import { Ionicons } from '@expo/vector-icons';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import { Pressable, ScrollView, View } from 'react-native';
 
 import FormInput from '@/components/FormInput';
+import { Button } from '@/components/ui/Button';
 import { useDialog } from '@/components/ui/Dialog';
+import { Card } from '@/components/ui/Surface';
 import { useToast } from '@/components/ui/Toast';
+import { Txt } from '@/components/ui/Txt';
 import { useAuth, type OAuthProvider } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
+import { APPLE_SIGN_IN_ENABLED } from '@/lib/features';
 import { credentialsSchema, type Credentials } from '@/lib/helpers/credentials-schema';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { useSync } from '@/lib/hooks/useSync';
 import { linkLocalData } from '@/services/sync/linkLocalData';
 import { countPendingChanges } from '@/services/sync/pendingCount';
+import { SYNC_LABEL } from '@/services/sync/syncStore';
 
 /**
  * Optional account + sync screen (docs/04). Local-first: the app works without
  * ever visiting this. When configured, sign in to enable sync; when not, it
  * explains the app is fully local.
+ *
+ * ## Entrar y registrarse dejan de ser una adivinanza
+ *
+ * Antes había un botón grande «Iniciar sesión» y un enlace «Crear cuenta nueva»
+ * debajo, los dos sobre los mismos dos campos. Con un correo que aún no existe,
+ * el primero contesta «el correo o la contraseña no son correctos» — que suena a
+ * que te has equivocado escribiendo, cuando lo que pasa es que hace falta el
+ * otro botón. Ahora se elige primero qué se va a hacer, y el formulario dice lo
+ * que va a pasar.
+ *
+ * Y registrarse tenía un final que no se contaba: con la confirmación de correo
+ * activada, `signUp` responde **sin sesión y sin error**. La pantalla no
+ * cambiaba de estado ni decía nada, así que pulsar el botón parecía no hacer
+ * absolutamente nada. Ver `SignUpResult` en `AuthContext`.
  */
+type Mode = 'signIn' | 'signUp';
+
 export default function AccountScreen() {
   const { colors } = useTheme();
   const {
@@ -34,11 +55,26 @@ export default function AccountScreen() {
   } = useAuth();
   const db = useDatabase();
   const router = useRouter();
-  const { status, lastOutcome, syncNow } = useSync();
+  /*
+   * `?welcome=1` lo pone el onboarding.
+   *
+   * Es lo que arregla el callejón sin salida que se vivía: se elegía «ya tengo
+   * cuenta», se entraba, empezaba a sincronizar… y no había ninguna salida hacia
+   * el diario. La única forma de seguir era el gesto de volver atrás, que en una
+   * pantalla a la que acabas de llegar no se le ocurre a nadie.
+   *
+   * Solo desde ahí: en Ajustes, un botón «ir a mi diario» sobraría, porque a
+   * Ajustes se llega desde el diario.
+   */
+  const { welcome } = useLocalSearchParams<{ welcome?: string }>();
+  const fromOnboarding = welcome === '1';
+  const { status, lastOutcome, rows, photos, syncNow } = useSync();
   const { ask, tell } = useDialog();
   const toast = useToast();
 
   const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState<Mode>('signIn');
+  const [showPassword, setShowPassword] = useState(false);
 
   const { control, handleSubmit } = useForm<Credentials>({
     resolver: zodResolver(credentialsSchema),
@@ -52,29 +88,63 @@ export default function AccountScreen() {
 
   if (!isConfigured) {
     return (
-      <ScrollView className="flex-1 bg-canvas p-4">
-        <View className="bg-surface p-4 rounded-xl">
-          <Text className="text-lg font-bold text-ink mb-2">Modo local</Text>
-          <Text className="text-ink-muted">
+      <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-5 gap-4">
+        <Card className="gap-2 p-4">
+          <Txt variant="title">Modo local</Txt>
+          <Txt variant="callout" tone="muted">
             La app funciona completamente sin cuenta: tus datos viven en este dispositivo. Las
             cuentas y la sincronización se activan cuando se configura el servicio.
-          </Text>
-        </View>
+          </Txt>
+        </Card>
       </ScrollView>
     );
   }
 
-  const runAuth = async (fn: () => Promise<{ error: string | null }>) => {
+  const fail = (message: string) =>
+    tell({
+      title: 'No se pudo continuar',
+      message,
+      icon: 'alert-circle-outline',
+      destructive: true,
+    });
+
+  const submit = handleSubmit(async ({ email, password }) => {
     setBusy(true);
-    const { error } = await fn();
-    setBusy(false);
-    if (error) {
-      void tell({
-        title: 'No se pudo continuar',
-        message: error,
-        icon: 'alert-circle-outline',
-        destructive: true,
-      });
+    try {
+      if (mode === 'signIn') {
+        const { error } = await signInWithEmail(email, password);
+        if (error) await fail(error);
+        return;
+      }
+
+      const { error, needsConfirmation } = await signUpWithEmail(email, password);
+      if (error) {
+        await fail(error);
+        return;
+      }
+      if (needsConfirmation) {
+        // Un modal y no un toast: hay que salir de la app a leer un correo, y
+        // eso es una instrucción, no el acuse de recibo de algo ya terminado.
+        await tell({
+          title: 'Revisa tu correo',
+          message: `Te hemos escrito a ${email}. Abre el enlace para confirmar la cuenta y luego vuelve aquí a entrar.`,
+          icon: 'mail-outline',
+        });
+        setMode('signIn');
+      }
+    } finally {
+      setBusy(false);
+    }
+  });
+
+  const oauth = async (provider: OAuthProvider) => {
+    setBusy(true);
+    try {
+      const { error } = await signInWithOAuth(provider);
+      // «cancelled» es cerrar el navegador a propósito, no un fallo que contar.
+      if (error && error !== 'cancelled') await fail(error);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -113,117 +183,247 @@ export default function AccountScreen() {
 
   if (session && accountUuid) {
     return (
-      <ScrollView className="flex-1 bg-canvas p-4">
-        <View className="bg-surface p-4 rounded-xl mb-4">
-          <Text className="text-lg font-bold text-ink">Tu cuenta</Text>
-          <Text className="text-ink-muted mt-1">{session.user.email}</Text>
-        </View>
+      <ScrollView className="flex-1 bg-canvas" contentContainerClassName="p-5 gap-4">
+        {fromOnboarding ? (
+          /*
+           * Lo primero de la pantalla, no lo último: quien llega aquí desde el
+           * onboarding viene a entrar, y en cuanto ha entrado lo que quiere es
+           * irse. La sincronización sigue corriendo de fondo — no hay nada que
+           * esperar aquí mirando.
+           */
+          <Card className="gap-3 p-4">
+            <Txt variant="title">Ya está</Txt>
+            <Txt variant="callout" tone="muted">
+              Tu cuenta está lista. Lo que guardes se sincroniza solo; puedes empezar a usar la app
+              mientras termina.
+            </Txt>
+            <Button
+              label="Ir a mi diario"
+              icon="arrow-forward"
+              size="lg"
+              block
+              onPress={() => router.replace('/(main)/(tabs)')}
+            />
+          </Card>
+        ) : null}
 
-        <View className="bg-surface p-4 rounded-xl mb-4">
-          <Text className="text-base font-bold text-ink mb-2">Sincronización</Text>
-          <Text className="text-ink-muted mb-3">
-            {status === 'syncing'
-              ? 'Sincronizando…'
-              : lastOutcome
-                ? lastOutcome.ok
-                  ? `Última sincronización correcta.`
-                  : `Error: ${lastOutcome.error}`
-                : 'Aún no se ha sincronizado.'}
-          </Text>
-          <TouchableOpacity
-            onPress={() => void syncNow()}
-            className="flex-row items-center bg-primary rounded-md px-4 py-2 self-start"
-          >
-            <Ionicons name="sync" size={18} color="#fff" />
-            <Text className="text-on-primary font-semibold ml-2">Sincronizar ahora</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => void handleLink()} className="mt-3 self-start">
-            <Text className="text-primary">Subir mis datos locales</Text>
-          </TouchableOpacity>
-          {/* "Última sincronización correcta" dice que el proceso no falló, no
-              que la copia esté completa. La diferencia solo se nota el día que
-              se pierde el teléfono, así que hay que poder mirarla antes. */}
-          <TouchableOpacity
-            onPress={() => router.push('/(main)/sync-status')}
-            className="mt-3 self-start"
-          >
-            <Text className="text-primary">¿Está todo en la nube?</Text>
-          </TouchableOpacity>
-        </View>
+        <Card className="gap-1 p-4">
+          <Txt variant="heading" weight="bold" serif={false}>
+            Tu cuenta
+          </Txt>
+          <Txt variant="callout" tone="muted">
+            {session.user.email}
+          </Txt>
+        </Card>
 
-        <TouchableOpacity
+        <Card className="gap-3 p-4">
+          <Txt variant="heading" weight="bold" serif={false}>
+            Sincronización
+          </Txt>
+          <Txt variant="callout" tone="muted">
+            {/* El detalle del avance cuando lo hay: «Sincronizando…» a secas
+                durante minutos no se distingue de estar colgado. */}
+            {status === 'syncing' && rows
+              ? `${rows.phase === 'push' ? 'Subiendo' : 'Bajando'} ${rows.table} · ${rows.done}`
+              : status === 'syncing' && photos
+                ? `${photos.phase === 'upload' ? 'Subiendo' : 'Descargando'} fotos · ${photos.done} de ${photos.total}`
+                : status === 'error' && lastOutcome?.error
+                  ? `No se pudo sincronizar: ${lastOutcome.error}`
+                  : SYNC_LABEL[status]}
+          </Txt>
+
+          <View className="flex-row gap-2.5">
+            <View className="flex-1">
+              <Button
+                label="Sincronizar ahora"
+                icon="sync"
+                block
+                loading={status === 'syncing'}
+                onPress={() => void syncNow()}
+              />
+            </View>
+          </View>
+
+          <View className="gap-2">
+            <Pressable accessibilityRole="button" onPress={() => void handleLink()} hitSlop={6}>
+              <Txt variant="callout" tone="primary" weight="semi" serif={false}>
+                Subir mis datos locales
+              </Txt>
+            </Pressable>
+            {/* "Última sincronización correcta" dice que el proceso no falló, no
+                que la copia esté completa. La diferencia solo se nota el día que
+                se pierde el teléfono, así que hay que poder mirarla antes. */}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push('/(main)/sync-status')}
+              hitSlop={6}
+            >
+              <Txt variant="callout" tone="primary" weight="semi" serif={false}>
+                ¿Está todo en la nube?
+              </Txt>
+            </Pressable>
+          </View>
+        </Card>
+
+        <Button
+          label="Cerrar sesión"
+          variant="danger"
+          size="lg"
+          block
           onPress={() => void confirmSignOut()}
-          className="bg-danger rounded-md px-4 py-3 items-center"
-        >
-          <Text className="text-on-primary font-semibold">Cerrar sesión</Text>
-        </TouchableOpacity>
+        />
       </ScrollView>
     );
   }
 
   return (
-    <ScrollView className="flex-1 bg-canvas p-4" keyboardShouldPersistTaps="handled">
-      <View className="bg-surface p-4 rounded-xl">
-        <Text className="text-lg font-bold text-ink mb-1">Crear cuenta o iniciar sesión</Text>
-        <Text className="text-ink-muted mb-4">
-          Opcional. Sincroniza tus datos entre dispositivos y habilita amigos y compartir.
-        </Text>
+    <ScrollView
+      className="flex-1 bg-canvas"
+      contentContainerClassName="p-5"
+      keyboardShouldPersistTaps="handled"
+    >
+      <Card className="gap-4 p-4">
+        <View className="gap-1">
+          <Txt variant="title">
+            {mode === 'signIn' ? 'Entrar en tu cuenta' : 'Crear una cuenta'}
+          </Txt>
+          <Txt variant="callout" tone="muted">
+            {mode === 'signIn'
+              ? 'Recupera tu diario en este móvil y vuelve a ver a tus amigos.'
+              : 'Opcional. Añade copia en la nube, otro dispositivo y compartir con quien quieras.'}
+          </Txt>
+        </View>
+
+        {/* Elegir primero qué se va a hacer, y después rellenar. Al revés —dos
+            botones bajo los mismos campos— el error que devuelve el servidor
+            habla de la contraseña cuando el problema era el botón. */}
+        <View className="flex-row rounded-pill bg-sunken p-1">
+          <ModeTab
+            label="Ya tengo cuenta"
+            selected={mode === 'signIn'}
+            onPress={() => setMode('signIn')}
+          />
+          <ModeTab
+            label="Crear cuenta"
+            selected={mode === 'signUp'}
+            onPress={() => setMode('signUp')}
+          />
+        </View>
 
         <FormInput
           control={control}
           name="email"
-          placeholder="Correo"
+          label="Correo"
+          placeholder="tu@correo.com"
           autoCapitalize="none"
           autoComplete="email"
           keyboardType="email-address"
-          containerClassName="mb-3"
-        />
-        <FormInput
-          control={control}
-          name="password"
-          placeholder="Contraseña"
-          secureTextEntry
-          autoComplete="password"
-          containerClassName="mb-4"
         />
 
-        <TouchableOpacity
-          disabled={busy}
-          onPress={handleSubmit(({ email, password }) =>
-            runAuth(() => signInWithEmail(email, password)),
-          )}
-          className="bg-primary rounded-md py-3 items-center mb-2"
-        >
-          {busy ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text className="text-on-primary font-semibold">Iniciar sesión</Text>
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          disabled={busy}
-          onPress={handleSubmit(({ email, password }) =>
-            runAuth(() => signUpWithEmail(email, password)),
-          )}
-          className="py-2 items-center mb-4"
-        >
-          <Text className="text-primary">Crear cuenta nueva</Text>
-        </TouchableOpacity>
-
-        {(['google', 'apple'] as OAuthProvider[]).map((provider) => (
-          <TouchableOpacity
-            key={provider}
-            disabled={busy}
-            onPress={() => void runAuth(() => signInWithOAuth(provider))}
-            className="flex-row items-center justify-center border border-line rounded-md py-3 mb-2"
+        <View>
+          <FormInput
+            control={control}
+            name="password"
+            label="Contraseña"
+            placeholder={mode === 'signUp' ? 'Al menos 6 caracteres' : 'Tu contraseña'}
+            secureTextEntry={!showPassword}
+            // `new-password` en el registro: es lo que hace que el gestor de
+            // contraseñas ofrezca generar una en vez de rellenar la de otra app.
+            autoComplete={mode === 'signUp' ? 'new-password' : 'password'}
+            autoCapitalize="none"
+            {...(mode === 'signIn' ? {} : { hint: 'Mínimo 6 caracteres' })}
+          />
+          {/* Ver lo que se escribe. En un teclado de móvil, escribir a ciegas una
+              contraseña larga es el motivo más común de «no son correctos». */}
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={showPassword ? 'Ocultar la contraseña' : 'Mostrar la contraseña'}
+            onPress={() => setShowPassword((current) => !current)}
+            hitSlop={10}
+            className="absolute right-3 top-[34px] h-9 w-9 items-center justify-center"
           >
-            <Ionicons name={`logo-${provider}`} size={20} color={colors.primary} />
-            <Text className="text-ink font-semibold ml-2">
+            <Ionicons
+              name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              size={19}
+              color={colors.inkSubtle}
+            />
+          </Pressable>
+        </View>
+
+        <Button
+          label={mode === 'signIn' ? 'Entrar' : 'Crear cuenta'}
+          size="lg"
+          block
+          loading={busy}
+          onPress={() => void submit()}
+        />
+
+        <View className="flex-row items-center gap-3">
+          <View className="h-px flex-1 bg-line" />
+          <Txt variant="caption" tone="subtle">
+            o
+          </Txt>
+          <View className="h-px flex-1 bg-line" />
+        </View>
+
+        {/* Apple está apagado en `lib/features.ts`, y el porqué está allí: el
+            proveedor no está configurado, así que el botón llevaba a un error. */}
+        {(APPLE_SIGN_IN_ENABLED
+          ? (['google', 'apple'] as OAuthProvider[])
+          : (['google'] as OAuthProvider[])
+        ).map((provider) => (
+          <Pressable
+            key={provider}
+            accessibilityRole="button"
+            disabled={busy}
+            onPress={() => void oauth(provider)}
+            className={`flex-row items-center justify-center gap-2 rounded-xl border border-line-strong py-3.5 ${
+              busy ? 'opacity-50' : ''
+            }`}
+          >
+            <Ionicons name={`logo-${provider}`} size={19} color={colors.ink} />
+            <Txt variant="body" weight="semi" serif={false}>
               Continuar con {provider === 'google' ? 'Google' : 'Apple'}
-            </Text>
-          </TouchableOpacity>
+            </Txt>
+          </Pressable>
         ))}
-      </View>
+
+        <Txt variant="caption" tone="subtle" className="text-center">
+          Tu diario seguirá guardándose en este teléfono aunque no entres.
+        </Txt>
+      </Card>
     </ScrollView>
+  );
+}
+
+function ModeTab({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="tab"
+      accessibilityState={{ selected }}
+      accessibilityLabel={label}
+      onPress={onPress}
+      className={`flex-1 items-center justify-center rounded-pill py-2 ${
+        selected ? 'bg-surface' : ''
+      }`}
+    >
+      <Txt
+        variant="callout"
+        serif={false}
+        weight={selected ? 'bold' : 'semi'}
+        tone={selected ? 'ink' : 'subtle'}
+        numberOfLines={1}
+      >
+        {label}
+      </Txt>
+    </Pressable>
   );
 }

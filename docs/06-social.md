@@ -10,7 +10,11 @@ Todo lo de este documento requiere cuenta y datos sincronizados. Es puramente ad
 - **Amigo**: lo que tenga en `friends`/`public`, paginado.
 - **Tú**: todo.
 
-Lo decide el servidor (`user_profile`, `user_entries`), nunca el cliente.
+Lo decide el servidor (`user_profile`, `user_entries_page`, `user_entry_counts`), nunca el cliente.
+
+El perfil se reparte en **secciones** —visitas, lugares, platos— igual que el diario propio, y con los mismos filtros de orden y nota. Solo salen las que tienen algo: a quien no es tu amigo y solo ha hecho públicos un par de sitios se le enseña una pestaña, no tres con dos vacías. Una pestaña vacía se lee como «no ha compartido nada» cuando lo que significa es «esto no te toca», y el único que sabe cuánto de esto puede ver quien mira es el servidor (0022).
+
+Las secciones paginan **por desplazamiento**, al revés que el feed. No es descuido: allí el orden es siempre `occurred_at desc`, así que un cursor por fecha nombra una posición estable; aquí el orden lo elige quien mira, y haría falta una clave de cursor por criterio. La lista de una sección es corta y no crece mientras la miras — es el diario de otra persona.
 
 ## Amistades
 

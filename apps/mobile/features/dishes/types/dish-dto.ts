@@ -15,6 +15,8 @@ export interface DishDetailsDTO {
     deleted: boolean;
   };
   price: number | null;
+  /** En qué moneda está `price`. Nulo exactamente cuando el precio lo es. */
+  currency: string | null;
   rating: number | null;
   deleted: boolean;
   tags: TagDTO[];

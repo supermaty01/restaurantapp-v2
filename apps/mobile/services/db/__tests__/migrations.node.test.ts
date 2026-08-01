@@ -24,7 +24,10 @@ function seedV1(db: Database.Database) {
       (3, 'Sitio borrado', 3, 1);
     INSERT INTO dishes (id, name, price, rating, restaurant_id, deleted) VALUES
       (1, 'Chihuahua', 1200, 5, 1, 0),
-      (2, 'Carbonara', 1500, 5, 2, 0);
+      (2, 'Carbonara', 1500, 5, 2, 0),
+      -- Uno barato y uno sin precio: los dos casos que reparte la 0013.
+      (4, 'Croissant', 2.4, 4, 2, 0),
+      (5, 'Agua', NULL, 3, 1, 0);
     INSERT INTO visits (id, visited_at, restaurant_id, deleted) VALUES
       (1, '2026-03-01', 1, 0),
       (2, '2026-03-15', 2, 0);
@@ -252,5 +255,48 @@ describe('actualización v1.3 → v2', () => {
         .get();
       expect(sinDuenyo).toEqual({ n: 0 });
     }
+  });
+
+  /**
+   * El reparto de la 0013, sobre un diario que viene de la v1.
+   *
+   * Es la única migración de este proyecto que **interpreta** los datos en vez
+   * de moverlos: deduce en qué moneda se escribió cada precio a partir del
+   * propio número. Se apoya en que la app solo se ha usado en Colombia y en
+   * Europa, y eso hay que dejarlo comprobado sobre filas de verdad — si algún
+   * día deja de valer, este test es donde se ve.
+   */
+  describe('0013 — la moneda de cada plato', () => {
+    const currencyOf = (id: number) =>
+      (
+        db.prepare('SELECT currency FROM dishes WHERE id = ?').get(id) as {
+          currency: string | null;
+        }
+      ).currency;
+
+    it('de mil en adelante, pesos', () => {
+      upgrade();
+      expect(currencyOf(1)).toBe('COP'); // 1200
+      expect(currencyOf(2)).toBe('COP'); // 1500
+    });
+
+    it('por debajo de mil, euros', () => {
+      upgrade();
+      expect(currencyOf(4)).toBe('EUR'); // 2,40
+    });
+
+    it('sin precio, sin moneda', () => {
+      // Una moneda huérfana viajaría por el sync sin significar nada.
+      upgrade();
+      expect(currencyOf(5)).toBeNull();
+    });
+
+    it('no toca ningún precio', () => {
+      // Lo que se deduce es la unidad, nunca el número: convertir importes
+      // necesitaría un tipo de cambio por fecha, que es una API de pago.
+      const before = db.prepare('SELECT id, price FROM dishes ORDER BY id').all();
+      upgrade();
+      expect(db.prepare('SELECT id, price FROM dishes ORDER BY id').all()).toEqual(before);
+    });
   });
 });

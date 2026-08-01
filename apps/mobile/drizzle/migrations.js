@@ -14,6 +14,7 @@ import m0009 from './0009_people_accounts.sql';
 import m0010 from './0010_visibility_default.sql';
 import m0011 from './0011_dish_price_real.sql';
 import m0012 from './0012_account_uuid.sql';
+import m0013 from './0013_dish_currency.sql';
 
   export default {
     journal,
@@ -30,7 +31,8 @@ m0008,
 m0009,
 m0010,
 m0011,
-m0012
+m0012,
+m0013
     }
   }
   

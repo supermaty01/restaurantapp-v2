@@ -8,16 +8,18 @@ import FormInput from '@/components/FormInput';
 import RatingStars from '@/components/RatingStars';
 import { FormScaffold, FormSection } from '@/components/ui/FormScaffold';
 import { useToast } from '@/components/ui/Toast';
+import { PriceField } from '@/features/dishes/components/PriceField';
 import { useNewDish } from '@/features/dishes/hooks/useNewDish';
 import { createDish } from '@/features/dishes/repositories/dishRepository';
 import type { DishFormData } from '@/features/dishes/schemas/dish-schema';
-import { dishSchema } from '@/features/dishes/schemas/dish-schema';
+import { dishSchema, dishWriteValues } from '@/features/dishes/schemas/dish-schema';
 import ImagesUploader from '@/features/images/components/ImagesUploader';
 import { useDefaultVisibility } from '@/features/privacy/useDefaultVisibility';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { NEW_ENTRY_VISIBILITY, type Visibility } from '@/features/privacy/visibility';
 import { VisibilityField } from '@/features/privacy/VisibilityField';
 import RestaurantPicker from '@/features/restaurants/components/RestaurantPicker';
+import { useCurrency } from '@/features/settings/useCurrency';
 import { TagField } from '@/features/tags/components/TagField';
 import type { TagDTO } from '@/features/tags/types/tag-dto';
 import { reportError } from '@/lib/helpers/report-error';
@@ -37,10 +39,19 @@ export default function DishCreateScreen() {
 
   const { notify } = useToast();
   const { useBackRedirect, restaurantId } = useGlobalSearchParams();
+  /*
+   * El ajuste de Ajustes es el **punto de partida** de lo nuevo, no la respuesta
+   * para todo el diario. Estando en Europa se deja en euros y lo que se apunte
+   * nace en euros; al volver a Colombia se cambia y lo nuevo nace en pesos. Lo
+   * ya escrito no se mueve — es la diferencia con la visibilidad por defecto,
+   * que sí se resuelve en vivo (ver `visibility.ts`).
+   */
+  const { currency: startingCurrency } = useCurrency();
   const {
     control,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = useForm<DishFormData>({
     resolver: zodResolver(dishSchema),
@@ -48,6 +59,7 @@ export default function DishCreateScreen() {
       name: '',
       ...(restaurantId ? { restaurantId: Number(restaurantId) } : {}),
       comments: '',
+      currency: startingCurrency,
     },
   });
 
@@ -64,7 +76,7 @@ export default function DishCreateScreen() {
         name: data.name.trim(),
         restaurantId: data.restaurantId,
         comments: data.comments?.trim() || '',
-        price: data.price || null,
+        ...dishWriteValues(data),
         rating: data.rating || null,
       };
 
@@ -125,12 +137,11 @@ export default function DishCreateScreen() {
       </FormSection>
 
       <FormSection title="Detalles" hint="Opcional">
-        <FormInput
+        <PriceField
           control={control}
-          name="price"
-          label="Precio"
-          placeholder="0"
-          keyboardType="numeric"
+          priceName="price"
+          currency={watch('currency')}
+          onCurrencyChange={(next) => setValue('currency', next)}
         />
         <FormInput
           control={control}

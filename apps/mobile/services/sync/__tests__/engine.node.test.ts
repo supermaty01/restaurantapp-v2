@@ -192,6 +192,7 @@ describe('SyncEngine', () => {
     await createDish(a.db, {
       name: 'Chihuahua',
       price: 1200,
+      currency: 'COP',
       rating: 5,
       comments: null,
       restaurantId,

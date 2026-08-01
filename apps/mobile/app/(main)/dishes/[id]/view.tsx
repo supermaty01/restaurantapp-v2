@@ -8,6 +8,7 @@ import { DetailField, DetailMissing, DetailScaffold } from '@/components/ui/Deta
 import { useDialog } from '@/components/ui/Dialog';
 import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
+import { formatDishPrice } from '@/features/dishes/currency';
 import { useDishById } from '@/features/dishes/hooks/useDishById';
 import {
   canHardDeleteDish,
@@ -18,8 +19,6 @@ import { ImageDisplay } from '@/features/images/components/ImageDisplay';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VisibilityControl } from '@/features/privacy/VisibilityControl';
 import { setVisibility } from '@/features/privacy/visibilityRepository';
-import { formatPrice } from '@/features/settings/currency';
-import { useCurrency } from '@/features/settings/useCurrency';
 import Tag from '@/features/tags/components/Tag';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { reportError } from '@/lib/helpers/report-error';
@@ -33,7 +32,6 @@ export default function DishDetailScreen() {
   const drizzleDb = useDatabase();
   const { colors } = useTheme();
   const dish = useDishById(Number(id));
-  const { currency } = useCurrency();
   const [isSharing, setIsSharing] = useState(false);
   const { ask } = useDialog();
 
@@ -150,10 +148,13 @@ export default function DishDetailScreen() {
           </PressableScale>
         </DetailField>
 
+        {/* Con la moneda del plato, no con la de Ajustes: el mismo numero en
+            pesos y en euros son dos precios distintos, y hasta 0013 se pintaban
+            todos igual. */}
         {dish.price ? (
           <DetailField label="Precio">
             <Txt variant="title" tone="primary" serif>
-              {formatPrice(dish.price, currency)}
+              {formatDishPrice(dish.price, dish.currency)}
             </Txt>
           </DetailField>
         ) : null}

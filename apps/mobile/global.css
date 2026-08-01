@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 /*
- * Clay theme variables. Generated from lib/design/tokens.ts — edit that file,
- * not this one; lib/design/tokens.test.ts fails if the two disagree.
+ * Theme variables. Generated from lib/design/tokens.ts — edit that file,
+ * not this one; lib/design/tokens.node.test.ts fails if the two disagree.
  *
  * Colours live here rather than in tailwind.config.js so one class name works
  * in both schemes: `bg-surface` resolves through the variable, which the .dark
@@ -16,42 +16,42 @@
  */
 @layer base {
   :root {
-    --color-canvas: 247 241 232;
+    --color-canvas: 242 242 231;
     --color-surface: 255 255 255;
-    --color-surface-alt: 255 253 248;
-    --color-sunken: 239 231 216;
-    --color-line: 239 231 216;
-    --color-line-strong: 230 221 206;
-    --color-ink: 42 33 28;
-    --color-ink-muted: 107 99 85;
-    --color-ink-subtle: 154 143 125;
-    --color-primary: 192 98 61;
-    --color-primary-pressed: 164 79 47;
+    --color-surface-alt: 250 250 244;
+    --color-sunken: 230 232 215;
+    --color-line: 230 232 215;
+    --color-line-strong: 212 216 193;
+    --color-ink: 46 32 22;
+    --color-ink-muted: 107 95 78;
+    --color-ink-subtle: 142 132 116;
+    --color-primary: 95 122 67;
+    --color-primary-pressed: 76 99 53;
     --color-on-primary: 255 255 255;
-    --color-accent: 224 168 59;
-    --color-sage: 138 154 107;
-    --color-danger: 176 74 58;
-    --color-inverse: 42 33 28;
-    --color-on-inverse: 247 241 232;
+    --color-accent: 196 135 60;
+    --color-sage: 110 140 63;
+    --color-danger: 168 69 47;
+    --color-inverse: 46 32 22;
+    --color-on-inverse: 242 242 231;
   }
 
   .dark:root {
-    --color-canvas: 33 28 24;
-    --color-surface: 44 38 33;
-    --color-surface-alt: 44 38 33;
-    --color-sunken: 26 21 18;
-    --color-line: 58 51 44;
-    --color-line-strong: 74 65 57;
-    --color-ink: 240 233 221;
-    --color-ink-muted: 176 164 143;
-    --color-ink-subtle: 138 126 111;
-    --color-primary: 192 98 61;
-    --color-primary-pressed: 217 120 79;
-    --color-on-primary: 255 255 255;
-    --color-accent: 224 168 59;
-    --color-sage: 138 154 107;
-    --color-danger: 208 90 72;
-    --color-inverse: 247 241 232;
-    --color-on-inverse: 42 33 28;
+    --color-canvas: 26 26 25;
+    --color-surface: 36 36 35;
+    --color-surface-alt: 41 41 40;
+    --color-sunken: 19 19 18;
+    --color-line: 49 49 48;
+    --color-line-strong: 64 63 62;
+    --color-ink: 237 237 235;
+    --color-ink-muted: 169 169 166;
+    --color-ink-subtle: 128 127 124;
+    --color-primary: 155 191 110;
+    --color-primary-pressed: 176 208 132;
+    --color-on-primary: 26 26 25;
+    --color-accent: 219 169 84;
+    --color-sage: 180 214 138;
+    --color-danger: 208 106 82;
+    --color-inverse: 242 242 231;
+    --color-on-inverse: 46 32 22;
   }
 }

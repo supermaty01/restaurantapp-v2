@@ -1,12 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { FadeInUp } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
 import { useTheme } from '@/lib/context/ThemeContext';
+
+import { StepFrame } from './StepFrame';
 
 import type { ComponentProps } from 'react';
 
@@ -52,65 +53,64 @@ export function WelcomeScreen({
   onSignIn: () => void;
 }) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
 
   return (
-    <View
-      className="flex-1 justify-between bg-canvas px-6"
-      style={{ paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }}
-    >
-      <View>
-        <FadeInUp index={0}>
-          <Image
-            source={appIcon}
-            style={{ width: 64, height: 64 }}
-            contentFit="contain"
-            accessibilityIgnoresInvertColors
-          />
-          <Txt variant="hero" className="mt-6">
-            {'Lo que comes,\napuntado.'}
-          </Txt>
-          <Txt variant="body" tone="muted" className="mt-3">
-            Dónde fuiste, qué pediste y qué tal estuvo. Para acordarte, y para saber dónde volver.
-          </Txt>
+    <StepFrame
+      step={1}
+      steps={2}
+      footer={
+        <FadeInUp index={3}>
+          <View className="gap-2.5">
+            <Button label="Empezar sin cuenta" size="lg" block onPress={onContinue} />
+            <Button
+              label="Ya tengo cuenta, o quiero una"
+              variant="secondary"
+              size="lg"
+              block
+              onPress={onSignIn}
+            />
+            <Txt variant="caption" tone="subtle" className="mt-1 text-center">
+              Si creas una cuenta más adelante, lo que hayas guardado hasta entonces se asocia a
+              ella.
+            </Txt>
+          </View>
         </FadeInUp>
-
-        <View className="mt-10 gap-5">
-          {POINTS.map((point, index) => (
-            <FadeInUp key={point.title} index={index + 1}>
-              <View className="flex-row items-start gap-3.5">
-                <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary/12">
-                  <Ionicons name={point.icon} size={17} color={colors.primary} />
-                </View>
-                <View className="min-w-0 flex-1">
-                  <Txt variant="callout" weight="bold" serif={false}>
-                    {point.title}
-                  </Txt>
-                  <Txt variant="caption" tone="subtle" className="mt-0.5">
-                    {point.detail}
-                  </Txt>
-                </View>
-              </View>
-            </FadeInUp>
-          ))}
-        </View>
-      </View>
-
-      <FadeInUp index={3}>
-        <View className="gap-2.5">
-          <Button label="Empezar sin cuenta" size="lg" block onPress={onContinue} />
-          <Button
-            label="Ya tengo cuenta, o quiero una"
-            variant="secondary"
-            size="lg"
-            block
-            onPress={onSignIn}
-          />
-          <Txt variant="caption" tone="subtle" className="mt-1 text-center">
-            Si creas una cuenta más adelante, lo que hayas guardado hasta entonces se asocia a ella.
-          </Txt>
-        </View>
+      }
+    >
+      <FadeInUp index={0}>
+        <Image
+          source={appIcon}
+          style={{ width: 64, height: 64 }}
+          contentFit="contain"
+          accessibilityIgnoresInvertColors
+        />
+        <Txt variant="hero" className="mt-6">
+          {'Lo que comes,\napuntado.'}
+        </Txt>
+        <Txt variant="body" tone="muted" className="mt-3">
+          Dónde fuiste, qué pediste y qué tal estuvo. Para acordarte, y para saber dónde volver.
+        </Txt>
       </FadeInUp>
-    </View>
+
+      <View className="mt-10 gap-5">
+        {POINTS.map((point, index) => (
+          <FadeInUp key={point.title} index={index + 1}>
+            <View className="flex-row items-start gap-3.5">
+              <View className="h-9 w-9 items-center justify-center rounded-pill bg-primary/12">
+                <Ionicons name={point.icon} size={17} color={colors.primary} />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Txt variant="callout" weight="bold" serif={false}>
+                  {point.title}
+                </Txt>
+                <Txt variant="caption" tone="subtle" className="mt-0.5">
+                  {point.detail}
+                </Txt>
+              </View>
+            </View>
+          </FadeInUp>
+        ))}
+      </View>
+    </StepFrame>
   );
 }

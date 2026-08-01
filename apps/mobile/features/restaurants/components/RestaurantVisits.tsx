@@ -5,6 +5,7 @@ import { View, Text, FlatList, TouchableOpacity } from 'react-native';
 import { Photo } from '@/components/ui/Photo';
 import type { RestaurantDetailsDTO } from '@/features/restaurants/types/restaurant-dto';
 import { useVisitsByRestaurant } from '@/features/visits/hooks/useVisitsByRestaurant';
+import { useTheme } from '@/lib/context/ThemeContext';
 import { formatVisitDate } from '@/lib/helpers/date';
 
 interface RestaurantVisitsProps {
@@ -14,6 +15,7 @@ interface RestaurantVisitsProps {
 export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) {
   const router = useRouter();
   const visits = useVisitsByRestaurant(restaurant.id);
+  const { colors } = useTheme();
 
   return (
     <View className="p-4 h-full bg-surface">
@@ -64,7 +66,7 @@ export default function RestaurantVisits({ restaurant }: RestaurantVisitsProps) 
           router.push({ pathname: '/visits/new', params: { restaurantId: restaurant.id } })
         }
       >
-        <Ionicons name="add-circle-outline" size={20} color="#fff" />
+        <Ionicons name="add-circle-outline" size={20} color={colors.onPrimary} />
         <Text className="text-on-primary font-bold ml-2">Añadir Visita</Text>
       </TouchableOpacity>
     </View>

@@ -1,9 +1,18 @@
-import { createContext, useCallback, useContext, useMemo } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import { useAuth } from '@/lib/context/AuthContext';
+import { useDatabase } from '@/lib/hooks/useDatabase';
 
 import { fetchMyProfile } from '../api';
-import { useAsyncResource } from '../hooks/useAsyncResource';
+import { cacheProfile, clearCachedProfile, readCachedProfile } from '../myProfile';
 
 import type { Profile } from '../api';
 import type { ReactNode } from 'react';
@@ -56,31 +65,89 @@ const MyProfileContext = createContext<MyProfileValue>({
  * Las amistades siguen recargando al enfocar, y está bien que sea distinto:
  * cambian **desde fuera** (alguien te acepta mientras miras otra pantalla).
  * El perfil de uno solo lo cambia uno, desde una pantalla concreta.
+ *
+ * ## Y por qué se guarda en disco
+ *
+ * Porque la red decide *cuándo* llega, y el avatar de Inicio se pintaba tres
+ * veces mientras tanto: círculo vacío, iniciales del correo, foto. La copia en
+ * `app_settings` hace que el primer fotograma ya sea el bueno; la petición sigue
+ * saliendo y corrige lo que haya cambiado. El razonamiento entero, en
+ * `myProfile.ts`.
  */
 export function MyProfileProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
+  const db = useDatabase();
+  const userId = session?.user.id ?? null;
 
-  const { data, loading, error, reload, setData } = useAsyncResource<Profile>(fetchMyProfile, {
-    enabled: Boolean(session),
-    deps: [session?.user.id],
-  });
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // `useAsyncResource` no borra lo que ya cargó cuando se deshabilita, así que
-  // al cerrar sesión el perfil anterior seguiría en pantalla hasta el siguiente
-  // montaje. Sin sesión no hay perfil, y eso se decide aquí.
-  const profile = session ? data : null;
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  const load = useCallback(async () => {
+    if (!userId) return;
+    setLoading(true);
+    try {
+      const fresh = await fetchMyProfile();
+      if (!mounted.current) return;
+      setProfile(fresh);
+      setError(null);
+      await cacheProfile(db, fresh);
+    } catch (cause) {
+      if (!mounted.current) return;
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      if (mounted.current) setLoading(false);
+    }
+  }, [db, userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      // Sin sesión no hay perfil, y hay que decirlo aquí: dejar el anterior
+      // puesto haría que cerrar sesión siguiera enseñando tu cara.
+      setProfile(null);
+      setError(null);
+      void clearCachedProfile(db);
+      return;
+    }
+
+    let cancelled = false;
+    void (async () => {
+      // Primero el disco, y sin esperar a la red: es lo que hace que el primer
+      // fotograma sea la foto y no un hueco. Si la petición ya contestó —al
+      // volver de segundo plano, por ejemplo—, no se pisa lo nuevo con lo viejo.
+      const cached = await readCachedProfile(db, userId);
+      if (!cancelled && cached) setProfile((current) => current ?? cached);
+      if (!cancelled) await load();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [db, userId, load]);
 
   const apply = useCallback(
     (changes: Partial<Profile>) => {
-      if (!data) return;
-      setData({ ...data, ...changes });
+      setProfile((current) => {
+        if (!current) return current;
+        const next = { ...current, ...changes };
+        void cacheProfile(db, next);
+        return next;
+      });
     },
-    [data, setData],
+    [db],
   );
 
   const value = useMemo<MyProfileValue>(
-    () => ({ profile, loading, error, reload, apply }),
-    [profile, loading, error, reload, apply],
+    () => ({ profile, loading, error, reload: load, apply }),
+    [profile, loading, error, load, apply],
   );
 
   return <MyProfileContext.Provider value={value}>{children}</MyProfileContext.Provider>;

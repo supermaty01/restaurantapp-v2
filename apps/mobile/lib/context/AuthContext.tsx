@@ -17,6 +17,19 @@ interface AuthResult {
   error: string | null;
 }
 
+/**
+ * Registrarse tiene un tercer final, además de «bien» y «mal».
+ *
+ * Si el proyecto pide confirmar el correo, `signUp` responde **sin sesión y sin
+ * error**: la cuenta existe pero todavía no se puede entrar. La pantalla trataba
+ * ese caso como éxito silencioso —ni sesión, ni aviso, ni cambio visible— así
+ * que pulsar «Crear cuenta nueva» parecía no hacer nada. Ahora se dice.
+ */
+interface SignUpResult extends AuthResult {
+  /** La cuenta se creó pero hace falta abrir el enlace del correo. */
+  needsConfirmation: boolean;
+}
+
 interface AuthContextValue {
   /** Whether accounts are available at all (env configured). */
   isConfigured: boolean;
@@ -26,7 +39,7 @@ interface AuthContextValue {
   /** The logged-in account uuid, or null in anonymous mode. */
   accountUuid: string | null;
   signInWithEmail: (email: string, password: string) => Promise<AuthResult>;
-  signUpWithEmail: (email: string, password: string) => Promise<AuthResult>;
+  signUpWithEmail: (email: string, password: string) => Promise<SignUpResult>;
   signInWithOAuth: (provider: OAuthProvider) => Promise<AuthResult>;
   /** Completes a login from a redirect the system delivered to the app. */
   completeOAuth: (url: string) => Promise<AuthResult>;
@@ -39,7 +52,7 @@ const AuthContext = createContext<AuthContextValue>({
   session: null,
   accountUuid: null,
   signInWithEmail: async () => ({ error: 'not-configured' }),
-  signUpWithEmail: async () => ({ error: 'not-configured' }),
+  signUpWithEmail: async () => ({ error: 'not-configured', needsConfirmation: false }),
   signInWithOAuth: async () => ({ error: 'not-configured' }),
   completeOAuth: async () => ({ error: 'not-configured' }),
   signOut: async () => {},
@@ -98,10 +111,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const signUpWithEmail = useCallback(
-    async (email: string, password: string): Promise<AuthResult> => {
-      if (!supabase) return { error: 'not-configured' };
-      const { error } = await supabase.auth.signUp({ email, password });
-      return { error: error ? describeAuthError(error.message) : null };
+    async (email: string, password: string): Promise<SignUpResult> => {
+      if (!supabase) return { error: 'not-configured', needsConfirmation: false };
+
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) return { error: describeAuthError(error.message), needsConfirmation: false };
+
+      /*
+       * Sin sesión y sin error quiere decir «confirma el correo».
+       *
+       * Y también es lo que contesta Supabase cuando el correo **ya tiene
+       * cuenta**: para no confirmarle a un desconocido qué direcciones están
+       * registradas, devuelve un usuario con la lista de identidades vacía en vez
+       * de un error. Las dos respuestas se cuentan igual a propósito —«mira tu
+       * correo»— porque distinguirlas en pantalla sería reabrir esa puerta.
+       */
+      return { error: null, needsConfirmation: data.session === null };
     },
     [supabase],
   );

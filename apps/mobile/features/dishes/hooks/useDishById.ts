@@ -21,6 +21,7 @@ export const useDishById = (id: number, includeDeleted: boolean = true) => {
       dishComments: schema.dishes.comments,
       dishRating: schema.dishes.rating,
       dishPrice: schema.dishes.price,
+      dishCurrency: schema.dishes.currency,
       dishDeleted: schema.dishes.deleted,
       tagId: schema.tags.id,
       tagName: schema.tags.name,
@@ -64,6 +65,7 @@ export const useDishById = (id: number, includeDeleted: boolean = true) => {
           comments: row.dishComments,
           rating: row.dishRating,
           price: row.dishPrice,
+          currency: row.dishCurrency,
           deleted: row.dishDeleted,
           visibility: row.dishVisibility,
           restaurant: {

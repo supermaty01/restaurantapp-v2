@@ -20,3 +20,18 @@
  * tell apart from a slow network.
  */
 export const ASSISTANT_ENABLED = false;
+
+/**
+ * Entrar con Apple.
+ *
+ * Apagado. El botón estaba puesto y el proveedor no está configurado en
+ * Supabase, así que tocarlo llevaba a un navegador que devolvía «provider is not
+ * enabled» — un método de acceso que se ofrece y no funciona es peor que uno que
+ * no se ofrece, porque el primero se lee como que la app está rota.
+ *
+ * Encenderlo no es solo cambiar esto a `true`: Apple exige una cuenta de
+ * desarrollador de pago para emitir la clave, y ese requisito choca con la
+ * restricción de capas gratuitas (docs/00). Cuando haya build de iOS habrá que
+ * decidirlo; hasta entonces la lista de proveedores es Google.
+ */
+export const APPLE_SIGN_IN_ENABLED = false;

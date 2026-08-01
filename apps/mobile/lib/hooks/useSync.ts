@@ -6,7 +6,12 @@ import { useDatabase } from '@/lib/hooks/useDatabase';
 import { subscribeToLocalChanges } from '@/services/sync/pending';
 import { needsDivergenceChoice } from '@/services/sync/resolveDivergence';
 import { createSupabaseTransport } from '@/services/sync/supabaseTransport';
-import { getSyncState, requestSync, subscribeToSync } from '@/services/sync/syncStore';
+import {
+  getSyncState,
+  requestSync,
+  setAwaitingDivergenceChoice,
+  subscribeToSync,
+} from '@/services/sync/syncStore';
 
 /**
  * How long to wait after a write before syncing.
@@ -70,6 +75,9 @@ export function useSync() {
     void (async () => {
       try {
         if (await needsDivergenceChoice(db, createSupabaseTransport(accountUuid), accountUuid)) {
+          // Antes de pintar nada: mientras la pregunta esté abierta, volver al
+          // primer plano no puede disparar una pasada que la conteste sola.
+          setAwaitingDivergenceChoice(true);
           if (!cancelled) setNeedsChoice(true);
           return;
         }

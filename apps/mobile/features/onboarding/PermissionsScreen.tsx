@@ -1,7 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { FadeInUp } from '@/components/ui/Motion';
@@ -10,6 +9,8 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { setSetting } from '@/services/db/settings-repository';
 import { PUSH_PROMPT_ASKED_KEY, requestPushPermission } from '@/services/push/push';
+
+import { StepFrame } from './StepFrame';
 
 import type { ComponentProps } from 'react';
 
@@ -51,9 +52,8 @@ const IN_CONTEXT: { icon: IconName; what: string; when: string }[] = [
  * no cuesta el permiso que sí habrías dado al pulsar «añadir foto». Explicarlos
  * da la transparencia sin pagar ese precio.
  */
-export function PermissionsScreen({ onDone }: { onDone: () => void }) {
+export function PermissionsScreen({ onDone, onBack }: { onDone: () => void; onBack: () => void }) {
   const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
   const db = useDatabase();
   const [asking, setAsking] = useState(false);
 
@@ -74,9 +74,34 @@ export function PermissionsScreen({ onDone }: { onDone: () => void }) {
   };
 
   return (
-    <View
-      className="flex-1 justify-between bg-canvas px-6"
-      style={{ paddingTop: insets.top + 48, paddingBottom: insets.bottom + 24 }}
+    <StepFrame
+      step={2}
+      steps={2}
+      onBack={asking ? undefined : onBack}
+      footer={
+        <FadeInUp index={4}>
+          <View className="gap-2.5">
+            <Button
+              label="Activar avisos"
+              size="lg"
+              block
+              loading={asking}
+              onPress={() => void enable()}
+            />
+            {/* «Ahora no» no marca nada: la pregunta de arriba es nuestra y se
+                puede repetir. El momento de después —cuando etiquetas a alguien—
+                sigue teniendo su oportunidad. */}
+            <Button
+              label="Ahora no"
+              variant="secondary"
+              size="lg"
+              block
+              disabled={asking}
+              onPress={onDone}
+            />
+          </View>
+        </FadeInUp>
+      }
     >
       <View>
         <FadeInUp index={0}>
@@ -121,29 +146,6 @@ export function PermissionsScreen({ onDone }: { onDone: () => void }) {
           ))}
         </View>
       </View>
-
-      <FadeInUp index={4}>
-        <View className="gap-2.5">
-          <Button
-            label="Activar avisos"
-            size="lg"
-            block
-            loading={asking}
-            onPress={() => void enable()}
-          />
-          {/* «Ahora no» no marca nada: la pregunta de arriba es nuestra y se
-              puede repetir. El momento de después —cuando etiquetas a alguien—
-              sigue teniendo su oportunidad. */}
-          <Button
-            label="Ahora no"
-            variant="secondary"
-            size="lg"
-            block
-            disabled={asking}
-            onPress={onDone}
-          />
-        </View>
-      </FadeInUp>
-    </View>
+    </StepFrame>
   );
 }

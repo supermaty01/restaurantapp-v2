@@ -115,6 +115,10 @@ export const SYNC_TABLES: SyncTableConfig[] = [
     scalars: [
       { local: 'name', remote: 'name', required: true },
       { local: 'price', remote: 'price' },
+      // Viaja con el precio y no aparte: sin ella, el otro dispositivo pinta el
+      // número con la moneda que tenga puesta, que es el fallo que la columna
+      // vino a arreglar (0013 local, 0023 en el espejo).
+      { local: 'currency', remote: 'currency' },
       { local: 'rating', remote: 'rating' },
       { local: 'comments', remote: 'comments' },
       {

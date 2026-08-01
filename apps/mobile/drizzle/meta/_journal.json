@@ -92,6 +92,13 @@
       "when": 1785400000000,
       "tag": "0012_account_uuid",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1785500000000,
+      "tag": "0013_dish_currency",
+      "breakpoints": true
     }
   ]
 }

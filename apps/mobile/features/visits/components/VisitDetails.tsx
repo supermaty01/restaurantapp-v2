@@ -6,6 +6,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { DetailField } from '@/components/ui/DetailScaffold';
 import { PressableScale } from '@/components/ui/Motion';
 import { Txt } from '@/components/ui/Txt';
+import { useAccountAvatars } from '@/features/people/hooks/useAccountAvatars';
 import { useSharingAvailable } from '@/features/privacy/useSharingAvailable';
 import { VisibilityControl } from '@/features/privacy/VisibilityControl';
 import { setVisibility } from '@/features/privacy/visibilityRepository';
@@ -18,6 +19,9 @@ export default function VisitDetails({ visit }: { visit: VisitDetailsDTO }) {
   const sharing = useSharingAvailable();
   const db = useDatabase();
   const { colors } = useTheme();
+  // Igual que al etiquetar: quien tiene cuenta se dibuja con su cara, que es lo
+  // que distingue «etiqueté a Caro» de «escribí Caro».
+  const avatarFor = useAccountAvatars();
 
   return (
     <ScrollView
@@ -58,7 +62,7 @@ export default function VisitDetails({ visit }: { visit: VisitDetailsDTO }) {
                 key={person.accountUuid ?? person.name}
                 className="flex-row items-center gap-2 rounded-pill border border-line bg-surface py-1.5 pl-1.5 pr-3.5"
               >
-                <Avatar name={person.name} size={26} />
+                <Avatar name={person.name} uri={avatarFor(person.accountUuid)} size={26} />
                 <View>
                   <Txt variant="caption" weight="semi" serif={false}>
                     {person.name}
