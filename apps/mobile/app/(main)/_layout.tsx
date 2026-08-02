@@ -84,10 +84,20 @@ export default function MainLayout() {
         <Stack.Screen name="notifications" options={{ title: 'Novedades' }} />
         <Stack.Screen name="sync-status" options={{ title: 'Estado de la copia' }} />
         <Stack.Screen name="sync-choice" options={{ title: 'Dos diarios' }} />
-        {/* Sin cabecera: la pantalla trae la suya, con el botón de volver y
-              el rótulo "Visita compartida". Sin registrarla aquí, expo-router
-              usa el nombre del fichero y sale un título "shared/[visit]". */}
+        {/* Las tres pantallas de contenido ajeno traen su propia cabecera, con
+              el botón de volver y un rótulo que dice qué es esto ("Visita
+              compartida", "Plato compartido", "Sitio compartido"). Sin
+              registrarlas aquí no se quedan sin título: `screenOptions` cae a
+              `route.name`, así que sale el nombre del fichero — un
+              "shared/dish/[id]" encima de la cabecera propia.
+
+              Y esto ya se sabía: el comentario estaba escrito para la primera y
+              las otras dos se añadieron igual. Ahora lo vigila
+              `routes-have-titles.node.test.ts`, que compara los ficheros de
+              ruta con lo declarado aquí. */}
         <Stack.Screen name="shared/[visit]" options={{ headerShown: false }} />
+        <Stack.Screen name="shared/dish/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="shared/restaurant/[id]" options={{ headerShown: false }} />
         <Stack.Screen name="profile-edit" options={{ title: 'Editar perfil' }} />
         <Stack.Screen name="settings/index" options={{ title: 'Ajustes' }} />
         <Stack.Screen name="account" options={{ title: 'Tu cuenta' }} />
