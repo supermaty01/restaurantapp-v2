@@ -124,15 +124,46 @@ select expect_eq(
   (select count(*)::int from user_entries_page(:mateo, 'visit', 'date', true, 5)), 1,
   'una visita no tiene nota propia, asi que el minimo no la esconde');
 
-\echo '### un sitio del que ya se cuenta una comida sale de la pestana de lugares'
+\echo '### un sitio con una visita compartida SIGUE en la pestana de lugares (0024)'
 
--- Regla heredada del feed (0012) y no un descuido: la visita ya nombra el sitio,
--- y repetirlo como entrada suelta lo contaria dos veces. Se comprueba porque es
--- lo que hace que el numero de la pestana no sea «cuantos sitios tiene».
+-- Lo contrario de lo que comprobaba este test hasta la 0024, y el porque esta
+-- escrito alli: la regla de no repetir viene del feed, donde hay **una** lista
+-- cronologica; un perfil son tres pestañas, y la de lugares tiene que contestar
+-- «donde ha estado esta persona». Con la regla puesta, quien registra sus
+-- comidas como visitas —el camino normal de la app— tenia las dos pestañas del
+-- catalogo vacias, asi que 0022 las escondia y el perfil entero se veia como una
+-- lista de visitas. Que es justo el sintoma que se reporto.
 select expect_eq(
   (select count(*)::int from user_entries_page(:mateo, 'restaurant')
-   where entity_uuid = :publico::uuid), 0,
-  'Zorrilla desaparece de lugares en cuanto hay una visita suya compartida');
+   where entity_uuid = :publico::uuid), 1,
+  'Zorrilla sigue en lugares aunque haya una visita suya compartida');
+
+-- El arroz pasa a estar comido *dentro* de la visita compartida, que es lo que
+-- antes lo borraba de la pestana.
+insert into dish_visit (user_id, visit_uuid, dish_uuid) values (:mateo, :visita, :plato_a);
+
+select expect_eq(
+  (select total::int from user_entry_counts(:mateo) where kind = 'dish'), 2,
+  'y un plato comido en una visita compartida sigue contando en la pestana de platos');
+
+select expect_eq(
+  (select count(*)::int from user_entries_page(:mateo, 'dish')
+   where entity_uuid = :plato_a::uuid), 1,
+  'y sale en la lista, no solo en el numero');
+
+-- Y lo que NO cambia: el acceso. Un plato privado dentro de una visita publica
+-- viaja en el detalle de esa visita (0011) y no por eso entra en la seccion.
+\set plato_privado '''cccccccc-0000-4000-8000-000000000003'''
+insert into dishes (uuid, user_id, restaurant_uuid, name, rating, visibility, created_at, updated_at)
+  values (:plato_privado, :mateo, :publico, 'Secreto', 5, 'private', '2026-01-04', now());
+insert into dish_visit (user_id, visit_uuid, dish_uuid) values (:mateo, :visita, :plato_privado);
+
+set test.uid = :carla;
+select expect_eq(
+  (select count(*)::int from user_entries_page(:mateo, 'dish')
+   where entity_uuid = :plato_privado::uuid), 0,
+  'SECURITY: un plato privado no entra en la seccion por estar en una visita publica');
+set test.uid = :mateo;
 
 \echo '### la paginacion no repite ni se salta filas'
 
@@ -144,10 +175,10 @@ insert into restaurants (uuid, user_id, name, rating, visibility, created_at, up
   (:empate1, :mateo, 'Empate uno', 3, 'public', '2026-05-01', now()),
   (:empate2, :mateo, 'Empate dos', 3, 'public', '2026-05-01', now());
 
--- Cuatro en la seccion: los tres iniciales menos Zorrilla, que se fue con su
--- visita, mas los dos del empate.
+-- Cinco en la seccion: los tres iniciales —Zorrilla incluido desde la 0024— mas
+-- los dos del empate.
 select expect_eq(
-  (select total::int from user_entry_counts(:mateo) where kind = 'restaurant'), 4,
+  (select total::int from user_entry_counts(:mateo) where kind = 'restaurant'), 5,
   'el recuento sigue cuadrando con lo que hay');
 
 select expect_eq(
@@ -155,8 +186,8 @@ select expect_eq(
      select entity_uuid from user_entries_page(:mateo, 'restaurant', 'rating', true, null, 0, 3)
      union all
      select entity_uuid from user_entries_page(:mateo, 'restaurant', 'rating', true, null, 3, 3)
-   ) as todas), 4,
-  'dos paginas traen las cuatro, sin repetir ninguna pese al empate a tres');
+   ) as todas), 5,
+  'dos paginas traen las cinco, sin repetir ninguna pese al empate a tres');
 
 \echo '### la base no es publica'
 

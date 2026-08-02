@@ -69,7 +69,10 @@ Notifications.setNotificationHandler({
 export async function ensureAndroidChannel(): Promise<void> {
   if (Platform.OS !== 'android') return;
   await Notifications.setNotificationChannelAsync('default', {
-    name: 'Avisos',
+    // El nombre que la persona ve en los ajustes del sistema, en la ficha de la
+    // app. Tiene que decir lo mismo que la sección de Ajustes de la app, o son
+    // dos interruptores distintos para quien los busca.
+    name: 'Notificaciones',
     importance: Notifications.AndroidImportance.DEFAULT,
     vibrationPattern: [0, 200],
     lockscreenVisibility: Notifications.AndroidNotificationVisibility.PRIVATE,

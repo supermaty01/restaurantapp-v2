@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo } from 'react';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 import { mapVisitListRows } from '../mappers/mapVisitListRows';
@@ -11,6 +12,7 @@ import { mapVisitListRows } from '../mappers/mapVisitListRows';
 export const useVisitList = (includeDeleted: boolean = false) => {
   const db = useSQLiteContext();
   const drizzleDb = useMemo(() => drizzle(db, { schema }), [db]);
+  const account = useCurrentAccount();
 
   const query = drizzleDb
     .select({
@@ -28,9 +30,13 @@ export const useVisitList = (includeDeleted: boolean = false) => {
     })
     .from(schema.visits);
 
-  if (!includeDeleted) {
-    query.where(eq(schema.visits.deleted, false));
-  }
+  query.where(
+    scopedTo(
+      schema.visits.accountUuid,
+      account,
+      includeDeleted ? undefined : eq(schema.visits.deleted, false),
+    ),
+  );
 
   query
     .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
@@ -39,7 +45,7 @@ export const useVisitList = (includeDeleted: boolean = false) => {
   const { data: rawData } = useLiveTablesQuery(
     query,
     [schema.visits, schema.restaurants, schema.images],
-    [includeDeleted],
+    [includeDeleted, account],
   );
 
   return useMemo(() => mapVisitListRows(rawData ?? []), [rawData]);

@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 
 import { formatDate } from '@/lib/helpers/date';
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { ownedBy, scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 import { collapseRegistrationSessions, type RecentEntry } from '../recentEntries';
@@ -21,6 +22,7 @@ export type { RecentEntry } from '../recentEntries';
 export function useHomeSummary(recentLimit = 3) {
   const db = useSQLiteContext();
   const drizzleDb = useMemo(() => drizzle(db, { schema }), [db]);
+  const account = useCurrentAccount();
 
   const countsQuery = useMemo(
     () =>
@@ -29,8 +31,10 @@ export function useHomeSummary(recentLimit = 3) {
           restaurants: count(schema.restaurants.id),
         })
         .from(schema.restaurants)
-        .where(eq(schema.restaurants.deleted, false)),
-    [drizzleDb],
+        .where(
+          scopedTo(schema.restaurants.accountUuid, account, eq(schema.restaurants.deleted, false)),
+        ),
+    [drizzleDb, account],
   );
 
   const dishCountQuery = useMemo(
@@ -38,8 +42,8 @@ export function useHomeSummary(recentLimit = 3) {
       drizzleDb
         .select({ dishes: count(schema.dishes.id) })
         .from(schema.dishes)
-        .where(eq(schema.dishes.deleted, false)),
-    [drizzleDb],
+        .where(scopedTo(schema.dishes.accountUuid, account, eq(schema.dishes.deleted, false))),
+    [drizzleDb, account],
   );
 
   const visitCountQuery = useMemo(
@@ -47,8 +51,8 @@ export function useHomeSummary(recentLimit = 3) {
       drizzleDb
         .select({ visits: count(schema.visits.id) })
         .from(schema.visits)
-        .where(eq(schema.visits.deleted, false)),
-    [drizzleDb],
+        .where(scopedTo(schema.visits.accountUuid, account, eq(schema.visits.deleted, false))),
+    [drizzleDb, account],
   );
 
   /*
@@ -78,10 +82,10 @@ export function useHomeSummary(recentLimit = 3) {
         })
         .from(schema.visits)
         .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
-        .where(eq(schema.visits.deleted, false))
+        .where(scopedTo(schema.visits.accountUuid, account, eq(schema.visits.deleted, false)))
         .orderBy(desc(schema.visits.createdAt), desc(schema.visits.id))
         .limit(overFetch),
-    [drizzleDb, overFetch],
+    [drizzleDb, overFetch, account],
   );
 
   const recentDishesQuery = useMemo(
@@ -96,10 +100,10 @@ export function useHomeSummary(recentLimit = 3) {
         })
         .from(schema.dishes)
         .leftJoin(schema.restaurants, eq(schema.dishes.restaurantId, schema.restaurants.id))
-        .where(eq(schema.dishes.deleted, false))
+        .where(scopedTo(schema.dishes.accountUuid, account, eq(schema.dishes.deleted, false)))
         .orderBy(desc(schema.dishes.createdAt), desc(schema.dishes.id))
         .limit(overFetch),
-    [drizzleDb, overFetch],
+    [drizzleDb, overFetch, account],
   );
 
   const recentRestaurantsQuery = useMemo(
@@ -111,10 +115,12 @@ export function useHomeSummary(recentLimit = 3) {
           name: schema.restaurants.name,
         })
         .from(schema.restaurants)
-        .where(eq(schema.restaurants.deleted, false))
+        .where(
+          scopedTo(schema.restaurants.accountUuid, account, eq(schema.restaurants.deleted, false)),
+        )
         .orderBy(desc(schema.restaurants.createdAt), desc(schema.restaurants.id))
         .limit(overFetch),
-    [drizzleDb, overFetch],
+    [drizzleDb, overFetch, account],
   );
 
   /** Qué platos cuelgan de qué visita, para poder absorberlos. */
@@ -140,26 +146,31 @@ export function useHomeSummary(recentLimit = 3) {
           dishId: schema.images.dishId,
           restaurantId: schema.images.restaurantId,
         })
-        .from(schema.images),
-    [drizzleDb],
+        .from(schema.images)
+        .where(ownedBy(schema.images.accountUuid, account)),
+    [drizzleDb, account],
   );
 
-  const { data: restaurantRows } = useLiveTablesQuery(countsQuery, [schema.restaurants]);
-  const { data: dishRows } = useLiveTablesQuery(dishCountQuery, [schema.dishes]);
-  const { data: visitRows } = useLiveTablesQuery(visitCountQuery, [schema.visits]);
-  const { data: recentVisits } = useLiveTablesQuery(recentVisitsQuery, [
-    schema.visits,
-    schema.restaurants,
-  ]);
-  const { data: recentDishes } = useLiveTablesQuery(recentDishesQuery, [
-    schema.dishes,
-    schema.restaurants,
-  ]);
-  const { data: recentRestaurants } = useLiveTablesQuery(recentRestaurantsQuery, [
-    schema.restaurants,
-  ]);
-  const { data: dishLinks } = useLiveTablesQuery(dishLinksQuery, [schema.dishVisits]);
-  const { data: imageRows } = useLiveTablesQuery(imagesQuery, [schema.images]);
+  const { data: restaurantRows } = useLiveTablesQuery(countsQuery, [schema.restaurants], [account]);
+  const { data: dishRows } = useLiveTablesQuery(dishCountQuery, [schema.dishes], [account]);
+  const { data: visitRows } = useLiveTablesQuery(visitCountQuery, [schema.visits], [account]);
+  const { data: recentVisits } = useLiveTablesQuery(
+    recentVisitsQuery,
+    [schema.visits, schema.restaurants],
+    [account],
+  );
+  const { data: recentDishes } = useLiveTablesQuery(
+    recentDishesQuery,
+    [schema.dishes, schema.restaurants],
+    [account],
+  );
+  const { data: recentRestaurants } = useLiveTablesQuery(
+    recentRestaurantsQuery,
+    [schema.restaurants],
+    [account],
+  );
+  const { data: dishLinks } = useLiveTablesQuery(dishLinksQuery, [schema.dishVisits], [account]);
+  const { data: imageRows } = useLiveTablesQuery(imagesQuery, [schema.images], [account]);
 
   const recent = useMemo(() => {
     /** Ruta y clave remota de la primera foto de una entidad; la primera vale. */

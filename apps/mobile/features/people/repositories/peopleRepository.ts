@@ -1,5 +1,7 @@
 import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 
+import { scopedTo } from '@/services/db/account-scope';
+import { getCurrentAccount } from '@/services/db/account-store';
 import * as schema from '@/services/db/schema';
 import { newSyncValues, recordChange, touchedAt } from '@/services/db/sync-write';
 import type { AppDatabase } from '@/services/db/types';
@@ -116,7 +118,12 @@ export async function listKnownPeople(db: AppDatabase, limit = 30): Promise<Pers
       username: schema.people.username,
     })
     .from(schema.people)
-    .where(eq(schema.people.deleted, false))
+    // Por cuenta, como todo lo que se lee del diario: la libreta de a quién has
+    // etiquetado es tuya, y la de la otra cuenta del móvil no tiene nada que
+    // hacer sugiriéndose aquí. Ver `services/db/account-scope.ts`.
+    .where(
+      scopedTo(schema.people.accountUuid, getCurrentAccount(), eq(schema.people.deleted, false)),
+    )
     .orderBy(desc(schema.people.updatedAt))
     .limit(limit);
 
@@ -133,7 +140,13 @@ export async function listLocalPeople(db: AppDatabase): Promise<PersonDTO[]> {
       username: schema.people.username,
     })
     .from(schema.people)
-    .where(and(eq(schema.people.deleted, false), sql`${schema.people.linkedAccountUuid} is null`))
+    .where(
+      scopedTo(
+        schema.people.accountUuid,
+        getCurrentAccount(),
+        and(eq(schema.people.deleted, false), sql`${schema.people.linkedAccountUuid} is null`),
+      ),
+    )
     .orderBy(schema.people.name);
 }
 
@@ -147,6 +160,12 @@ export async function listLinkedAccounts(db: AppDatabase): Promise<PersonDTO[]> 
       username: schema.people.username,
     })
     .from(schema.people)
-    .where(and(eq(schema.people.deleted, false), isNotNull(schema.people.linkedAccountUuid)))
+    .where(
+      scopedTo(
+        schema.people.accountUuid,
+        getCurrentAccount(),
+        and(eq(schema.people.deleted, false), isNotNull(schema.people.linkedAccountUuid)),
+      ),
+    )
     .orderBy(schema.people.name);
 }

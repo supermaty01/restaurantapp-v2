@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 import { mapDishListRows } from '../mappers/mapDishListRows';
@@ -12,6 +13,7 @@ import type { DishListRow } from '../mappers/mapDishListRows';
 export const useDishesDetails = (dishIds: number[]) => {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
+  const account = useCurrentAccount();
 
   const { data: rawData } = useLiveTablesQuery(
     dishIds.length > 0
@@ -29,13 +31,13 @@ export const useDishesDetails = (dishIds: number[]) => {
             imageRemoteKey: schema.images.remoteKey,
           })
           .from(schema.dishes)
-          .where(inArray(schema.dishes.id, dishIds))
+          .where(scopedTo(schema.dishes.accountUuid, account, inArray(schema.dishes.id, dishIds)))
           .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
           .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
           .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId))
       : drizzleDb.select().from(schema.dishes).where(eq(schema.dishes.id, -1)), // Query vacía si no hay dishIds
     [schema.dishes, schema.dishTags, schema.tags, schema.images],
-    [dishIds.join(',')],
+    [dishIds.join(','), account],
   );
 
   return mapDishListRows((rawData ?? []) as DishListRow[]);

@@ -27,6 +27,32 @@ import { column, SYNC_TABLES } from '@/services/sync/tables';
  *
  * One query per table (NOT EXISTS), so it is cheap enough to run on every push.
  */
+/**
+ * Cuántas filas del diario todavía no son de ninguna cuenta.
+ *
+ * Sirve para una sola cosa y es la mitad de esta historia que se olvida: avisar
+ * **antes** de entrar por primera vez. Desde que las lecturas filtran por cuenta
+ * (`account-scope.ts`), iniciar sesión asocia lo que ya había a esa cuenta y
+ * cerrar sesión lo saca de la pantalla. Nada se borra, pero sin decirlo antes
+ * eso se vive exactamente como perder el diario.
+ *
+ * Cuenta y no lista: lo único que hay que decidir con esto es si enseñar el
+ * aviso, y contar seis tablas es más barato que traerlas.
+ */
+export async function countUnclaimedRows(db: AppDatabase): Promise<number> {
+  let total = 0;
+
+  for (const cfg of SYNC_TABLES) {
+    const rows = (await db
+      .select({ id: column(cfg.table, 'id') })
+      .from(cfg.table)
+      .where(isNull(column(cfg.table, 'accountUuid')))) as { id: number }[];
+    total += rows.length;
+  }
+
+  return total;
+}
+
 export async function linkLocalData(db: AppDatabase): Promise<number> {
   let queued = 0;
   const account = getCurrentAccount();

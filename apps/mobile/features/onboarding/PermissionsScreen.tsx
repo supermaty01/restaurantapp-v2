@@ -82,7 +82,7 @@ export function PermissionsScreen({ onDone, onBack }: { onDone: () => void; onBa
         <FadeInUp index={4}>
           <View className="gap-2.5">
             <Button
-              label="Activar avisos"
+              label="Activar notificaciones"
               size="lg"
               block
               loading={asking}
@@ -121,8 +121,8 @@ export function PermissionsScreen({ onDone, onBack }: { onDone: () => void; onBa
           {/* La única razón por la que esto se pregunta ahora y no más tarde, y
               conviene que se lea: lo que avisa no lo provocas tú. */}
           <Txt variant="caption" tone="subtle" className="mt-4">
-            Es el único permiso que no depende de ti: lo demás lo activas cuando lo usas. Sin avisos
-            no se pierde nada, lo verás igual en Novedades.
+            Es el único permiso que no depende de ti: lo demás lo activas cuando lo usas. Sin
+            notificaciones no se pierde nada, lo verás igual en Novedades.
           </Txt>
         </FadeInUp>
 

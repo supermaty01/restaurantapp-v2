@@ -8,7 +8,7 @@ import { useTheme } from '@/lib/context/ThemeContext';
 import { pushPermissionGranted, requestPushPermission } from '@/services/push/push';
 
 /**
- * Encender los avisos desde Ajustes.
+ * Encender las notificaciones desde Ajustes.
  *
  * El sitio donde se piden es justo después de etiquetar a alguien, que es
  * cuando la pregunta se entiende. Pero esa pregunta se hace **una sola vez**, y
@@ -55,12 +55,12 @@ export default function NotificationsCard() {
 
   return (
     <View className="gap-3 rounded-xl bg-surface p-4">
-      {/* El estado es el titular, no la palabra "Avisos".
+      {/* El estado es el titular, no la palabra "Notificaciones".
           La sección de Ajustes ya se llama así, y repetirlo aquí dejaba la
-          pantalla diciendo "Avisos / cuando alguien te etiqueta en una comida /
-          Avisos / te llegará un aviso cuando alguien te etiquete": cuatro
-          líneas para una idea. Lo único que no se sabía de un vistazo era si
-          estaban encendidos, así que eso es lo que va grande. */}
+          pantalla diciendo "Notificaciones / cuando alguien te etiqueta en una
+          comida / Notificaciones / te llegará una notificación cuando alguien
+          te etiquete": cuatro líneas para una idea. Lo único que no se sabía de
+          un vistazo era si estaban encendidas, así que eso es lo que va grande. */}
       <View className="flex-row items-center gap-2.5">
         <Ionicons
           name={granted ? 'notifications' : 'notifications-off-outline'}
@@ -68,7 +68,7 @@ export default function NotificationsCard() {
           color={granted ? colors.sage : colors.inkSubtle}
         />
         <Txt variant="body" weight="semi" serif={false} className="flex-1">
-          {granted === null ? 'Sin comprobar' : granted ? 'Activados' : 'Desactivados'}
+          {granted === null ? 'Sin comprobar' : granted ? 'Activadas' : 'Desactivadas'}
         </Txt>
       </View>
 
@@ -76,13 +76,13 @@ export default function NotificationsCard() {
           que le expliquen para qué sirven. */}
       {granted ? null : (
         <Txt variant="caption" tone="subtle">
-          Sin ellos seguirás viendo tus novedades en la campana, pero solo al abrir la app.
+          Sin ellas seguirás viendo tus novedades en la campana, pero solo al abrir la app.
         </Txt>
       )}
 
       {granted ? null : (
         <Button
-          label="Activar los avisos"
+          label="Activar las notificaciones"
           variant="secondary"
           size="sm"
           disabled={busy}

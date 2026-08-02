@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo } from 'react';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 export interface TagUsage {
@@ -25,6 +26,7 @@ export interface TagUsage {
 export function useTagUsage(): Map<number, TagUsage> {
   const db = useSQLiteContext();
   const drizzleDb = useMemo(() => drizzle(db, { schema }), [db]);
+  const account = useCurrentAccount();
 
   const restaurantCounts = useMemo(
     () =>
@@ -35,9 +37,11 @@ export function useTagUsage(): Map<number, TagUsage> {
           schema.restaurants,
           eq(schema.restaurants.id, schema.restaurantTags.restaurantId),
         )
-        .where(eq(schema.restaurants.deleted, false))
+        .where(
+          scopedTo(schema.restaurants.accountUuid, account, eq(schema.restaurants.deleted, false)),
+        )
         .groupBy(schema.restaurantTags.tagId),
-    [drizzleDb],
+    [drizzleDb, account],
   );
 
   const dishCounts = useMemo(
@@ -46,16 +50,21 @@ export function useTagUsage(): Map<number, TagUsage> {
         .select({ tagId: schema.dishTags.tagId, total: count() })
         .from(schema.dishTags)
         .innerJoin(schema.dishes, eq(schema.dishes.id, schema.dishTags.dishId))
-        .where(eq(schema.dishes.deleted, false))
+        .where(scopedTo(schema.dishes.accountUuid, account, eq(schema.dishes.deleted, false)))
         .groupBy(schema.dishTags.tagId),
-    [drizzleDb],
+    [drizzleDb, account],
   );
 
-  const { data: restaurantRows } = useLiveTablesQuery(restaurantCounts, [
-    schema.restaurantTags,
-    schema.restaurants,
-  ]);
-  const { data: dishRows } = useLiveTablesQuery(dishCounts, [schema.dishTags, schema.dishes]);
+  const { data: restaurantRows } = useLiveTablesQuery(
+    restaurantCounts,
+    [schema.restaurantTags, schema.restaurants],
+    [account],
+  );
+  const { data: dishRows } = useLiveTablesQuery(
+    dishCounts,
+    [schema.dishTags, schema.dishes],
+    [account],
+  );
 
   return useMemo(() => {
     const usage = new Map<number, TagUsage>();

@@ -2,7 +2,17 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { contrastRatio, parseHex } from './colour';
-import { darkColors, gradientFor, lightColors, placeholderGradients } from './tokens';
+import {
+  DISPLAY_VARIANTS,
+  PALETTES,
+  PALETTE_IDS,
+  darkColors,
+  gradientFor,
+  lightColors,
+  paletteVars,
+  placeholderGradients,
+  type as scale,
+} from './tokens';
 
 import type { ThemeColors } from './tokens';
 
@@ -83,15 +93,15 @@ describe('theme tokens', () => {
  * aquí sería escribir una aspiración y verla fallar el primer día; poner el
  * listón donde de verdad está convierte esto en un guardián que se respeta.
  */
-describe('la paleta se puede leer', () => {
-  const ratio = (a: string, b: string) => {
-    const first = parseHex(a);
-    const second = parseHex(b);
-    expect(first).not.toBeNull();
-    expect(second).not.toBeNull();
-    return contrastRatio(first!, second!);
-  };
+const ratio = (a: string, b: string) => {
+  const first = parseHex(a);
+  const second = parseHex(b);
+  expect(first).not.toBeNull();
+  expect(second).not.toBeNull();
+  return contrastRatio(first!, second!);
+};
 
+describe('la paleta se puede leer', () => {
   /** Parejas donde uno de los dos es texto o un icono sobre el otro. */
   const TEXT_PAIRS: [keyof ThemeColors, keyof ThemeColors][] = [
     ['ink', 'canvas'],
@@ -168,6 +178,142 @@ describe('la paleta se puede leer', () => {
     // ratio de 1 sería una tarjeta invisible.
     expect(ratio(colors.surface, colors.canvas)).toBeGreaterThan(1.05);
     expect(ratio(colors.sunken, colors.surface)).toBeGreaterThan(1.05);
+  });
+});
+
+/**
+ * Y lo mismo, en las ocho paletas.
+ *
+ * Este es el guardián que hace que las siete generadas se puedan generar. Sin
+ * él, la elección de tema sería «ocho oportunidades de que un fondo y su texto
+ * queden en 2:1», y la que fallara no daría ningún error: se vería mal en el
+ * móvil de quien la eligiera, y solo en el suyo.
+ *
+ * Los umbrales son **los mismos** que los de la verde, a propósito: si una
+ * paleta necesitara un listón más bajo para pasar, lo que hay que cambiar es la
+ * paleta.
+ */
+describe('las ocho paletas se pueden leer', () => {
+  const TEXT_PAIRS: [keyof ThemeColors, keyof ThemeColors][] = [
+    ['ink', 'canvas'],
+    ['ink', 'surface'],
+    ['inkMuted', 'surface'],
+    ['onPrimary', 'primary'],
+    ['onPrimary', 'primaryPressed'],
+    ['onInverse', 'inverse'],
+    ['primary', 'canvas'],
+    ['primary', 'surface'],
+    ['danger', 'surface'],
+  ];
+
+  const schemes: [string, (id: (typeof PALETTE_IDS)[number]) => ThemeColors][] = [
+    ['claro', (id) => PALETTES[id].light],
+    ['oscuro', (id) => PALETTES[id].dark],
+  ];
+
+  for (const [schemeName, pick] of schemes) {
+    it.each(PALETTE_IDS)(`%s / ${schemeName}: todo lo que es texto contrasta`, (id) => {
+      const colors = pick(id);
+      for (const [front, back] of TEXT_PAIRS) {
+        const value = ratio(colors[front], colors[back]);
+        expect({ pair: `${id} ${schemeName}: ${front} sobre ${back}`, ok: value >= 4 }).toEqual({
+          pair: `${id} ${schemeName}: ${front} sobre ${back}`,
+          ok: true,
+        });
+      }
+    });
+
+    it.each(PALETTE_IDS)(`%s / ${schemeName}: los segundos planos se ven`, (id) => {
+      const colors = pick(id);
+      const checks: [string, number, number][] = [
+        ['inkSubtle sobre surface', ratio(colors.inkSubtle, colors.surface), 3],
+        ['inkSubtle sobre canvas', ratio(colors.inkSubtle, colors.canvas), 3],
+        ['sage sobre surface', ratio(colors.sage, colors.surface), 3],
+        ['accent sobre surface', ratio(colors.accent, colors.surface), 2.4],
+        // No es contraste de texto: es que una tarjeta se vea *sobre* el fondo.
+        ['surface sobre canvas', ratio(colors.surface, colors.canvas), 1.05],
+        ['sunken sobre surface', ratio(colors.sunken, colors.surface), 1.05],
+        // Comparten familia de tono a propósito, así que lo que los separa es
+        // la luminosidad. Si se acercaran, una pastilla de «correcto» y un
+        // botón de acción serían el mismo color.
+        ['primary y sage', ratio(colors.primary, colors.sage), 1.2],
+      ];
+
+      for (const [what, value, floor] of checks) {
+        expect({ what: `${id} ${schemeName}: ${what}`, ok: value > floor }).toEqual({
+          what: `${id} ${schemeName}: ${what}`,
+          ok: true,
+        });
+      }
+    });
+  }
+
+  it('la verde es exactamente la que se afinó a mano', () => {
+    // Se genera todo menos esta. Si algún día entrara en el generador, dejaría
+    // de coincidir con `global.css` y con el logo del que salió.
+    expect(PALETTES.green.light).toBe(lightColors);
+    expect(PALETTES.green.dark).toBe(darkColors);
+  });
+
+  it('todas declaran los mismos colores', () => {
+    const expected = Object.keys(lightColors).sort();
+    for (const id of PALETTE_IDS) {
+      expect(Object.keys(PALETTES[id].light).sort()).toEqual(expected);
+      expect(Object.keys(PALETTES[id].dark).sort()).toEqual(expected);
+    }
+  });
+});
+
+/**
+ * Las variables que se inyectan tienen que llamarse como las de `global.css`.
+ *
+ * Una variable con el nombre mal escrito no falla: la clase resuelve a la que
+ * dejó el fichero estático, así que el color se queda en el de la paleta verde.
+ * O sea, media pantalla cambiada de tema — que es peor que ninguna.
+ */
+describe('paletteVars', () => {
+  it('genera exactamente las variables que declara global.css', () => {
+    const declared = Object.keys(blockFor(':root {')).sort();
+    const generated = Object.keys(paletteVars(PALETTES.blue.light))
+      .map((name) => name.replace('--color-', ''))
+      .sort();
+    expect(generated).toEqual(declared);
+  });
+
+  it('los valores son canales RGB, que es lo que espera el alfa de Tailwind', () => {
+    // `rgb(var(--color-x) / <alpha-value>)`: con un `#rrggbb` aquí, cualquier
+    // `bg-primary/12` de la app saldría transparente.
+    const vars = paletteVars(PALETTES.blue.light);
+    expect(vars['--color-primary']).toMatch(/^\d{1,3} \d{1,3} \d{1,3}$/);
+  });
+});
+
+/**
+ * Que las letras quepan enteras dentro de su línea.
+ *
+ * Esto existe porque la «g» de «¿Desayunaste en algún sitio?» salía cortada por
+ * abajo en la pantalla de inicio. En Android un `lineHeight` explícito **recorta**
+ * lo que no cabe en la caja de línea, así que un interlineado apretado no
+ * desborda: borra media letra. Y no lo caza ningún otro test, porque la cadena
+ * de texto sigue estando entera — solo se ve mirando la pantalla.
+ *
+ * El 1,3 no es un número de manual: es donde las descendentes de Fraunces (la
+ * «g», la «y», la «j», que son largas a propósito) entran con margen. `hero`
+ * estaba en 1,12 y por eso se cortaba.
+ */
+describe('los títulos tienen sitio para las descendentes', () => {
+  it.each(DISPLAY_VARIANTS)('%s deja al menos un 1,3 de interlineado', (variant) => {
+    const { fontSize, lineHeight } = scale[variant];
+    expect({ variant, ratio: lineHeight / fontSize >= 1.3 }).toEqual({ variant, ratio: true });
+  });
+
+  it('el guardián mira variantes que existen de verdad', () => {
+    // Sin esto, renombrar una variante dejaría la lista vacía y el test de
+    // arriba pasaría sin comprobar nada.
+    expect(DISPLAY_VARIANTS.length).toBeGreaterThan(0);
+    for (const variant of DISPLAY_VARIANTS) {
+      expect(scale[variant]).toBeDefined();
+    }
   });
 });
 
