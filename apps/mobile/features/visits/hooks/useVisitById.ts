@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 
 import { imagePathToUri } from '@/lib/helpers/image-paths';
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 import type { VisitDetailsDTO } from '../types/visit-dto';
@@ -12,6 +13,7 @@ import type { VisitDetailsDTO } from '../types/visit-dto';
 export const useVisitById = (id: number, includeDeleted: boolean = true) => {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
+  const account = useCurrentAccount();
 
   const query = drizzleDb
     .select({
@@ -36,12 +38,16 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
     })
     .from(schema.visits);
 
-  // Filtrar por ID y, opcionalmente, por estado de eliminación
-  if (includeDeleted) {
-    query.where(eq(schema.visits.id, id));
-  } else {
-    query.where(and(eq(schema.visits.id, id), eq(schema.visits.deleted, false)));
-  }
+  // Por ID, por cuenta y, opcionalmente, por estado de eliminación.
+  query.where(
+    scopedTo(
+      schema.visits.accountUuid,
+      account,
+      includeDeleted
+        ? eq(schema.visits.id, id)
+        : and(eq(schema.visits.id, id), eq(schema.visits.deleted, false)),
+    ),
+  );
 
   query
     .leftJoin(schema.restaurants, eq(schema.visits.restaurantId, schema.restaurants.id))
@@ -62,7 +68,7 @@ export const useVisitById = (id: number, includeDeleted: boolean = true) => {
       schema.visitParticipants,
       schema.people,
     ],
-    [id, includeDeleted],
+    [id, includeDeleted, account],
   );
 
   const visit = useMemo(() => {

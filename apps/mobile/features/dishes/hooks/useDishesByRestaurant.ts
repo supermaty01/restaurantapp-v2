@@ -4,6 +4,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useMemo } from 'react';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 import { mapDishListRows } from '../mappers/mapDishListRows';
@@ -14,6 +15,7 @@ export const useDishesByRestaurant = (
 ) => {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
+  const account = useCurrentAccount();
 
   // WHERE applies after the joins regardless of builder order, so joins are
   // chained first to keep the query fully typed (no `any` reassignment).
@@ -42,12 +44,12 @@ export const useDishesByRestaurant = (
     .leftJoin(schema.dishTags, eq(schema.dishes.id, schema.dishTags.dishId))
     .leftJoin(schema.tags, eq(schema.dishTags.tagId, schema.tags.id))
     .leftJoin(schema.images, eq(schema.dishes.id, schema.images.dishId))
-    .where(whereCondition);
+    .where(scopedTo(schema.dishes.accountUuid, account, whereCondition));
 
   const { data: rawData } = useLiveTablesQuery(
     query,
     [schema.dishes, schema.dishTags, schema.tags, schema.images],
-    [restaurantId, includeDeleted],
+    [restaurantId, includeDeleted, account],
   );
 
   /*

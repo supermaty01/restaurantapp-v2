@@ -3,6 +3,7 @@ import { drizzle } from 'drizzle-orm/expo-sqlite';
 import { useSQLiteContext } from 'expo-sqlite';
 
 import { useLiveTablesQuery } from '@/lib/hooks/useLiveTablesQuery';
+import { scopedTo, useCurrentAccount } from '@/services/db/account-scope';
 import * as schema from '@/services/db/schema';
 
 export interface RestaurantMapDTO {
@@ -16,6 +17,7 @@ export interface RestaurantMapDTO {
 export const useRestaurantMapList = () => {
   const db = useSQLiteContext();
   const drizzleDb = drizzle(db, { schema });
+  const account = useCurrentAccount();
 
   const query = drizzleDb
     .select({
@@ -27,14 +29,18 @@ export const useRestaurantMapList = () => {
     })
     .from(schema.restaurants)
     .where(
-      and(
-        eq(schema.restaurants.deleted, false),
-        isNotNull(schema.restaurants.latitude),
-        isNotNull(schema.restaurants.longitude),
+      scopedTo(
+        schema.restaurants.accountUuid,
+        account,
+        and(
+          eq(schema.restaurants.deleted, false),
+          isNotNull(schema.restaurants.latitude),
+          isNotNull(schema.restaurants.longitude),
+        ),
       ),
     );
 
-  const { data: rawData } = useLiveTablesQuery(query, [schema.restaurants]);
+  const { data: rawData } = useLiveTablesQuery(query, [schema.restaurants], [account]);
 
   const restaurants: RestaurantMapDTO[] = (rawData ?? []).map((row) => ({
     id: row.id,

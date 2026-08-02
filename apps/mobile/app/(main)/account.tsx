@@ -17,7 +17,7 @@ import { APPLE_SIGN_IN_ENABLED } from '@/lib/features';
 import { credentialsSchema, type Credentials } from '@/lib/helpers/credentials-schema';
 import { useDatabase } from '@/lib/hooks/useDatabase';
 import { useSync } from '@/lib/hooks/useSync';
-import { linkLocalData } from '@/services/sync/linkLocalData';
+import { countUnclaimedRows, linkLocalData } from '@/services/sync/linkLocalData';
 import { countPendingChanges } from '@/services/sync/pendingCount';
 import { SYNC_LABEL } from '@/services/sync/syncStore';
 
@@ -108,12 +108,67 @@ export default function AccountScreen() {
       destructive: true,
     });
 
+  /*
+   * Entrar termina en el diario, no aquí.
+   *
+   * Con Google ya pasaba —el redirect aterriza en `auth/callback`, que hace
+   * exactamente este `replace`— y con correo y contraseña no, porque no hay
+   * ningún redirect: la sesión aparece y la pantalla simplemente se vuelve a
+   * pintar mostrando el bloque de sincronización. Desde fuera eso se lee como
+   * «he entrado y me ha dejado en los ajustes», que además es la pantalla que
+   * uno acaba de decidir abandonar.
+   *
+   * `replace` y no `push`: la pantalla de entrar ya no tiene sentido en el
+   * histórico una vez has entrado, y el gesto de volver atrás debe llevarte a
+   * donde estabas antes de venir aquí.
+   */
+  const enterTheApp = () => router.replace('/(main)/(tabs)');
+
+  /*
+   * Lo que hay que decir **antes** de entrar por primera vez con un diario ya
+   * escrito, y que no se decía.
+   *
+   * Desde que las lecturas filtran por cuenta (`services/db/account-scope.ts`),
+   * entrar asocia a esa cuenta todo lo que ya había en el móvil, y cerrar sesión
+   * lo saca de la pantalla. Es la semántica correcta —las filas quedaron
+   * selladas y vuelven al volver a entrar— pero es un cambio brusco, y sin este
+   * aviso se vive exactamente como perder el diario. La bienvenida ya dice la
+   * mitad («si creas una cuenta más adelante, lo que hayas guardado se asocia a
+   * ella»); faltaba la otra mitad, y faltaba en el momento en que se decide.
+   *
+   * Solo cuando hay algo huérfano que asociar: a quien entra con el diario
+   * vacío, o a quien ya entró una vez, esto no le dice nada.
+   *
+   * Devuelve si se sigue adelante.
+   */
+  const confirmLocalDataWillBeLinked = async (): Promise<boolean> => {
+    const unclaimed = await countUnclaimedRows(db);
+    if (unclaimed === 0) return true;
+
+    return ask({
+      title: 'Tu diario pasa a ser de esta cuenta',
+      message:
+        `Lo que ya tienes guardado en este móvil (${unclaimed} entradas) se asociará a la cuenta ` +
+        'con la que entres y se subirá a la nube. Si cierras sesión dejarás de verlo aquí: no se ' +
+        'borra, y vuelve entero al volver a entrar con esa misma cuenta.',
+      icon: 'cloud-upload-outline',
+      confirmLabel: 'Entendido, entrar',
+      cancelLabel: 'Cancelar',
+    });
+  };
+
   const submit = handleSubmit(async ({ email, password }) => {
+    if (!(await confirmLocalDataWillBeLinked())) return;
+
     setBusy(true);
     try {
       if (mode === 'signIn') {
         const { error } = await signInWithEmail(email, password);
-        if (error) await fail(error);
+        if (error) {
+          await fail(error);
+          return;
+        }
+        enterTheApp();
         return;
       }
 
@@ -122,27 +177,37 @@ export default function AccountScreen() {
         await fail(error);
         return;
       }
-      if (needsConfirmation) {
-        // Un modal y no un toast: hay que salir de la app a leer un correo, y
-        // eso es una instrucción, no el acuse de recibo de algo ya terminado.
-        await tell({
-          title: 'Revisa tu correo',
-          message: `Te hemos escrito a ${email}. Abre el enlace para confirmar la cuenta y luego vuelve aquí a entrar.`,
-          icon: 'mail-outline',
-        });
-        setMode('signIn');
+      if (!needsConfirmation) {
+        // Sin confirmación de correo el registro deja sesión abierta, así que
+        // es un inicio de sesión y acaba donde acaban los demás.
+        enterTheApp();
+        return;
       }
+      // Un modal y no un toast: hay que salir de la app a leer un correo, y
+      // eso es una instrucción, no el acuse de recibo de algo ya terminado.
+      await tell({
+        title: 'Revisa tu correo',
+        message: `Te hemos escrito a ${email}. Abre el enlace desde este móvil y la app se abrirá sola con la sesión ya iniciada.`,
+        icon: 'mail-outline',
+      });
+      setMode('signIn');
     } finally {
       setBusy(false);
     }
   });
 
   const oauth = async (provider: OAuthProvider) => {
+    if (!(await confirmLocalDataWillBeLinked())) return;
+
     setBusy(true);
     try {
       const { error } = await signInWithOAuth(provider);
       // «cancelled» es cerrar el navegador a propósito, no un fallo que contar.
-      if (error && error !== 'cancelled') await fail(error);
+      if (error && error !== 'cancelled') {
+        await fail(error);
+        return;
+      }
+      if (!error) enterTheApp();
     } finally {
       setBusy(false);
     }
