@@ -14,7 +14,15 @@ import { Screen } from '@/components/ui/Screen';
 import { Card, EmptyState } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
-import { fetchSharedVisit, rejectTag, type SharedVisit } from '@/features/social/api';
+import { formatDishPrice } from '@/features/dishes/currency';
+import {
+  fetchSharedVisit,
+  rejectTag,
+  type SharedDish,
+  type SharedVisit,
+} from '@/features/social/api';
+import { LikeButton } from '@/features/social/components/LikeButton';
+import { SharedAuthorRow, SharedBackBar } from '@/features/social/components/SharedChrome';
 import { useAsyncResource } from '@/features/social/hooks/useAsyncResource';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
@@ -25,13 +33,21 @@ import { remoteImageUri } from '@/lib/helpers/remote-image';
  * Someone else's meal.
  *
  * A read-only screen on purpose, and visibly not the same thing as your own
- * visit detail: there is nothing to edit, nothing to delete, and the restaurant
- * does not link anywhere because it is not in your diary. Making it look like
- * your own screen would invite taps that cannot work.
+ * visit detail: there is nothing to edit and nothing to delete. Making it look
+ * like your own screen would invite taps that cannot work.
  *
- * Everything comes from one RPC. The restaurant and the dishes arrive even when
- * their owner keeps them private — a shared meal that cannot say where it was
- * or what was eaten is not shared at all (0011).
+ * ## El sitio y los platos sí llevan a alguna parte (0025)
+ *
+ * Y antes no: eran texto, con la foto del plato recortada a 44 píxeles y sin
+ * forma de ver el precio ni el comentario entero. Ahora abren su propia
+ * pantalla — **cuando su dueño los comparte también sueltos**, que es lo que
+ * dice `canOpen`. La diferencia importa porque este detalle enseña platos y un
+ * restaurante que pueden ser privados: viajan dentro de la visita porque una
+ * comida que no dice dónde fue ni qué se comió no comparte nada (0011), y eso
+ * no los convierte en entradas abiertas del diario de nadie. Sin `canOpen` la
+ * pantalla ofrecería un toque que el servidor va a rechazar.
+ *
+ * Everything comes from one RPC.
  */
 export default function SharedVisitScreen() {
   const { visit: visitUuid } = useGlobalSearchParams<{ visit: string }>();
@@ -72,7 +88,6 @@ export default function SharedVisitScreen() {
     );
   }
 
-  const author = data.author.displayName ?? data.author.username;
   const cover = remoteImageUri(data.author.userId, data.images[0] ?? null);
   const taggedMe = data.people.some((person) => person.accountUuid === session?.user.id);
 
@@ -135,19 +150,7 @@ export default function SharedVisitScreen() {
         contentContainerClassName="px-5 pb-16 pt-3 gap-4"
         showsVerticalScrollIndicator={false}
       >
-        <View className="flex-row items-center gap-3">
-          <PressableScale
-            accessibilityLabel="Volver"
-            onPress={() => router.back()}
-            scaleTo={0.9}
-            className="h-9 w-9 items-center justify-center rounded-pill bg-sunken"
-          >
-            <Ionicons name="chevron-back" size={19} color={colors.ink} />
-          </PressableScale>
-          <Txt variant="caption" tone="subtle" className="flex-1">
-            Visita compartida
-          </Txt>
-        </View>
+        <SharedBackBar label="Visita compartida" />
 
         {cover ? (
           <Pressable
@@ -173,31 +176,44 @@ export default function SharedVisitScreen() {
         )}
 
         <View className="gap-1">
-          <Txt variant="title">{data.restaurant?.name ?? 'Una visita'}</Txt>
-          <Txt variant="caption" tone="subtle">
-            {formatVisitDate(data.visitedAt)}
-          </Txt>
+          {/* El nombre del sitio abre el sitio, cuando su dueño también lo
+              comparte. El título y no un botón aparte: es el único elemento de
+              la pantalla que ya *es* el restaurante. */}
+          {data.restaurant && data.restaurant.canOpen ? (
+            <PressableScale
+              accessibilityLabel={`Ver ${data.restaurant.name}`}
+              onPress={() =>
+                router.push({
+                  pathname: '/(main)/shared/restaurant/[id]',
+                  params: { id: data.restaurant?.uuid ?? '' },
+                })
+              }
+              scaleTo={0.99}
+              className="flex-row items-center gap-2"
+            >
+              <Txt variant="title" tone="primary" className="flex-1">
+                {data.restaurant.name}
+              </Txt>
+              <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+            </PressableScale>
+          ) : (
+            <Txt variant="title">{data.restaurant?.name ?? 'Una visita'}</Txt>
+          )}
+          <View className="flex-row items-center justify-between">
+            <Txt variant="caption" tone="subtle">
+              {formatVisitDate(data.visitedAt)}
+            </Txt>
+            <LikeButton
+              entityUuid={data.uuid}
+              kind="visit"
+              count={data.likeCount}
+              liked={data.likedByMe}
+              size="md"
+            />
+          </View>
         </View>
 
-        <PressableScale
-          accessibilityLabel={`Ver el perfil de ${author}`}
-          onPress={() =>
-            router.push({ pathname: '/(main)/friends/[id]', params: { id: data.author.userId } })
-          }
-          scaleTo={0.985}
-          className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-3"
-        >
-          <Avatar name={author} uri={data.author.avatarUrl} size={38} />
-          <View className="flex-1">
-            <Txt variant="body" weight="semi" serif={false} numberOfLines={1}>
-              {author}
-            </Txt>
-            <Txt variant="caption" tone="subtle">
-              @{data.author.username}
-            </Txt>
-          </View>
-          <Ionicons name="chevron-forward" size={17} color={colors.inkSubtle} />
-        </PressableScale>
+        <SharedAuthorRow author={data.author} />
 
         {data.comments ? (
           <Card>
@@ -251,46 +267,14 @@ export default function SharedVisitScreen() {
             <Txt variant="caption" tone="subtle">
               Qué comieron
             </Txt>
-            {data.dishes.map((dish) => {
-              const photo = remoteImageUri(data.author.userId, dish.imageKey);
-              return (
-                <View
-                  key={dish.uuid}
-                  className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5"
-                >
-                  {photo ? (
-                    <Pressable
-                      accessibilityRole="imagebutton"
-                      accessibilityLabel={`Ver la foto de ${dish.name}`}
-                      onPress={() => openPhoto(`${dish.uuid}-photo`)}
-                    >
-                      <Thumbnail
-                        name={dish.name}
-                        uri={photo}
-                        size={44}
-                        radius={10}
-                        icon="fast-food"
-                      />
-                    </Pressable>
-                  ) : (
-                    <Thumbnail name={dish.name} size={44} radius={10} icon="fast-food" />
-                  )}
-                  <View className="flex-1 gap-0.5">
-                    <Txt variant="body" weight="semi" serif={false} numberOfLines={1}>
-                      {dish.name}
-                    </Txt>
-                    {dish.rating ? (
-                      <RatingStars value={dish.rating} readOnly size={13} gap={2} />
-                    ) : null}
-                    {dish.comments ? (
-                      <Txt variant="caption" tone="subtle" numberOfLines={2}>
-                        {dish.comments}
-                      </Txt>
-                    ) : null}
-                  </View>
-                </View>
-              );
-            })}
+            {data.dishes.map((dish) => (
+              <SharedDishRow
+                key={dish.uuid}
+                dish={dish}
+                authorId={data.author.userId}
+                onOpenPhoto={() => openPhoto(`${dish.uuid}-photo`)}
+              />
+            ))}
           </View>
         ) : null}
 
@@ -327,5 +311,87 @@ export default function SharedVisitScreen() {
         onClose={() => setLightboxIndex(null)}
       />
     </Screen>
+  );
+}
+
+/**
+ * Un plato dentro de la comida.
+ *
+ * Dos gestos distintos sobre la misma fila, y por eso la miniatura conserva el
+ * suyo: tocar la foto la abre a pantalla completa —que es lo que se venía
+ * haciendo y sigue valiendo aunque el plato no se pueda abrir— y tocar el resto
+ * de la fila abre el plato, si es que se puede.
+ */
+function SharedDishRow({
+  dish,
+  authorId,
+  onOpenPhoto,
+}: {
+  dish: SharedDish;
+  authorId: string;
+  onOpenPhoto: () => void;
+}) {
+  const router = useRouter();
+  const { colors } = useTheme();
+  const photo = remoteImageUri(authorId, dish.imageKey);
+  const price = formatDishPrice(dish.price, dish.currency);
+
+  const thumbnail = photo ? (
+    <Pressable
+      accessibilityRole="imagebutton"
+      accessibilityLabel={`Ver la foto de ${dish.name}`}
+      onPress={onOpenPhoto}
+    >
+      <Thumbnail name={dish.name} uri={photo} size={44} radius={10} icon="fast-food" />
+    </Pressable>
+  ) : (
+    <Thumbnail name={dish.name} size={44} radius={10} icon="fast-food" />
+  );
+
+  const details = (
+    <View className="min-w-0 flex-1 gap-0.5">
+      <View className="flex-row items-center gap-2">
+        <Txt variant="body" weight="semi" serif={false} numberOfLines={1} className="flex-1">
+          {dish.name}
+        </Txt>
+        {price ? (
+          <Txt variant="caption" tone="subtle">
+            {price}
+          </Txt>
+        ) : null}
+      </View>
+      {dish.rating ? <RatingStars value={dish.rating} readOnly size={13} gap={2} /> : null}
+      {dish.comments ? (
+        <Txt variant="caption" tone="subtle" numberOfLines={2}>
+          {dish.comments}
+        </Txt>
+      ) : null}
+    </View>
+  );
+
+  if (!dish.canOpen) {
+    return (
+      <View className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5">
+        {thumbnail}
+        {details}
+      </View>
+    );
+  }
+
+  return (
+    <View className="flex-row items-center gap-3 rounded-xl border border-line bg-surface p-2.5">
+      {thumbnail}
+      <PressableScale
+        accessibilityLabel={`Ver ${dish.name}`}
+        onPress={() =>
+          router.push({ pathname: '/(main)/shared/dish/[id]', params: { id: dish.uuid } })
+        }
+        scaleTo={0.99}
+        className="min-w-0 flex-1 flex-row items-center gap-2"
+      >
+        {details}
+        <Ionicons name="chevron-forward" size={16} color={colors.inkSubtle} />
+      </PressableScale>
+    </View>
   );
 }

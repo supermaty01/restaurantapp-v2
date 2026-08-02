@@ -56,6 +56,15 @@ export interface FeedEntry {
   companionCount: number;
   /** Quiénes fueron, sin ti. Un número no contesta la pregunta que se hace uno. */
   companionNames: string[];
+  /**
+   * Cuántos me gusta tiene, y si uno es tuyo.
+   *
+   * Viajan con la tarjeta y no en una llamada aparte, y el porqué está en la
+   * migración 0026: un contador que aparece medio segundo después de la tarjeta
+   * se lee como que acaba de darle alguien.
+   */
+  likeCount: number;
+  likedByMe: boolean;
 }
 
 /** Rows come back snake_case from PostgREST; the app speaks camelCase. */
@@ -197,6 +206,9 @@ function toFeedEntry(row: Record<string, unknown>): FeedEntry {
     dishNames: (row['dish_names'] as string[] | null) ?? [],
     companionCount: Number(row['companion_count'] ?? 0),
     companionNames: (row['companion_names'] as string[] | null) ?? [],
+    // bigint llega como cadena desde PostgREST.
+    likeCount: Number(row['like_count'] ?? 0),
+    likedByMe: row['liked_by_me'] === true,
   };
 }
 
@@ -323,9 +335,21 @@ export interface SharedDish {
   uuid: string;
   name: string;
   price: number | null;
+  /** En qué moneda está `price`. Nula exactamente cuando el precio lo es. */
+  currency: string | null;
   rating: number | null;
   comments: string | null;
   imageKey: string | null;
+  /**
+   * Si este plato tiene una pantalla propia que quien mira pueda abrir.
+   *
+   * Lo decide el servidor (0025) y no se deduce aquí, porque no se puede: el
+   * detalle de una visita enseña platos que su dueño **no** ha compartido
+   * sueltos —una comida que no dice qué se comió no comparte nada (0011)— así
+   * que «está en la lista» no implica «se puede abrir». Sin este dato, la
+   * pantalla ofrecería un toque que el servidor va a rechazar.
+   */
+  canOpen: boolean;
 }
 
 export interface SharedPerson {
@@ -340,6 +364,8 @@ export interface SharedVisit {
   comments: string | null;
   visibility: string;
   createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
   author: {
     userId: string;
     username: string;
@@ -353,6 +379,8 @@ export interface SharedVisit {
     longitude: number | null;
     rating: number | null;
     comments: string | null;
+    /** Igual que en `SharedDish`, y por el mismo motivo. */
+    canOpen: boolean;
   } | null;
   dishes: SharedDish[];
   /** Photo keys, resolved through the Worker by `remoteImageUri`. */
@@ -367,6 +395,8 @@ interface SharedVisitRow {
   comments: string | null;
   visibility: string;
   created_at: string;
+  like_count: number | string;
+  liked_by_me: boolean;
   author: {
     user_id: string;
     username: string;
@@ -380,14 +410,17 @@ interface SharedVisitRow {
     longitude: number | null;
     rating: number | null;
     comments: string | null;
+    can_open: boolean;
   } | null;
   dishes: {
     uuid: string;
     name: string;
     price: string | number | null;
+    currency: string | null;
     rating: number | null;
     comments: string | null;
     image_key: string | null;
+    can_open: boolean;
   }[];
   images: string[];
   people: { name: string; account_uuid: string | null; username: string | null }[];
@@ -414,21 +447,35 @@ export async function fetchSharedVisit(visitUuid: string): Promise<SharedVisit |
     comments: row.comments,
     visibility: row.visibility,
     createdAt: row.created_at,
+    likeCount: Number(row.like_count ?? 0),
+    likedByMe: row.liked_by_me === true,
     author: {
       userId: row.author.user_id,
       username: row.author.username,
       displayName: row.author.display_name,
       avatarUrl: row.author.avatar_url,
     },
-    restaurant: row.restaurant,
+    restaurant: row.restaurant
+      ? {
+          uuid: row.restaurant.uuid,
+          name: row.restaurant.name,
+          latitude: row.restaurant.latitude,
+          longitude: row.restaurant.longitude,
+          rating: row.restaurant.rating,
+          comments: row.restaurant.comments,
+          canOpen: row.restaurant.can_open === true,
+        }
+      : null,
     dishes: (row.dishes ?? []).map((dish) => ({
       uuid: dish.uuid,
       name: dish.name,
       // numeric comes back as a string from PostgREST; the UI wants a number.
       price: dish.price === null || dish.price === undefined ? null : Number(dish.price),
+      currency: dish.currency ?? null,
       rating: dish.rating,
       comments: dish.comments,
       imageKey: dish.image_key,
+      canOpen: dish.can_open === true,
     })),
     images: row.images ?? [],
     people: (row.people ?? []).map((person) => ({
@@ -436,6 +483,152 @@ export async function fetchSharedVisit(visitUuid: string): Promise<SharedVisit |
       accountUuid: person.account_uuid,
       username: person.username,
     })),
+  };
+}
+
+// ── Un plato y un sitio compartidos ──────────────────────────────────────────
+
+/** Quién publicó algo. La misma forma en las tres pantallas compartidas. */
+export interface SharedAuthor {
+  userId: string;
+  username: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+}
+
+interface AuthorRow {
+  user_id: string;
+  username: string;
+  display_name: string | null;
+  avatar_url: string | null;
+}
+
+function toAuthor(row: AuthorRow): SharedAuthor {
+  return {
+    userId: row.user_id,
+    username: row.username,
+    displayName: row.display_name,
+    avatarUrl: row.avatar_url,
+  };
+}
+
+export interface SharedDishDetail {
+  uuid: string;
+  name: string;
+  price: number | null;
+  currency: string | null;
+  rating: number | null;
+  comments: string | null;
+  createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+  author: SharedAuthor;
+  /** Dónde se comió, si lo hay. `canOpen` dice si además se puede abrir. */
+  restaurant: { uuid: string; name: string; canOpen: boolean } | null;
+  images: string[];
+}
+
+export interface SharedRestaurantDetail {
+  uuid: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  rating: number | null;
+  comments: string | null;
+  createdAt: string;
+  likeCount: number;
+  likedByMe: boolean;
+  author: SharedAuthor;
+  images: string[];
+}
+
+interface SharedDishRow {
+  uuid: string;
+  name: string;
+  price: string | number | null;
+  currency: string | null;
+  rating: number | null;
+  comments: string | null;
+  created_at: string;
+  like_count: number | string;
+  liked_by_me: boolean;
+  author: AuthorRow;
+  restaurant: { uuid: string; name: string; can_open: boolean } | null;
+  images: string[];
+}
+
+interface SharedRestaurantRow {
+  uuid: string;
+  name: string;
+  latitude: number | null;
+  longitude: number | null;
+  rating: number | null;
+  comments: string | null;
+  created_at: string;
+  like_count: number | string;
+  liked_by_me: boolean;
+  author: AuthorRow;
+  images: string[];
+}
+
+/**
+ * Un plato de otra persona, entero.
+ *
+ * Mismo trato que `fetchSharedVisit`: el servidor decide si se puede ver y
+ * contesta null si no, sin distinguir «no existe» de «no es para ti».
+ *
+ * **No devuelve las visitas en las que se comió**, y no es un olvido: poder ver
+ * un plato no da acceso al diario de nadie (0011). Lo único que sale hacia
+ * arriba es el restaurante, y solo su nombre.
+ */
+export async function fetchSharedDish(dishUuid: string): Promise<SharedDishDetail | null> {
+  const row = await callRpc<SharedDishRow | null>('dish_detail', { target: dishUuid });
+  if (!row) return null;
+
+  return {
+    uuid: row.uuid,
+    name: row.name,
+    // numeric llega como cadena desde PostgREST.
+    price: row.price === null || row.price === undefined ? null : Number(row.price),
+    currency: row.currency,
+    rating: row.rating,
+    comments: row.comments,
+    createdAt: row.created_at,
+    likeCount: Number(row.like_count ?? 0),
+    likedByMe: row.liked_by_me === true,
+    author: toAuthor(row.author),
+    restaurant: row.restaurant
+      ? {
+          uuid: row.restaurant.uuid,
+          name: row.restaurant.name,
+          canOpen: row.restaurant.can_open === true,
+        }
+      : null,
+    images: row.images ?? [],
+  };
+}
+
+/** Un sitio de otra persona. Sin su historial, por el mismo motivo que arriba. */
+export async function fetchSharedRestaurant(
+  restaurantUuid: string,
+): Promise<SharedRestaurantDetail | null> {
+  const row = await callRpc<SharedRestaurantRow | null>('restaurant_detail', {
+    target: restaurantUuid,
+  });
+  if (!row) return null;
+
+  return {
+    uuid: row.uuid,
+    name: row.name,
+    latitude: row.latitude,
+    longitude: row.longitude,
+    rating: row.rating,
+    comments: row.comments,
+    createdAt: row.created_at,
+    likeCount: Number(row.like_count ?? 0),
+    likedByMe: row.liked_by_me === true,
+    author: toAuthor(row.author),
+    images: row.images ?? [],
   };
 }
 
@@ -453,6 +646,8 @@ export interface TaggedVisit {
   companionCount: number;
   /** Quiénes fueron, sin ti. Un número no contesta la pregunta que se hace uno. */
   companionNames: string[];
+  likeCount: number;
+  likedByMe: boolean;
 }
 
 /**
@@ -482,7 +677,36 @@ export async function fetchTaggedVisits(before?: string): Promise<TaggedVisit[]>
     imageKey: (row['image_key'] as string | null) ?? null,
     companionCount: Number(row['companion_count'] ?? 0),
     companionNames: (row['companion_names'] as string[] | null) ?? [],
+    likeCount: Number(row['like_count'] ?? 0),
+    likedByMe: row['liked_by_me'] === true,
   }));
+}
+
+// ── Me gusta ─────────────────────────────────────────────────────────────────
+
+/** Cómo queda una entrada después de tocar el corazón. */
+export interface LikeState {
+  liked: boolean;
+  total: number;
+}
+
+/**
+ * Da o quita el me gusta. Un solo verbo, porque es un solo botón.
+ *
+ * Dos llamadas («dar» y «quitar») obligarían a la pantalla a saber el estado
+ * actual antes de llamar, y el estado actual es justo lo que puede estar
+ * desactualizado: con dos verbos, un doble toque rápido acaba contestando «ya
+ * existe» o «no existe» según el orden en que lleguen.
+ *
+ * Devuelve el estado resultante para que la pantalla no lo adivine — si el
+ * optimismo del cliente se equivocó, esto lo corrige.
+ */
+export async function toggleLike(entityUuid: string, kind: FeedKind): Promise<LikeState> {
+  const row = await callRpc<{ liked: boolean; total: number | string } | null>('toggle_like', {
+    target: entityUuid,
+    kind,
+  });
+  return { liked: row?.liked === true, total: Number(row?.total ?? 0) };
 }
 
 /**

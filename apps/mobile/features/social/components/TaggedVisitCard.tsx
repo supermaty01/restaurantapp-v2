@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
+import { View } from 'react-native';
 
 import { PressableScale } from '@/components/ui/Motion';
 import { Card } from '@/components/ui/Surface';
@@ -12,6 +13,7 @@ import { remoteImageUri } from '@/lib/helpers/remote-image';
 
 import { companionsLabel } from '../companions';
 import { AuthorHeader } from './AuthorHeader';
+import { LikeButton } from './LikeButton';
 
 import type { TaggedVisit } from '../api';
 
@@ -88,6 +90,18 @@ export function TaggedVisitCard({ visit }: { visit: TaggedVisit }) {
             {visit.comments}
           </Txt>
         ) : null}
+
+        {/* También aquí: es la comida de otra persona igual que las del feed, y
+            que se pudiera dar me gusta en una lista y no en la otra sería una
+            diferencia sin ninguna razón detrás. */}
+        <View className="flex-row items-center justify-end">
+          <LikeButton
+            entityUuid={visit.entityUuid}
+            kind="visit"
+            count={visit.likeCount}
+            liked={visit.likedByMe}
+          />
+        </View>
       </Card>
     </PressableScale>
   );

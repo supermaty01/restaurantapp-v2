@@ -14,6 +14,7 @@ import { remoteImageUri } from '@/lib/helpers/remote-image';
 
 import { companionsLabel } from '../companions';
 import { AuthorHeader } from './AuthorHeader';
+import { LikeButton } from './LikeButton';
 
 import type { FeedEntry, FeedKind } from '../api';
 
@@ -51,11 +52,6 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
   const photo = remoteImageUri(entry.authorId, entry.imageKey);
   const dishes = eaten(entry.dishNames);
   const companions = companionsLabel(entry.companionNames, entry.companionCount);
-
-  // Only a visit has a screen of its own to open. A loose dish or restaurant
-  // has no shared detail behind it, so the card stays inert rather than
-  // offering a tap that goes nowhere.
-  const openable = entry.kind === 'visit';
 
   const body = (
     <Card className="gap-3">
@@ -123,21 +119,63 @@ export function FeedCard({ entry }: { entry: FeedEntry }) {
             </Txt>
           </View>
         ) : null}
+        {/* El corazón, al final de la fila y siempre a la derecha: es lo único
+            de la tarjeta que se toca por sí solo, así que tiene que estar en el
+            mismo sitio en todas — con la compañía o sin ella. */}
+        <View className={companions ? '' : 'flex-1 items-end'}>
+          <LikeButton
+            entityUuid={entry.entityUuid}
+            kind={entry.kind}
+            count={entry.likeCount}
+            liked={entry.likedByMe}
+          />
+        </View>
       </View>
     </Card>
   );
 
-  if (!openable) return body;
-
   return (
     <PressableScale
-      accessibilityLabel={`Ver la visita de ${author} a ${entry.title}`}
-      onPress={() =>
-        router.push({ pathname: '/(main)/shared/[visit]', params: { visit: entry.entityUuid } })
-      }
+      accessibilityLabel={`${OPEN_LABEL[entry.kind]} de ${author}: ${entry.title}`}
+      onPress={() => open(router, entry)}
       scaleTo={0.985}
     >
       {body}
     </PressableScale>
   );
+}
+
+/**
+ * Las tres clases se abren, desde la migración 0025.
+ *
+ * Antes solo la visita: un plato o un sitio compartidos sueltos no tenían
+ * detrás ninguna pantalla, así que la tarjeta se quedaba inerte antes que
+ * ofrecer un toque que no lleva a ninguna parte. Ahora la tienen las tres, y la
+ * inercia sería la que sobra — una tarjeta con foto y nota que no se abre es lo
+ * que se toca dos veces antes de darse por vencido.
+ *
+ * Y una tarjeta del feed siempre se puede abrir: está ahí porque el servidor ya
+ * decidió que quien mira puede verla, que es exactamente la comprobación que
+ * hacen `dish_detail` y `restaurant_detail` al llegar. (No es así dentro del
+ * detalle de una visita, donde sí hacía falta un `canOpen` — ver
+ * `shared/[visit].tsx`.)
+ */
+const OPEN_LABEL: Record<FeedKind, string> = {
+  visit: 'Ver la visita',
+  dish: 'Ver el plato',
+  restaurant: 'Ver el sitio',
+};
+
+function open(router: ReturnType<typeof useRouter>, entry: FeedEntry): void {
+  switch (entry.kind) {
+    case 'visit':
+      router.push({ pathname: '/(main)/shared/[visit]', params: { visit: entry.entityUuid } });
+      return;
+    case 'dish':
+      router.push({ pathname: '/(main)/shared/dish/[id]', params: { id: entry.entityUuid } });
+      return;
+    case 'restaurant':
+      router.push({ pathname: '/(main)/shared/restaurant/[id]', params: { id: entry.entityUuid } });
+      return;
+  }
 }
