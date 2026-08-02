@@ -737,9 +737,13 @@ export async function restoreTag(visitUuid: string): Promise<void> {
  * la visita y los platos, y de ahí sale un aviso y no tres. Por eso llega sin
  * visita a la que apuntar — la ráfaga no tiene una fila que la represente— y se
  * abre en el perfil de quien publicó, que es donde están las tres.
+ *
+ * `entry_liked` es la primera que **no ocurre en una visita**: se le puede dar
+ * me gusta a un plato o a un sitio sueltos. Por eso llega con `entityUuid` y
+ * `entityKind` en vez de con `visitUuid` (0027).
  */
 export type NotificationKind =
-  'tagged_in_visit' | 'friend_published' | 'friend_request' | 'friend_accepted';
+  'tagged_in_visit' | 'friend_published' | 'friend_request' | 'friend_accepted' | 'entry_liked';
 
 export interface AppNotification {
   id: number;
@@ -751,9 +755,12 @@ export interface AppNotification {
   username: string | null;
   displayName: string | null;
   avatarUrl: string | null;
-  /** Dónde fue. Nulo en los avisos que no ocurren en ningún restaurante. */
+  /** Cómo se llama aquello de lo que habla. Nulo si no apunta a nada. */
   title: string | null;
   imageKey: string | null;
+  /** La entrada de un me gusta, y de qué clase es. Decide qué pantalla abre. */
+  entityUuid: string | null;
+  entityKind: FeedKind | null;
 }
 
 /**
@@ -781,6 +788,8 @@ export async function fetchNotifications(before?: string): Promise<AppNotificati
     avatarUrl: (row['avatar_url'] as string | null) ?? null,
     title: (row['title'] as string | null) ?? null,
     imageKey: (row['image_key'] as string | null) ?? null,
+    entityUuid: (row['entity_uuid'] as string | null) ?? null,
+    entityKind: (row['entity_kind'] as FeedKind | null) ?? null,
   }));
 }
 

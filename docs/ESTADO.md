@@ -1,6 +1,6 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-08-01 (ronda 9 — los trece del segundo feedback)
+**Última actualización:** 2026-08-01 (ronda 9 — trece del segundo feedback, y cuatro del tercero)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
@@ -14,11 +14,17 @@ fuente**. Marcar aquí al cerrar algo.
 
 ### 🚀 Despliegue — bloquea a casi todo lo demás
 
-- [ ] **Aplicar 0024, 0025 y 0026 a Supabase** (`supabase db push`). Sin ellas,
+- [ ] **Aplicar 0024, 0025, 0026 y 0027 a Supabase** (`supabase db push`). Sin ellas,
       de la ronda 9 no funciona nada de lo social: el perfil de otra persona
       sigue viéndose como una lista de visitas (0024), el detalle de un plato o
       un sitio contesta «no existe esa función» (0025) y el feed entero devuelve
-      un error porque `feed_page` cambió de firma (0026). **Las tres o ninguna**
+      un error porque `feed_page` cambió de firma (0026), y los avisos de me
+      gusta no existen (0027). **Las cuatro o ninguna**
+- [ ] **Desplegar el Worker** (`npx wrangler deploy`). Los textos de las
+      notificaciones push se redactan allí, así que sin esto siguen saliendo con
+      el nombre de la persona por título — y un me gusta llegaría con el texto
+      genérico de «clase desconocida», que es la rama que existe justo para esta
+      ventana entre migración y despliegue
 - [ ] **APK nuevo.** Nada de la ronda 9 se ha visto en un dispositivo
 - [ ] **Comprobar la Site URL de Supabase.** El arreglo del correo de
       confirmación manda `emailRedirectTo` desde el cliente, pero
@@ -402,14 +408,71 @@ Dos cosas que costaron una pasada cada una y quedan escritas donde tocan:
 | La ficha de la persona se come media pantalla   | Se encoge a una barra con la cara y el nombre. No se va del todo: una lista de tarjetas de una sola persona no dice de quién es                                   |
 | Abrir un plato o un sitio compartidos           | Dos pantallas nuevas y sus RPCs (0025). Dentro de una visita, `can_open` decide si se ofrece el toque — el detalle enseña platos que su dueño no comparte sueltos |
 
+### 🔁 Lo que cambió al probarlo (los cuatro del tercer feedback)
+
+**El parpadeo de la cabecera del perfil, que es el que enseña algo.** Se
+reportó como «hay dos eventos que se activan a la vez y la sección de arriba se
+recorta/agranda todo el tiempo». Los había, y eran uno solo dando vueltas: la
+altura de la cabecera salía del desplazamiento, y cambiarla cambiaba el alto de
+la lista, que hacía que Android recortara el desplazamiento, que volvía a
+cambiar la altura.
+
+**No se arregla suavizando.** Mientras la altura salga del desplazamiento, el
+desplazamiento va a seguir saliendo de la altura. Hay tres cosas que cortan el
+lazo y las tres hacen falta: la altura se anima hacia un valor **constante**, el
+estado es **binario** con histéresis (se recoge a 96 px, no se despliega hasta
+40), y quien decide comprueba antes que **la lista tenga sitio que devolver** —
+con cuatro entradas en la sección, recogerse le quita a la lista más recorrido
+del que tiene, y el recorte es inevitable. Está en
+`collapsing-header-motion.ts`, con su test; y verificado en el emulador con
+datos reales, siete fotogramas seguidos con la cabecera clavada.
+
+La lección para la próxima: **una animación atada al gesto que además cambia el
+layout del contenedor del gesto es un bucle**, no un efecto. Se ve perfecta en
+la cabeza y en el móvil tiembla.
+
+**La naranja es Clay**, la paleta que la app tuvo hasta la ronda 8, sacada del
+histórico (`743f36f~1`) y no de la memoria. Tres valores se movieron lo mínimo
+para pasar el test de contraste, y **dos de esas tres parejas no existían
+cuando Clay estaba viva**: `tone="primary"` empezó a escribir texto sobre el
+lienzo en la ronda 8, y hasta entonces el primario solo rellenaba botones. La
+medida no cambió, cambió el uso. El detalle está en `tokens.ts`.
+
+Y un cuarto valor **no** se movió: el ámbar `#E0A83B` de las estrellas se
+quedaba a 2,13 de un listón de 2,4 que se había inventado en la ronda anterior
+mirando las siete paletas generadas. Ese ámbar se usó durante meses sin queja,
+así que lo que bajó fue el listón. Un umbral inventado que rechaza lo que ya
+funcionaba no es un guardián.
+
+**Avisar de un me gusta** (0027) es la primera clase de aviso que no ocurre en
+una visita, así que la tabla necesitaba a dónde apuntar. Avisa **una vez y para
+siempre** por persona y entrada: sin ese índice único, quitar y volver a dar me
+gusta es un timbre que cualquiera puede tocar desde su móvil.
+
+**Y los textos de las notificaciones.** El título era el nombre de la persona, y
+se reportó que no dice nada. Tiene razón: Android ya pinta el nombre de la app
+encima, así que un aviso titulado «Mateo Álvarez» gasta las dos líneas
+destacadas en un nombre y deja lo ocurrido en la letra pequeña — y cuatro
+avisos de la misma persona salen como cuatro títulos idénticos. Ahora el título
+dice qué pasó y el cuerpo lleva la frase entera.
+
 ### ⚠️ Lo que no se pudo comprobar, y las dudas que quedan
 
-- **Nada de esto se ha visto en un dispositivo.** Sigue siendo el paso cero, y
-  esta ronda lo agrava: tres puntos dependen además de las migraciones.
-- **La cabecera que se encoge no tiene test.** Usa reanimated, que no se puede
-  importar en jest (docs/12), y la lógica que se podría sacar fuera —una
-  interpolación— no es donde está el riesgo. El riesgo es la medida de la altura
-  desplegada, y eso solo se ve en pantalla.
+- **Nada de esto se ha visto en un dispositivo**, aunque la ronda 9 sí se
+  ejercitó en el emulador con el diario real: el perfil de un amigo con sus tres
+  secciones, la cabecera que se recoge sin temblar, las ocho paletas y el
+  recorte de la «g». Lo que sigue sin verse es el push, que necesita el APK.
+- **En modo oscuro, la paleta naranja vuelve a poner las tarjetas cafés**, que
+  es literalmente la queja que cerró la ronda 8. Aquí es deliberado —se pidió
+  esa paleta y esos son sus colores— y además es opcional, así que se deja. Pero
+  si al usarla chirría, lo que hay que tocar son sus seis neutros oscuros, no el
+  acento.
+- **El «me gusta» no se pudo probar contra el servidor**: `toggle_like` vive en
+  la 0026 y el proyecto remoto todavía está en la 0023. Lo que hay probado son
+  los 14 asserts SQL contra un Postgres construido desde cero.
+- **La cabecera que se encoge sigue sin test de interfaz.** Lo que sí tiene test
+  es la **regla** que decide cuándo recogerse, que es donde estaba el fallo; el
+  pintado usa reanimated, que no se puede importar en jest (docs/12).
 - **El aviso de «tu diario pasa a ser de esta cuenta» sale también al crear una
   cuenta nueva desde un diario ya escrito**, que es exactamente cuando más falta
   hace. Pero también sale si alguien entra, sale y vuelve a entrar con datos que

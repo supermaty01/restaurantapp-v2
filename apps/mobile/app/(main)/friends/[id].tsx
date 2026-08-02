@@ -30,6 +30,7 @@ import type {
   PublicProfile,
   UserEntryCounts,
 } from '@/features/social/api';
+import { shouldCollapse } from '@/features/social/components/collapsing-header-motion';
 import { CollapsingHeader } from '@/features/social/components/CollapsingHeader';
 import { FeedCard } from '@/features/social/components/FeedCard';
 import {
@@ -113,15 +114,22 @@ export default function UserProfileScreen() {
   );
 
   /*
-   * Cuánto ha bajado la sección que se está mirando.
+   * Si la ficha está recogida, y cuánto sitio devuelve al recogerse.
    *
-   * Uno solo para las tres, y lo escribe únicamente la activa: con el pager,
-   * las tres listas existen a la vez y las tres pueden emitir desplazamiento
-   * durante una transición. Cada sección recuerda además el suyo y lo repone al
-   * volverse activa, o cambiar de pestaña dejaría la cabecera recogida sobre
-   * una lista que está arriba del todo.
+   * **Un booleano y no el desplazamiento**, que es lo que arregla el parpadeo:
+   * mientras la altura de la cabecera salía del desplazamiento, cambiarla
+   * cambiaba el alto de la lista, que hacía que Android recortara el
+   * desplazamiento, que volvía a cambiar la altura. El razonamiento entero está
+   * en `collapsing-header-motion.ts`.
+   *
+   * Uno solo para las tres secciones, y lo escribe únicamente la activa: con el
+   * pager, las tres listas existen a la vez y las tres emiten desplazamiento
+   * durante una transición. Cada sección recuerda además su propio estado y lo
+   * repone al volverse activa, o cambiar de pestaña dejaría la cabecera
+   * recogida sobre una lista que está arriba del todo.
    */
-  const scrollY = useSharedValue(0);
+  const collapsed = useSharedValue(0);
+  const headerRange = useSharedValue(0);
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const act = useCallback(
@@ -232,7 +240,7 @@ export default function UserProfileScreen() {
    * las tarjetas son todas de la misma persona, así que tampoco lo dice la
    * lista.
    */
-  const collapsedHeader = (
+  const compactHeader = (
     <View className="flex-row items-center gap-3 px-1 py-2.5">
       <Avatar name={name} uri={user.avatarUrl} size={34} />
       <View className="min-w-0 flex-1">
@@ -247,13 +255,24 @@ export default function UserProfileScreen() {
   );
 
   const renderSection = (kind: FeedKind) => (
-    <Section userId={id} kind={kind} scrollY={scrollY} active={current === kind} />
+    <Section
+      userId={id}
+      kind={kind}
+      collapsed={collapsed}
+      headerRange={headerRange}
+      active={current === kind}
+    />
   );
 
   return (
     <Screen padded={false}>
       <View className="px-5 pt-2">
-        <CollapsingHeader scrollY={scrollY} expanded={expandedHeader} collapsed={collapsedHeader} />
+        <CollapsingHeader
+          collapsed={collapsed}
+          range={headerRange}
+          expanded={expandedHeader}
+          compact={compactHeader}
+        />
       </View>
 
       {sections.length === 0 ? (
@@ -300,13 +319,16 @@ export default function UserProfileScreen() {
 function Section({
   userId,
   kind,
-  scrollY,
+  collapsed,
+  headerRange,
   active,
 }: {
   userId: string;
   kind: FeedKind;
-  /** El desplazamiento compartido que encoge la cabecera. */
-  scrollY: SharedValue<number>;
+  /** El estado compartido de la cabecera: 1 recogida, 0 desplegada. */
+  collapsed: SharedValue<number>;
+  /** Cuánto sitio devuelve la cabecera al recogerse. Lo mide ella. */
+  headerRange: SharedValue<number>;
   /** Si esta es la pestaña que se está mirando. Solo la activa manda. */
   active: boolean;
 }) {
@@ -325,16 +347,26 @@ function Section({
    * El desplazamiento propio se guarda siempre; al compartido solo escribe la
    * activa, porque durante un arrastre entre páginas las tres están vivas.
    */
-  const ownOffset = useSharedValue(0);
+  const ownCollapsed = useSharedValue(0);
   const isActive = useSharedValue(active);
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      // Negativo cuando se estira por arriba (el rebote de iOS), y eso pondría
-      // la cabecera más alta que su altura medida.
+      // Negativo cuando se estira por arriba (el rebote de iOS).
       const y = Math.max(0, event.contentOffset.y);
-      ownOffset.value = y;
-      if (isActive.value) scrollY.value = y;
+      // Cuánto recorrido le queda a la lista ahora mismo. Es el dato que
+      // `shouldCollapse` necesita para no quitarle sitio a una lista que no lo
+      // tiene, que es lo que hacía que una sección de cuatro entradas oscilara.
+      const scrollable = Math.max(0, event.contentSize.height - event.layoutMeasurement.height);
+      const next = shouldCollapse(y, ownCollapsed.value > 0.5, {
+        range: headerRange.value,
+        scrollable,
+      })
+        ? 1
+        : 0;
+
+      ownCollapsed.value = next;
+      if (isActive.value) collapsed.value = next;
     },
   });
 
@@ -343,8 +375,8 @@ function Section({
   // `AuthContext`, y aquí además React puede llamar al render dos veces.
   useEffect(() => {
     isActive.value = active;
-    if (active) scrollY.value = ownOffset.value;
-  }, [active, isActive, scrollY, ownOffset]);
+    if (active) collapsed.value = ownCollapsed.value;
+  }, [active, isActive, collapsed, ownCollapsed]);
 
   return (
     <View className="flex-1">

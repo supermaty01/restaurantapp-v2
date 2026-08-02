@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useAuth } from '@/lib/context/AuthContext';
 import {
   actorFromNotification,
+  entityFromNotification,
   registerPushIfAllowed,
   visitFromNotification,
 } from '@/services/push/push';
@@ -57,6 +58,21 @@ export function PushRunner() {
       const visit = visitFromNotification(data);
       if (visit) {
         router.push({ pathname: '/(main)/shared/[visit]', params: { visit } });
+        return;
+      }
+
+      // Un me gusta apunta a la entrada, que puede no ser una visita (0027).
+      // Antes que el perfil de quien lo provocó: el aviso habla de lo que le
+      // gustó, así que ahí es donde tiene que dejarte.
+      const entity = entityFromNotification(data);
+      if (entity) {
+        router.push(
+          entity.kind === 'visit'
+            ? { pathname: '/(main)/shared/[visit]', params: { visit: entity.uuid } }
+            : entity.kind === 'dish'
+              ? { pathname: '/(main)/shared/dish/[id]', params: { id: entity.uuid } }
+              : { pathname: '/(main)/shared/restaurant/[id]', params: { id: entity.uuid } },
+        );
         return;
       }
 

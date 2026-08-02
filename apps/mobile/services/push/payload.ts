@@ -15,6 +15,11 @@
 /** Los nombres de los campos. Los dos lados tienen que decir lo mismo. */
 export const VISIT_FIELD = 'visitUuid';
 export const ACTOR_FIELD = 'actorId';
+export const ENTITY_FIELD = 'entityUuid';
+export const ENTITY_KIND_FIELD = 'entityKind';
+
+/** A qué clase de entrada apunta un aviso que no ocurre en una visita. */
+export type PushEntityKind = 'visit' | 'dish' | 'restaurant';
 
 function field(data: unknown, name: string): string | null {
   if (typeof data !== 'object' || data === null) return null;
@@ -25,6 +30,27 @@ function field(data: unknown, name: string): string | null {
 /** La visita que abre un aviso, si la trae. */
 export function visitFromNotification(data: unknown): string | null {
   return field(data, VISIT_FIELD);
+}
+
+/**
+ * La entrada suelta que abre un aviso, si la trae (0027).
+ *
+ * Es lo que necesita un me gusta: apunta a una visita, a un plato o a un sitio,
+ * y cada uno abre una pantalla distinta. Sin esto, un me gusta a un plato caería
+ * al perfil de quien lo dio —por `actorFromNotification`—, que es un sitio
+ * perfectamente válido y no es donde está lo que le gustó.
+ *
+ * Devuelve las dos mitades juntas o nada: un uuid sin saber de qué clase es no
+ * dice qué ruta abrir, y una clase sin uuid no dice qué abrir.
+ */
+export function entityFromNotification(
+  data: unknown,
+): { uuid: string; kind: PushEntityKind } | null {
+  const uuid = field(data, ENTITY_FIELD);
+  const kind = field(data, ENTITY_KIND_FIELD);
+  if (!uuid || !kind) return null;
+  if (kind !== 'visit' && kind !== 'dish' && kind !== 'restaurant') return null;
+  return { uuid, kind };
 }
 
 /**

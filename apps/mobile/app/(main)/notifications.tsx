@@ -12,6 +12,7 @@ import { fetchNotifications, markNotificationsRead } from '@/features/social/api
 import type { AppNotification } from '@/features/social/api';
 import { AuthorHeader } from '@/features/social/components/AuthorHeader';
 import { usePagedResource } from '@/features/social/hooks/usePagedResource';
+import { describeNotification } from '@/features/social/notification-text';
 import { useAuth } from '@/lib/context/AuthContext';
 import { useTheme } from '@/lib/context/ThemeContext';
 import { formatRelativeDate } from '@/lib/helpers/date';
@@ -99,46 +100,6 @@ export default function NotificationsScreen() {
   );
 }
 
-/**
- * Cómo se lee cada clase de aviso.
- *
- * Una función y no cuatro componentes: lo único que cambia entre ellas es la
- * frase. El avatar, la foto, la hora y el punto de no leído son los mismos, y
- * duplicar la fila cuatro veces para cambiar seis palabras es donde se acaban
- * yendo cada una por su lado.
- *
- * Devuelve también la frase en plano porque un lector de pantalla no puede leer
- * el texto compuesto: lo que ve es una lista de trozos con formato.
- */
-function describe(kind: AppNotification['kind'], actor: string, place: string | null) {
-  switch (kind) {
-    case 'tagged_in_visit': {
-      // El servidor ya descarta los avisos de visitas borradas, así que aquí
-      // siempre hay sitio; el respaldo es para que un fallo suyo no acabe
-      // pintando "te etiquetó en null".
-      const where = place ?? 'una comida';
-      return { verb: ' te etiquetó en ', place: where, plain: `${actor} te etiquetó en ${where}` };
-    }
-    case 'friend_published':
-      // Sin decir qué, a propósito: el aviso resume el sitio, la visita y los
-      // platos de una misma comida, y nombrar solo uno de los tres sería
-      // nombrar el que ganó la carrera del sync.
-      return {
-        verb: ' ha añadido algo nuevo',
-        place: null,
-        plain: `${actor} ha añadido algo nuevo`,
-      };
-    case 'friend_request':
-      return { verb: ' quiere ser tu amigo', place: null, plain: `${actor} quiere ser tu amigo` };
-    case 'friend_accepted':
-      return {
-        verb: ' aceptó tu solicitud de amistad',
-        place: null,
-        plain: `${actor} aceptó tu solicitud de amistad`,
-      };
-  }
-}
-
 function NotificationRow({ notification }: { notification: AppNotification }) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -148,7 +109,7 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
     ? remoteImageUri(notification.actorId, notification.imageKey)
     : null;
   const unread = notification.readAt === null;
-  const said = describe(notification.kind, actor, notification.title);
+  const said = describeNotification(notification, actor);
 
   /*
    * Dónde lleva el aviso.
@@ -167,6 +128,25 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
       });
       return;
     }
+
+    // Un me gusta lleva a lo que le gustó, que puede no ser una visita (0027).
+    // Antes que el perfil: el aviso habla de tu entrada, no de quien la vio.
+    const entity = notification.entityUuid;
+    if (entity) {
+      if (notification.entityKind === 'visit') {
+        router.push({ pathname: '/(main)/shared/[visit]', params: { visit: entity } });
+        return;
+      }
+      if (notification.entityKind === 'dish') {
+        router.push({ pathname: '/(main)/shared/dish/[id]', params: { id: entity } });
+        return;
+      }
+      if (notification.entityKind === 'restaurant') {
+        router.push({ pathname: '/(main)/shared/restaurant/[id]', params: { id: entity } });
+        return;
+      }
+    }
+
     if (notification.actorId) {
       router.push({ pathname: '/(main)/friends/[id]', params: { id: notification.actorId } });
     }
@@ -201,6 +181,7 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
         }
       >
         <Txt variant="callout" numberOfLines={2}>
+          {said.prefix}
           <Txt variant="callout" weight="bold">
             {actor}
           </Txt>

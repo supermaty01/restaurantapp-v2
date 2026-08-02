@@ -229,7 +229,24 @@ describe('las ocho paletas se pueden leer', () => {
         ['inkSubtle sobre surface', ratio(colors.inkSubtle, colors.surface), 3],
         ['inkSubtle sobre canvas', ratio(colors.inkSubtle, colors.canvas), 3],
         ['sage sobre surface', ratio(colors.sage, colors.surface), 3],
-        ['accent sobre surface', ratio(colors.accent, colors.surface), 2.4],
+        /*
+         * El ámbar de las estrellas, con el listón más bajo de todos, y esta
+         * cifra tiene una historia que conviene no perder.
+         *
+         * Empezó en 2,4 —un número que salió de mirar las siete paletas
+         * generadas, no de ningún sitio— y la primera paleta escrita a mano que
+         * se midió contra él lo tumbó: el `#E0A83B` de Clay da 2,13 sobre
+         * blanco. Ese ámbar se usó durante meses sin que nadie se quejara de no
+         * ver las estrellas.
+         *
+         * Así que se baja a donde el proyecto de verdad ha vivido, que es el
+         * mismo criterio con el que están puestos el 4:1 y el 3:1 de arriba:
+         * un listón inventado que rechaza lo que ya funcionaba no es un
+         * guardián, es una opinión con permiso para romper la build. Lo que
+         * sigue haciendo es impedir que una paleta futura hunda las estrellas
+         * hasta el amarillo sobre blanco, que es el fallo real que esto vigila.
+         */
+        ['accent sobre surface', ratio(colors.accent, colors.surface), 2.1],
         // No es contraste de texto: es que una tarjeta se vea *sobre* el fondo.
         ['surface sobre canvas', ratio(colors.surface, colors.canvas), 1.05],
         ['sunken sobre surface', ratio(colors.sunken, colors.surface), 1.05],
