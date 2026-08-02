@@ -1,7 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, View } from 'react-native';
+import Animated, {
+  useAnimatedScrollHandler,
+  useSharedValue,
+  type SharedValue,
+} from 'react-native-reanimated';
 
 import { ImageLightbox } from '@/components/media/ImageLightbox';
 import { Avatar } from '@/components/ui/Avatar';
@@ -25,6 +30,7 @@ import type {
   PublicProfile,
   UserEntryCounts,
 } from '@/features/social/api';
+import { CollapsingHeader } from '@/features/social/components/CollapsingHeader';
 import { FeedCard } from '@/features/social/components/FeedCard';
 import {
   activeSectionFilterCount,
@@ -60,6 +66,20 @@ import { reportError } from '@/lib/helpers/report-error';
  * dos vacías: una pestaña vacía se lee como «no ha compartido nada» cuando lo
  * que significa es «esto no te toca». Los recuentos los da el servidor (0022),
  * que es el único que sabe cuánto de esto puede ver quien mira.
+ *
+ * **Y una sección vacía era el síntoma de un fallo del servidor, no una
+ * elección de nadie**: hasta la migración 0024, un plato comido dentro de una
+ * visita compartida no contaba para la pestaña de platos, así que a quien
+ * registra sus comidas como visitas —el camino normal— se le escondían las dos
+ * pestañas del catálogo y el perfil entero se veía como una lista de visitas.
+ * El razonamiento largo está en la propia migración.
+ *
+ * ## Se desliza, como el diario
+ *
+ * Las tres secciones son caras de lo mismo y se recorren seguidas, que es el
+ * único caso en que `swipeable` compensa (ver `SegmentedTabs`). El coste —las
+ * tres páginas montadas a la vez— aquí es una petición por sección al abrir el
+ * perfil, no tres consultas vivas contra SQLite.
  */
 const SECTION_LABEL: Record<FeedKind, string> = {
   visit: 'Visitas',
@@ -91,6 +111,18 @@ export default function UserProfileScreen() {
     () => SECTION_ORDER.filter((kind) => (counts.data?.[kind] ?? 0) > 0),
     [counts.data],
   );
+
+  /*
+   * Cuánto ha bajado la sección que se está mirando.
+   *
+   * Uno solo para las tres, y lo escribe únicamente la activa: con el pager,
+   * las tres listas existen a la vez y las tres pueden emitir desplazamiento
+   * durante una transición. Cada sección recuerda además el suyo y lo repone al
+   * volverse activa, o cambiar de pestaña dejaría la cabecera recogida sobre
+   * una lista que está arriba del todo.
+   */
+  const scrollY = useSharedValue(0);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
 
   const act = useCallback(
     async (action: () => Promise<FriendshipState>, failure: string) => {
@@ -132,6 +164,7 @@ export default function UserProfileScreen() {
 
   const user = profile.data;
   const name = user.displayName ?? user.username;
+  const current = activeSection ?? sections[0] ?? null;
 
   /*
    * Quitar a alguien pregunta antes, y pregunta distinto según qué se deshace.
@@ -148,7 +181,7 @@ export default function UserProfileScreen() {
     }
   };
 
-  const header = (
+  const expandedHeader = (
     <Card className="items-center gap-3 py-5">
       {/* La foto se abre a pantalla completa. Solo desde aquí: en una lista de
           tarjetas, un avatar es el atajo al perfil de quien publicó, y que a
@@ -191,9 +224,37 @@ export default function UserProfileScreen() {
     </Card>
   );
 
+  /*
+   * Lo que queda al recogerse: de quién es este perfil, y nada más.
+   *
+   * No se va del todo porque una lista de tarjetas ajenas sin ninguna cabecera
+   * no dice de quién es lo que estás leyendo — y aquí, a diferencia del feed,
+   * las tarjetas son todas de la misma persona, así que tampoco lo dice la
+   * lista.
+   */
+  const collapsedHeader = (
+    <View className="flex-row items-center gap-3 px-1 py-2.5">
+      <Avatar name={name} uri={user.avatarUrl} size={34} />
+      <View className="min-w-0 flex-1">
+        <Txt variant="body" weight="bold" serif={false} numberOfLines={1}>
+          {name}
+        </Txt>
+        <Txt variant="caption" tone="subtle" numberOfLines={1}>
+          @{user.username}
+        </Txt>
+      </View>
+    </View>
+  );
+
+  const renderSection = (kind: FeedKind) => (
+    <Section userId={id} kind={kind} scrollY={scrollY} active={current === kind} />
+  );
+
   return (
     <Screen padded={false}>
-      <View className="px-5 pb-1 pt-2">{header}</View>
+      <View className="px-5 pt-2">
+        <CollapsingHeader scrollY={scrollY} expanded={expandedHeader} collapsed={collapsedHeader} />
+      </View>
 
       {sections.length === 0 ? (
         <EmptyState
@@ -209,14 +270,17 @@ export default function UserProfileScreen() {
         />
       ) : sections.length === 1 ? (
         // Una sola sección no necesita un control para elegir entre una cosa.
-        <Section userId={id} kind={sections[0] as FeedKind} />
+        <View className="flex-1 pt-3">{renderSection(sections[0] as FeedKind)}</View>
       ) : (
         <SegmentedTabs
           tabs={sections.map((kind) => ({
             key: kind,
             label: `${SECTION_LABEL[kind]} ${counts.data?.[kind] ?? 0}`,
-            render: () => <Section userId={id} kind={kind} />,
+            render: () => renderSection(kind),
           }))}
+          selectedKey={current ?? undefined}
+          onSelect={setActiveSection}
+          swipeable
         />
       )}
 
@@ -233,13 +297,54 @@ export default function UserProfileScreen() {
 }
 
 /** Una sección: la lista de una clase, con su orden y su filtro propios. */
-function Section({ userId, kind }: { userId: string; kind: FeedKind }) {
+function Section({
+  userId,
+  kind,
+  scrollY,
+  active,
+}: {
+  userId: string;
+  kind: FeedKind;
+  /** El desplazamiento compartido que encoge la cabecera. */
+  scrollY: SharedValue<number>;
+  /** Si esta es la pestaña que se está mirando. Solo la activa manda. */
+  active: boolean;
+}) {
   const { colors } = useTheme();
   const [options, setOptions] = useState<SectionOptions>(defaultSectionOptions);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const section = useUserSection(userId, kind, options);
   const activeFilters = activeSectionFilterCount(options);
+
+  /*
+   * Cada lista recuerda por dónde iba.
+   *
+   * Sin esto, cambiar de pestaña deja la cabecera como la dejó la anterior: te
+   * llevas una lista empezada por arriba con el perfil recogido, o al revés.
+   * El desplazamiento propio se guarda siempre; al compartido solo escribe la
+   * activa, porque durante un arrastre entre páginas las tres están vivas.
+   */
+  const ownOffset = useSharedValue(0);
+  const isActive = useSharedValue(active);
+
+  const onScroll = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      // Negativo cuando se estira por arriba (el rebote de iOS), y eso pondría
+      // la cabecera más alta que su altura medida.
+      const y = Math.max(0, event.contentOffset.y);
+      ownOffset.value = y;
+      if (isActive.value) scrollY.value = y;
+    },
+  });
+
+  // En un efecto y no en el render: escribir en un valor compartido mientras
+  // React renderiza es el mismo efecto secundario fuera de sitio que en
+  // `AuthContext`, y aquí además React puede llamar al render dos veces.
+  useEffect(() => {
+    isActive.value = active;
+    if (active) scrollY.value = ownOffset.value;
+  }, [active, isActive, scrollY, ownOffset]);
 
   return (
     <View className="flex-1">
@@ -258,12 +363,19 @@ function Section({ userId, kind }: { userId: string; kind: FeedKind }) {
         </PressableScale>
       </View>
 
-      <FlatList
+      <Animated.FlatList
         data={section.items}
         keyExtractor={(item) => `${item.kind}:${item.entityUuid}`}
         renderItem={({ item }) => <FeedCard entry={item} />}
-        contentContainerClassName="px-5 pb-8 gap-3"
+        // Con `style` y no con `contentContainerClassName`: `Animated.FlatList`
+        // lo envuelve reanimated, no NativeWind, así que la clase no llegaría a
+        // ninguna parte y el fallo sería una lista sin márgenes.
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        // El manejador corre en el hilo de interfaz, así que no hay ningún salto
+        // a JavaScript por fotograma que ahorrar bajando la frecuencia.
+        scrollEventThrottle={16}
         onEndReached={section.loadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={
