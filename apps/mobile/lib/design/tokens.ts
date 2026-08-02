@@ -262,17 +262,9 @@ function separatedFromPrimary(hue: number, saturation: number, primary: string, 
 }
 
 const SPECS: readonly PaletteSpec[] = [
-  // La verde no lleva spec: es la de arriba, afinada a mano desde el logo.
-  {
-    id: 'orange',
-    label: 'Naranja',
-    hue: 26,
-    saturation: 62,
-    lightL: 40,
-    darkL: 62,
-    neutralSaturation: 24,
-    accent: [38, 60, 46],
-  },
+  // Ni la verde ni la naranja llevan spec: las dos están escritas a mano más
+  // abajo. La verde salió del logo; la naranja **es la paleta Clay**, la que
+  // tuvo la app hasta la ronda 8.
   {
     id: 'blue',
     label: 'Azul',
@@ -427,15 +419,116 @@ function buildDark(spec: PaletteSpec): ThemeColors {
   };
 }
 
-/** Las ocho, listas para pintar. La verde entra tal cual, sin generar. */
+/**
+ * La naranja es **Clay**, la paleta que la app tuvo hasta la ronda 8.
+ *
+ * Y por eso no se genera: cuando se pidió «que el tema naranja use los colores
+ * que se usaban antes de cambiar al verde», la respuesta no era un naranja
+ * parecido — era *ese* naranja. La terracota `#C0623D` sobre la crema
+ * `#F7F1E8`, con sus neutros cálidos y su ámbar, tal y como estaban escritos
+ * antes del commit que los cambió (`743f36f~1`); se sacaron del histórico, no
+ * de la memoria.
+ *
+ * Se cambió en su día porque era casi exactamente la identidad de Claude Code
+ * (docs/14) y una app propia no puede parecer la herramienta con la que se
+ * escribió. Eso sigue siendo verdad **para la paleta por defecto**, y por eso
+ * la verde sigue siendo la de por defecto. Como una opción entre ocho, elegida
+ * a mano por quien echaba de menos el naranja, ese argumento ya no aplica.
+ *
+ * ## Los cuatro valores que **no** son los originales, y por qué
+ *
+ * Al meter Clay bajo el test de contraste que la ronda 8 escribió, tres parejas
+ * se quedaron cortas. No es que el test sea exigente de más: es que **dos de
+ * esas parejas no existían cuando Clay estaba viva**. `tone="primary"` empezó a
+ * escribir texto sobre el lienzo en la ronda 8; hasta entonces `primary` solo
+ * rellenaba botones, y ahí el blanco encima contrastaba de sobra. La medida no
+ * cambió, cambió el uso.
+ *
+ *   primary sobre canvas (claro)     3,70 → hace falta 4
+ *   inkSubtle sobre canvas (claro)   2,83 → hace falta 3
+ *   danger sobre surface (oscuro)    3,73 → hace falta 4
+ *
+ * Así que se mueven **esos tres y nada más**, y lo mínimo para pasar: la
+ * terracota se oscurece un punto y medio, la tinta terciaria otro tanto, y el
+ * rojo de oscuro se aclara. Sigue siendo la misma paleta de un vistazo — el
+ * lienzo crema, el ámbar y el verde oliva no se tocan— y ahora se puede leer.
+ * Bajar el listón para que entrara habría sido escribir que la app tiene ocho
+ * temas cuando tiene siete y uno que no se lee.
+ *
+ * Y `surfaceAlt` en oscuro, que en el original era idéntico a `surface`: la
+ * barra de pestañas no se distinguía de una tarjeta. Dos puntos arriba, que es
+ * lo que hace la verde.
+ */
+const clayLight: ThemeColors = {
+  canvas: '#F7F1E8',
+  surface: '#FFFFFF',
+  surfaceAlt: '#FFFDF8',
+  sunken: '#EFE7D8',
+  line: '#EFE7D8',
+  lineStrong: '#E6DDCE',
+  ink: '#2A211C',
+  inkMuted: '#6B6355',
+  // 2,83:1 sobre el lienzo en el original. Ver la nota de arriba.
+  inkSubtle: '#8E8371',
+  // La terracota de Clay era `#C0623D`, que sobre la crema da 3,70:1.
+  primary: '#B85933',
+  primaryPressed: '#A44F2F',
+  onPrimary: '#FFFFFF',
+  accent: '#E0A83B',
+  sage: '#8A9A6B',
+  danger: '#B04A3A',
+  inverse: '#2A211C',
+  onInverse: '#F7F1E8',
+};
+
+const clayDark: ThemeColors = {
+  canvas: '#211C18',
+  surface: '#2C2621',
+  // El original repetía `surface` aquí y la barra de pestañas se perdía sobre
+  // las tarjetas. Dos puntos arriba, como hace la verde.
+  surfaceAlt: '#332C26',
+  sunken: '#1A1512',
+  line: '#3A332C',
+  lineStrong: '#4A4139',
+  ink: '#F0E9DD',
+  inkMuted: '#B0A48F',
+  inkSubtle: '#8A7E6F',
+  /*
+   * Más claro que el `#C0623D` original, y hay que decir por qué se toca algo
+   * que se pidió tal cual.
+   *
+   * La terracota de Clay era **el mismo color en los dos esquemas**, y sobre el
+   * lienzo oscuro da 3,4:1. Eso valía cuando `primary` solo rellenaba botones
+   * —el texto encima era blanco y ahí contrasta de sobra—, pero desde la ronda 8
+   * `tone="primary"` también **escribe texto** sobre el lienzo, y a 3,4:1 no se
+   * lee. Es exactamente lo que la paleta verde documenta al aclarar su primario
+   * en oscuro, y lo que `tokens.node.test.ts` mide en las ocho.
+   *
+   * Así que sube lo justo para pasar de 4:1 conservando el tono. En claro, que
+   * es donde vive el recuerdo de esta paleta, no se toca ni un dígito.
+   */
+  primary: '#D9784F',
+  primaryPressed: '#E68F69',
+  // Y su consecuencia: sobre ese naranja claro el blanco se queda en 2,6:1.
+  onPrimary: '#211C18',
+  accent: '#E0A83B',
+  sage: '#A8B888',
+  // 3,73:1 sobre la tarjeta oscura en el original.
+  danger: '#DC6B58',
+  inverse: '#F7F1E8',
+  onInverse: '#2A211C',
+};
+
+/** Las ocho, listas para pintar. La verde y la naranja entran tal cual. */
 export const PALETTES: Record<PaletteId, Palette> = {
   green: { id: 'green', label: 'Verde', light: lightColors, dark: darkColors },
+  orange: { id: 'orange', label: 'Naranja', light: clayLight, dark: clayDark },
   ...(Object.fromEntries(
     SPECS.map((spec) => [
       spec.id,
       { id: spec.id, label: spec.label, light: buildLight(spec), dark: buildDark(spec) },
     ]),
-  ) as Record<Exclude<PaletteId, 'green'>, Palette>),
+  ) as Record<Exclude<PaletteId, 'green' | 'orange'>, Palette>),
 };
 
 export const DEFAULT_PALETTE: PaletteId = 'green';
