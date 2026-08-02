@@ -22,7 +22,15 @@ import type { LayoutChangeEvent } from 'react-native';
 export interface SegmentedTab {
   key: string;
   label: string;
-  render: () => ReactNode;
+  /**
+   * `insetTop` es el hueco que la página tiene que dejarse arriba.
+   *
+   * Vale 0 salvo cuando hay `header`: entonces la cabecera y el carril de
+   * pestañas van **flotando** sobre las páginas, así que cada una tiene que
+   * empezar su contenido por debajo. Quien lo recibe lo pone como `paddingTop`
+   * de su lista; ignorarlo deja las primeras filas debajo de la cabecera.
+   */
+  render: (insetTop: number) => ReactNode;
 }
 
 interface SegmentedTabsProps {
@@ -51,6 +59,25 @@ interface SegmentedTabsProps {
    * con pager las páginas existen todas a la vez; sin él, solo la activa.
    */
   swipeable?: boolean;
+  /**
+   * Una cabecera que flota sobre las páginas, junto con el carril de pestañas.
+   *
+   * Existe para el perfil de otra persona, donde la ficha se recoge al bajar. Y
+   * **flota, en vez de ir en el flujo, por una razón que costó dos intentos**:
+   * si la cabecera participara en el layout, encogerla cambiaría el alto de las
+   * listas, lo que cambia su desplazamiento máximo, lo que hace que el sistema
+   * recorte el desplazamiento actual, lo que vuelve a mover la cabecera. Un
+   * bucle que en pantalla se ve como un parpadeo.
+   *
+   * Flotando, el alto de las páginas es constante y lo único que se mueve con el
+   * dedo es un `translateY`. Ver `collapsing-header-motion.ts`.
+   */
+  header?: ReactNode;
+  /**
+   * Cuánto sube el bloque flotante, en píxeles. Lo escribe quien lo recibe el
+   * desplazamiento; aquí solo se aplica.
+   */
+  headerOffset?: SharedValue<number> | undefined;
 }
 
 const SETTLE_SPRING = { damping: 22, stiffness: 220, mass: 0.7 };
@@ -94,6 +121,8 @@ export function SegmentedTabs({
   selectedKey,
   onSelect,
   swipeable = false,
+  header,
+  headerOffset,
 }: SegmentedTabsProps) {
   const [internalKey, setInternalKey] = useState(initialKey ?? tabs[0]?.key ?? '');
 
@@ -121,6 +150,8 @@ export function SegmentedTabs({
    */
   const [pageWidth, setPageWidth] = useState(0);
   const [trackWidth, setTrackWidth] = useState(0);
+  /** Lo que ocupa el bloque flotante, que es el hueco que se dejan las páginas. */
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   /** Desplazamiento del pager, en píxeles y negativo hacia la derecha. */
   const offset = useSharedValue(0);
@@ -200,8 +231,28 @@ export function SegmentedTabs({
     setTrackWidth((current) => (Math.abs(current - width) < 1 ? current : width));
   };
 
-  return (
-    <View className="flex-1">
+  const measureHeader = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    setHeaderHeight((current) => (Math.abs(current - height) < 1 ? current : height));
+  };
+
+  const floatingStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: -(headerOffset?.value ?? 0) }],
+  }));
+
+  const floating = header !== undefined;
+  const insetTop = floating ? headerHeight : 0;
+
+  /*
+   * El carril, que se pinta en el flujo o dentro del bloque flotante según haya
+   * cabecera o no. Es el mismo en los dos casos a propósito: una segunda copia
+   * es como las pestañas acaban con dos aspectos.
+   *
+   * Con una sola pestaña no se pinta: un control para elegir entre una cosa no
+   * es un control, es un adorno que ocupa una fila.
+   */
+  const track =
+    tabs.length > 1 ? (
       <View className="mx-5 my-3 flex-row rounded-pill bg-sunken p-1" onLayout={measureTrack}>
         {/* La pastilla es **una**, compartida, y se mueve con el pager. Antes
             había una por segmento animando su opacidad, que es por lo que no
@@ -219,29 +270,56 @@ export function SegmentedTabs({
           />
         ))}
       </View>
+    ) : null;
 
-      {swipeable ? (
-        <GestureDetector gesture={swipe}>
-          <View className="flex-1 overflow-hidden" onLayout={measurePage}>
-            <Animated.View
-              style={[
-                { flex: 1, flexDirection: 'row', width: pageWidth * tabs.length },
-                pagerStyle,
-              ]}
-            >
-              {tabs.map((tab) => (
-                <View key={tab.key} style={{ width: pageWidth }}>
-                  {/* Sin ancho todavía no hay dónde pintar, y montar las listas
-                      para medirlas después las haría consultar dos veces. */}
-                  {pageWidth > 0 ? tab.render() : null}
-                </View>
-              ))}
-            </Animated.View>
-          </View>
-        </GestureDetector>
-      ) : (
-        <View className="flex-1">{activeTab?.render()}</View>
-      )}
+  const pages = swipeable ? (
+    <GestureDetector gesture={swipe}>
+      <View className="flex-1 overflow-hidden" onLayout={measurePage}>
+        <Animated.View
+          style={[{ flex: 1, flexDirection: 'row', width: pageWidth * tabs.length }, pagerStyle]}
+        >
+          {tabs.map((tab) => (
+            <View key={tab.key} style={{ width: pageWidth }}>
+              {/* Sin ancho todavía no hay dónde pintar, y montar las listas
+                  para medirlas después las haría consultar dos veces. */}
+              {pageWidth > 0 ? tab.render(insetTop) : null}
+            </View>
+          ))}
+        </Animated.View>
+      </View>
+    </GestureDetector>
+  ) : (
+    <View className="flex-1">{activeTab?.render(insetTop)}</View>
+  );
+
+  if (!floating) {
+    return (
+      <View className="flex-1">
+        {track}
+        {pages}
+      </View>
+    );
+  }
+
+  /*
+   * Con cabecera flotante el orden importa dos veces.
+   *
+   * Las páginas van **primero** para que el bloque se pinte encima; si fuera al
+   * revés, la lista taparía la cabecera al desplazarse. Y el bloque lleva el
+   * fondo del lienzo, porque lo que pasa por debajo es la lista: sin fondo, las
+   * tarjetas se leerían a través de la ficha.
+   */
+  return (
+    <View className="flex-1">
+      {pages}
+      <Animated.View
+        onLayout={measureHeader}
+        style={[{ position: 'absolute', top: 0, left: 0, right: 0 }, floatingStyle]}
+        className="bg-canvas"
+      >
+        {header}
+        {track}
+      </Animated.View>
     </View>
   );
 }

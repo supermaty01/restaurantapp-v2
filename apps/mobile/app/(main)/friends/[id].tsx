@@ -30,7 +30,7 @@ import type {
   PublicProfile,
   UserEntryCounts,
 } from '@/features/social/api';
-import { shouldCollapse } from '@/features/social/components/collapsing-header-motion';
+import { headerOffset } from '@/features/social/components/collapsing-header-motion';
 import { CollapsingHeader } from '@/features/social/components/CollapsingHeader';
 import { FeedCard } from '@/features/social/components/FeedCard';
 import {
@@ -114,21 +114,20 @@ export default function UserProfileScreen() {
   );
 
   /*
-   * Si la ficha está recogida, y cuánto sitio devuelve al recogerse.
+   * Cuánto ha subido la cabecera, en píxeles, y cuánto puede subir.
    *
-   * **Un booleano y no el desplazamiento**, que es lo que arregla el parpadeo:
-   * mientras la altura de la cabecera salía del desplazamiento, cambiarla
-   * cambiaba el alto de la lista, que hacía que Android recortara el
-   * desplazamiento, que volvía a cambiar la altura. El razonamiento entero está
+   * `offset` va entre 0 y `range`, y sale del desplazamiento de la sección que
+   * se está mirando: la cabecera se come los primeros `range` píxeles del gesto
+   * y después suelta el scroll. Las tres frases con las que se pidió esto están
    * en `collapsing-header-motion.ts`.
    *
    * Uno solo para las tres secciones, y lo escribe únicamente la activa: con el
    * pager, las tres listas existen a la vez y las tres emiten desplazamiento
-   * durante una transición. Cada sección recuerda además su propio estado y lo
-   * repone al volverse activa, o cambiar de pestaña dejaría la cabecera
-   * recogida sobre una lista que está arriba del todo.
+   * durante una transición. Cada sección recuerda además el suyo y lo repone al
+   * volverse activa, o cambiar de pestaña dejaría la cabecera recogida sobre una
+   * lista que está arriba del todo.
    */
-  const collapsed = useSharedValue(0);
+  const offset = useSharedValue(0);
   const headerRange = useSharedValue(0);
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
@@ -254,52 +253,68 @@ export default function UserProfileScreen() {
     </View>
   );
 
-  const renderSection = (kind: FeedKind) => (
+  const renderSection = (kind: FeedKind, insetTop: number) => (
     <Section
       userId={id}
       kind={kind}
-      collapsed={collapsed}
+      offset={offset}
       headerRange={headerRange}
+      insetTop={insetTop}
       active={current === kind}
     />
   );
 
+  const header = (
+    <CollapsingHeader
+      offset={offset}
+      range={headerRange}
+      expanded={expandedHeader}
+      compact={compactHeader}
+    />
+  );
+
+  /*
+   * La cabecera ya no va en el flujo: se la pasa a `SegmentedTabs`, que la pinta
+   * flotando sobre las páginas y les da su alto como `paddingTop`.
+   *
+   * **Ese es el arreglo del parpadeo**, y costó dos intentos llegar aquí. Con la
+   * cabecera en el flujo, encogerla cambiaba el alto de las listas → cambiaba su
+   * desplazamiento máximo → el sistema recortaba el desplazamiento actual → la
+   * cabecera volvía a moverse. Flotando, el alto de las listas es constante y lo
+   * único que cambia con el dedo es un `translateY`.
+   */
   return (
     <Screen padded={false}>
-      <View className="px-5 pt-2">
-        <CollapsingHeader
-          collapsed={collapsed}
-          range={headerRange}
-          expanded={expandedHeader}
-          compact={compactHeader}
-        />
-      </View>
-
       {sections.length === 0 ? (
-        <EmptyState
-          icon="albums-outline"
-          title={
-            user.state === 'friends' ? 'Todavía no ha compartido nada' : 'Nada público por aquí'
-          }
-          message={
-            user.state === 'friends'
-              ? 'Cuando comparta una visita, un plato o un sitio, aparecerá aquí.'
-              : 'Si os hacéis amigos podrás ver lo que comparta con sus amigos.'
-          }
-        />
-      ) : sections.length === 1 ? (
-        // Una sola sección no necesita un control para elegir entre una cosa.
-        <View className="flex-1 pt-3">{renderSection(sections[0] as FeedKind)}</View>
+        <>
+          <View className="px-5 pt-2">{header}</View>
+          <EmptyState
+            icon="albums-outline"
+            title={
+              user.state === 'friends' ? 'Todavía no ha compartido nada' : 'Nada público por aquí'
+            }
+            message={
+              user.state === 'friends'
+                ? 'Cuando comparta una visita, un plato o un sitio, aparecerá aquí.'
+                : 'Si os hacéis amigos podrás ver lo que comparta con sus amigos.'
+            }
+          />
+        </>
       ) : (
+        /* Con una sola sección el carril no se pinta —`SegmentedTabs` no ofrece
+           un control para elegir entre una cosa— pero el resto de la maquinaria
+           sirve igual, así que no hay dos caminos que mantener. */
         <SegmentedTabs
           tabs={sections.map((kind) => ({
             key: kind,
             label: `${SECTION_LABEL[kind]} ${counts.data?.[kind] ?? 0}`,
-            render: () => renderSection(kind),
+            render: (insetTop: number) => renderSection(kind, insetTop),
           }))}
           selectedKey={current ?? undefined}
           onSelect={setActiveSection}
-          swipeable
+          swipeable={sections.length > 1}
+          header={<View className="px-5 pt-2">{header}</View>}
+          headerOffset={offset}
         />
       )}
 
@@ -319,16 +334,19 @@ export default function UserProfileScreen() {
 function Section({
   userId,
   kind,
-  collapsed,
+  offset,
   headerRange,
+  insetTop,
   active,
 }: {
   userId: string;
   kind: FeedKind;
-  /** El estado compartido de la cabecera: 1 recogida, 0 desplegada. */
-  collapsed: SharedValue<number>;
-  /** Cuánto sitio devuelve la cabecera al recogerse. Lo mide ella. */
+  /** Cuánto ha subido la cabecera. Lo escribe la sección activa. */
+  offset: SharedValue<number>;
+  /** Cuánto puede subir. Lo mide la cabecera. */
   headerRange: SharedValue<number>;
+  /** El hueco que la cabecera flotante ocupa arriba. */
+  insetTop: number;
   /** Si esta es la pestaña que se está mirando. Solo la activa manda. */
   active: boolean;
 }) {
@@ -347,26 +365,14 @@ function Section({
    * El desplazamiento propio se guarda siempre; al compartido solo escribe la
    * activa, porque durante un arrastre entre páginas las tres están vivas.
    */
-  const ownCollapsed = useSharedValue(0);
+  const ownOffset = useSharedValue(0);
   const isActive = useSharedValue(active);
 
   const onScroll = useAnimatedScrollHandler({
     onScroll: (event) => {
-      // Negativo cuando se estira por arriba (el rebote de iOS).
-      const y = Math.max(0, event.contentOffset.y);
-      // Cuánto recorrido le queda a la lista ahora mismo. Es el dato que
-      // `shouldCollapse` necesita para no quitarle sitio a una lista que no lo
-      // tiene, que es lo que hacía que una sección de cuatro entradas oscilara.
-      const scrollable = Math.max(0, event.contentSize.height - event.layoutMeasurement.height);
-      const next = shouldCollapse(y, ownCollapsed.value > 0.5, {
-        range: headerRange.value,
-        scrollable,
-      })
-        ? 1
-        : 0;
-
-      ownCollapsed.value = next;
-      if (isActive.value) collapsed.value = next;
+      const next = headerOffset(event.contentOffset.y, headerRange.value);
+      ownOffset.value = next;
+      if (isActive.value) offset.value = next;
     },
   });
 
@@ -375,26 +381,35 @@ function Section({
   // `AuthContext`, y aquí además React puede llamar al render dos veces.
   useEffect(() => {
     isActive.value = active;
-    if (active) collapsed.value = ownCollapsed.value;
-  }, [active, isActive, collapsed, ownCollapsed]);
+    if (active) offset.value = ownOffset.value;
+  }, [active, isActive, offset, ownOffset]);
+
+  /*
+   * El botón de ordenar viaja **dentro** de la lista, como su cabecera.
+   *
+   * Antes iba fijo encima; ahora encima está la cabecera flotante, y dejarlo ahí
+   * lo pondría debajo de ella. Como primera fila de la lista se desplaza con el
+   * contenido, que además es donde tiene sentido: ordena lo que hay debajo.
+   */
+  const listHeader = (
+    <View className="flex-row items-center justify-end pb-2">
+      <PressableScale
+        accessibilityLabel="Filtrar y ordenar"
+        onPress={() => setFiltersOpen(true)}
+        scaleTo={0.94}
+        className="flex-row items-center gap-1.5 rounded-pill border border-line bg-surface px-3 py-1.5"
+      >
+        <Ionicons name="options-outline" size={15} color={colors.inkMuted} />
+        <Txt variant="caption" weight="semi" serif={false} tone="muted">
+          Ordenar
+        </Txt>
+        {activeFilters > 0 ? <Chip label={String(activeFilters)} tone="primary" /> : null}
+      </PressableScale>
+    </View>
+  );
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center justify-end px-5 pb-2">
-        <PressableScale
-          accessibilityLabel="Filtrar y ordenar"
-          onPress={() => setFiltersOpen(true)}
-          scaleTo={0.94}
-          className="flex-row items-center gap-1.5 rounded-pill border border-line bg-surface px-3 py-1.5"
-        >
-          <Ionicons name="options-outline" size={15} color={colors.inkMuted} />
-          <Txt variant="caption" weight="semi" serif={false} tone="muted">
-            Ordenar
-          </Txt>
-          {activeFilters > 0 ? <Chip label={String(activeFilters)} tone="primary" /> : null}
-        </PressableScale>
-      </View>
-
       <Animated.FlatList
         data={section.items}
         keyExtractor={(item) => `${item.kind}:${item.entityUuid}`}
@@ -402,7 +417,14 @@ function Section({
         // Con `style` y no con `contentContainerClassName`: `Animated.FlatList`
         // lo envuelve reanimated, no NativeWind, así que la clase no llegaría a
         // ninguna parte y el fallo sería una lista sin márgenes.
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32, gap: 12 }}
+        // `paddingTop` es el hueco de la cabecera flotante: sin él, las
+        // primeras tarjetas nacen debajo de ella.
+        contentContainerStyle={{
+          paddingHorizontal: 20,
+          paddingTop: insetTop,
+          paddingBottom: 32,
+          gap: 12,
+        }}
         showsVerticalScrollIndicator={false}
         onScroll={onScroll}
         // El manejador corre en el hilo de interfaz, así que no hay ningún salto
@@ -410,6 +432,7 @@ function Section({
         scrollEventThrottle={16}
         onEndReached={section.loadMore}
         onEndReachedThreshold={0.5}
+        ListHeaderComponent={listHeader}
         ListFooterComponent={
           section.loadingMore ? (
             <View className="py-5">
@@ -422,6 +445,8 @@ function Section({
             refreshing={section.loading}
             onRefresh={section.reload}
             tintColor={colors.primary}
+            // O la ruedecita gira detrás de la cabecera flotante.
+            progressViewOffset={insetTop}
           />
         }
         ListEmptyComponent={

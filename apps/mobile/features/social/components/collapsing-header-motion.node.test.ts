@@ -1,123 +1,94 @@
-import {
-  COLLAPSE_AT,
-  COLLAPSED_HEIGHT,
-  EXPAND_AT,
-  shouldCollapse,
-} from './collapsing-header-motion';
+import { COLLAPSED_HEIGHT, headerOffset, headerProgress } from './collapsing-header-motion';
 
 /**
- * El parpadeo de la cabecera del perfil, convertido en aserciones.
+ * Las tres frases con las que se pidió esto, convertidas en aserciones.
  *
- * El síntoma reportado fue «hay dos eventos que se activan a la vez mientras
- * scrolleo y la sección de arriba se recorta/agranda todo el tiempo». No eran
- * dos eventos: era uno dando vueltas entre el layout y el gesto, porque la
- * altura de la cabecera salía del desplazamiento y el desplazamiento acababa
- * saliendo de la altura.
+ * > - Al iniciar a scrollear, no se debería mover aún la lista, solo reducir el
+ * >   tamaño del header.
+ * > - Cuando el header esté de tamaño, se retoma el control del scroll por la
+ * >   lista y se comienza a bajar.
+ * > - Cuando se está abajo en la lista y se scrollea para arriba, se debe
+ * >   mantener el header pequeño hasta que se llegue arriba.
  *
- * Lo que se prueba aquí es lo que corta ese lazo. Y se prueba porque **es
- * exactamente la clase de arreglo que se deshace sin querer**: los dos umbrales
- * distintos parecen un descuido y unificarlos parece una limpieza.
+ * Las tres salen de la misma función leída en tres tramos, y por eso están las
+ * tres aquí: lo que hay que poder comprobar de un vistazo dentro de seis meses
+ * es que sigue haciendo eso, no que `Math.min` funciona.
  */
+const RANGE = 200;
 
-/** Una lista larga: le sobra recorrido para devolverle sitio a la cabecera. */
-const ROOMY = { range: 220, scrollable: 1400 };
-
-describe('shouldCollapse', () => {
-  it('no se recoge nada más empezar a bajar', () => {
-    expect(shouldCollapse(0, false, ROOMY)).toBe(false);
-    expect(shouldCollapse(COLLAPSE_AT - 1, false, ROOMY)).toBe(false);
+describe('la cabecera se come el primer tramo del gesto', () => {
+  it('lo que se desplaza al principio se lo lleva entero la cabecera', () => {
+    // Primera frase: el desplazamiento y la subida de la cabecera van uno a uno,
+    // así que la lista no pasa de largo — el bloque entero sube con ella.
+    expect(headerOffset(0, RANGE)).toBe(0);
+    expect(headerOffset(40, RANGE)).toBe(40);
+    expect(headerOffset(120, RANGE)).toBe(120);
+    expect(headerOffset(RANGE, RANGE)).toBe(RANGE);
   });
 
-  it('se recoge al pasar el umbral', () => {
-    expect(shouldCollapse(COLLAPSE_AT + 1, false, ROOMY)).toBe(true);
+  it('pasada la cabecera, el resto es de la lista', () => {
+    // Segunda frase: a partir de `range` la cabecera no se mueve más, así que
+    // todo el desplazamiento que sigue lo consume la lista.
+    expect(headerOffset(RANGE + 1, RANGE)).toBe(RANGE);
+    expect(headerOffset(RANGE + 500, RANGE)).toBe(RANGE);
+    expect(headerOffset(4000, RANGE)).toBe(RANGE);
   });
 
-  it('sigue recogida entre los dos umbrales, subiendo o bajando', () => {
-    // La histéresis, que es la mitad del arreglo: entre 40 y 96 el estado no
-    // cambia, así que un recorte del desplazamiento —que es de bastante más de
-    // un píxel— no puede devolverte al otro lado.
-    const middle = (COLLAPSE_AT + EXPAND_AT) / 2;
-    expect(shouldCollapse(middle, true, ROOMY)).toBe(true);
-    expect(shouldCollapse(middle, false, ROOMY)).toBe(false);
+  it('subiendo desde abajo se queda pequeña hasta llegar arriba', () => {
+    // Tercera frase, que es el mismo tope leído al revés: mientras quede
+    // desplazamiento por encima de `range`, la cabecera sigue recogida del todo.
+    for (const y of [4000, 2000, 900, RANGE + 60, RANGE + 1]) {
+      expect({ y, offset: headerOffset(y, RANGE) }).toEqual({ y, offset: RANGE });
+    }
+    // Y solo empieza a crecer al entrar en el último tramo.
+    expect(headerOffset(RANGE - 1, RANGE)).toBe(RANGE - 1);
+    expect(headerOffset(0, RANGE)).toBe(0);
   });
 
-  it('solo se despliega al volver arriba del todo', () => {
-    expect(shouldCollapse(EXPAND_AT + 1, true, ROOMY)).toBe(true);
-    expect(shouldCollapse(EXPAND_AT - 1, true, ROOMY)).toBe(false);
-    expect(shouldCollapse(0, true, ROOMY)).toBe(false);
+  it('el rebote hacia arriba no la baja más de lo que mide', () => {
+    // iOS deja estirar la lista por encima del tope y eso da desplazamientos
+    // negativos. Sin el suelo, la cabecera bajaría más de lo que ocupa y dejaría
+    // un hueco entre ella y la lista.
+    expect(headerOffset(-1, RANGE)).toBe(0);
+    expect(headerOffset(-300, RANGE)).toBe(0);
   });
 
-  it('los dos umbrales son distintos', () => {
-    // Sin esto el resto de este fichero pasa igual y la app vuelve a parpadear:
-    // con un solo umbral, la histéresis no existe y los casos de arriba se
-    // convierten en el mismo caso.
-    expect(EXPAND_AT).toBeLessThan(COLLAPSE_AT);
+  it('es monótona: recorrer el gesto nunca la hace retroceder', () => {
+    // Lo que fallaba en la primera versión no era el valor, era que iba y venía.
+    // Bajando, la cabecera solo puede recogerse; subiendo, solo desplegarse.
+    let previous = -1;
+    for (let y = 0; y <= 600; y += 7) {
+      const offset = headerOffset(y, RANGE);
+      expect(offset).toBeGreaterThanOrEqual(previous);
+      previous = offset;
+    }
   });
 });
 
-describe('shouldCollapse: la lista tiene que poder devolver el sitio', () => {
-  /**
-   * La otra mitad del arreglo, y la que la histéresis sola no cubre.
-   *
-   * Recogerse le devuelve `range` píxeles a la lista, así que su desplazamiento
-   * máximo baja en `range`. En una sección corta eso deja el máximo por debajo
-   * del umbral de volver a desplegarse: Android recorta, la cabecera se
-   * despliega, la lista vuelve a encoger, y otra vez. Con cuatro entradas era
-   * justo el caso.
-   */
-  it('no se recoge si al hacerlo la lista se quedaría sin recorrido', () => {
-    const tight = { range: 220, scrollable: 240 };
-    expect(shouldCollapse(COLLAPSE_AT + 40, false, tight)).toBe(false);
+describe('antes de medir la ficha no se mueve nada', () => {
+  it('sin rango, la cabecera se queda desplegada', () => {
+    // `range` vale 0 hasta que `onLayout` contesta. Devolver otra cosa aquí
+    // encogería la cabecera en el primer fotograma y daría el salto que la
+    // medición existe para evitar.
+    expect(headerOffset(500, 0)).toBe(0);
+    expect(headerProgress(500, 0)).toBe(0);
   });
 
-  it('tampoco justo en la frontera', () => {
-    // `scrollable - range` cae exactamente en EXPAND_AT: recogerse dejaría el
-    // desplazamiento máximo en el umbral, que es donde empieza a temblar.
-    const edge = { range: 220, scrollable: 220 + EXPAND_AT };
-    expect(shouldCollapse(COLLAPSE_AT + 40, false, edge)).toBe(false);
-  });
-
-  it('y sí en cuanto sobra un poco', () => {
-    const enough = { range: 220, scrollable: 220 + EXPAND_AT + 1 };
-    expect(shouldCollapse(COLLAPSE_AT + 40, false, enough)).toBe(true);
-  });
-
-  it('desplegarse no mira el sitio, porque devolver espacio no rebota', () => {
-    // Al desplegarse la cabecera *quita* sitio a la lista, así que su recorrido
-    // solo puede crecer. No hay nada que pueda recortarse ahí.
-    const tight = { range: 220, scrollable: 0 };
-    expect(shouldCollapse(EXPAND_AT + 1, true, tight)).toBe(true);
+  it('y el progreso nunca sale NaN', () => {
+    // En un estilo de reanimated un NaN no falla: deja la vista invisible, que
+    // es de los fallos más caros de encontrar mirando una pantalla.
+    for (const range of [0, -1, Number.NaN]) {
+      expect(Number.isNaN(headerProgress(120, range))).toBe(false);
+    }
   });
 });
 
-describe('nunca se queda a medias', () => {
-  it('recorrer una lista larga de arriba abajo y volver no oscila', () => {
-    // La prueba que reproduce el gesto: bajar hasta el final y volver a subir
-    // tiene que dar **un** cambio de estado en cada sentido, no una ristra.
-    let state = false;
-    let flips = 0;
-
-    const path = [
-      ...Array.from({ length: 40 }, (_, i) => i * 10),
-      ...Array.from({ length: 40 }, (_, i) => 390 - i * 10),
-    ];
-
-    for (const y of path) {
-      const next = shouldCollapse(y, state, ROOMY);
-      if (next !== state) flips += 1;
-      state = next;
-    }
-
-    expect(flips).toBe(2);
-  });
-
-  it('y en una lista corta no cambia ni una vez', () => {
-    const tight = { range: 220, scrollable: 200 };
-    let state = false;
-    for (const y of [0, 50, 100, 150, 200, 150, 100, 50, 0]) {
-      state = shouldCollapse(y, state, tight);
-      expect(state).toBe(false);
-    }
+describe('el progreso', () => {
+  it('va de 0 a 1 a lo largo del recorrido', () => {
+    expect(headerProgress(0, RANGE)).toBe(0);
+    expect(headerProgress(RANGE / 2, RANGE)).toBeCloseTo(0.5);
+    expect(headerProgress(RANGE, RANGE)).toBe(1);
+    expect(headerProgress(RANGE * 3, RANGE)).toBe(1);
   });
 });
 
