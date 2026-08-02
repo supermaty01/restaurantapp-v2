@@ -12,6 +12,7 @@ import ExportCard from '@/features/settings/components/ExportCard';
 import ImportCard from '@/features/settings/components/ImportCard';
 import InfoCard from '@/features/settings/components/InfoCard';
 import NotificationsCard from '@/features/settings/components/NotificationsCard';
+import { PaletteCard } from '@/features/settings/components/PaletteCard';
 import ThemeCard from '@/features/settings/components/ThemeCard';
 import ThemeSelectionModal from '@/features/settings/components/ThemeSelectionModal';
 import { useAppSettings } from '@/features/settings/hooks/useAppSettings';
@@ -155,10 +156,10 @@ export default function SettingsScreen() {
       ) : null}
 
       {/* Solo con cuenta: sin ella no hay quien te etiquete, así que un
-          interruptor de avisos sería un interruptor de nada. */}
+          interruptor de notificaciones sería un interruptor de nada. */}
       {sharing ? (
         <FormSection
-          title="Avisos"
+          title="Notificaciones"
           hint="Etiquetas, solicitudes de amistad y lo que comparten tus amigos, aunque no tengas la app abierta"
         >
           <NotificationsCard />
@@ -171,6 +172,7 @@ export default function SettingsScreen() {
 
       <FormSection title="Apariencia">
         <ThemeCard onPress={handleThemePress} />
+        <PaletteCard />
       </FormSection>
 
       <FormSection title="Acerca de">

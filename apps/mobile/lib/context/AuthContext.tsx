@@ -58,7 +58,21 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
 });
 
-// Deep link the OAuth flow returns to (declared in app.config.js scheme).
+/**
+ * Deep link the OAuth flow returns to (declared in app.config.js scheme).
+ *
+ * **También es a donde vuelve el enlace de confirmación del correo**, y ahí
+ * estaba el fallo: `signUp` sin `emailRedirectTo` deja que Supabase use la
+ * *Site URL* del proyecto, que viene puesta a `http://localhost:3000` y nadie
+ * cambia porque en una app móvil no hay ningún sitio donde se note… hasta que
+ * alguien se registra con correo, abre el enlace en el móvil y aterriza en una
+ * página que no carga. La cuenta sí queda confirmada —la verificación ocurre
+ * antes del redirect—, así que el fallo se vive como «se confirmó, pero la app
+ * no se entera», que es lo peor de los dos mundos.
+ *
+ * Tiene que estar en las *Redirect URLs* del panel de Supabase. Ya lo está: es
+ * la misma que usa OAuth desde el primer día.
+ */
 const REDIRECT_TO = 'restaurantapp://auth/callback';
 
 /**
@@ -114,7 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string): Promise<SignUpResult> => {
       if (!supabase) return { error: 'not-configured', needsConfirmation: false };
 
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        // Sin esto el enlace del correo lleva a la Site URL del proyecto
+        // (`localhost:3000`). Ver `REDIRECT_TO`.
+        options: { emailRedirectTo: REDIRECT_TO },
+      });
       if (error) return { error: describeAuthError(error.message), needsConfirmation: false };
 
       /*

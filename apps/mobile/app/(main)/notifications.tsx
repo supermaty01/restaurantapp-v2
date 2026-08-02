@@ -55,7 +55,7 @@ export default function NotificationsScreen() {
         <EmptyState
           icon="notifications-off-outline"
           title="Inicia sesión para ver tus novedades"
-          message="Los avisos llegan de las personas con las que compartes."
+          message="Las notificaciones llegan de las personas con las que compartes."
         />
       </Screen>
     );

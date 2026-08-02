@@ -9,6 +9,7 @@ import { Screen } from '@/components/ui/Screen';
 import { EmptyState, SectionHeader, Card } from '@/components/ui/Surface';
 import { Thumbnail } from '@/components/ui/Thumbnail';
 import { Txt } from '@/components/ui/Txt';
+import { greeting, prompt } from '@/features/home/greeting';
 import { useHomeSummary } from '@/features/home/hooks/useHomeSummary';
 import type { RecentEntry } from '@/features/home/hooks/useHomeSummary';
 import { useMyProfile } from '@/features/social/context/MyProfileContext';
@@ -24,21 +25,6 @@ type IconName = ComponentProps<typeof Ionicons>['name'];
 // tsc cannot resolve image modules through the path alias. expo-image takes
 // the packager's numeric asset id directly, which is what require yields.
 const appIcon = require('@/assets/burger-logo.png') as number;
-
-/** The greeting follows the device clock. */
-function greeting(hour: number): string {
-  if (hour < 6) return 'Buenas noches';
-  if (hour < 13) return 'Buenos días';
-  if (hour < 21) return 'Buenas tardes';
-  return 'Buenas noches';
-}
-
-/** A question rather than a heading, so the screen invites instead of reporting. */
-function prompt(hour: number): string {
-  if (hour < 11) return '¿Desayunaste\nen algún sitio?';
-  if (hour < 17) return '¿Qué comiste\nhoy?';
-  return '¿Dónde has\ncenado?';
-}
 
 export default function HomeScreen() {
   const router = useRouter();

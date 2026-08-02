@@ -1,6 +1,6 @@
 import { Text } from 'react-native';
 
-import { fonts, type as scale } from '@/lib/design/tokens';
+import { DISPLAY_VARIANTS as SERIF_VARIANTS, fonts, type as scale } from '@/lib/design/tokens';
 
 import type { TextProps } from 'react-native';
 
@@ -33,12 +33,12 @@ type Weight = 'regular' | 'medium' | 'semi' | 'bold';
  * were picked per element, which is how a screen ends up with four sizes that
  * are nearly the same and a serif heading next to a sans one for no reason.
  *
- * The serif (Newsreader) carries anything editorial — headings, counts, the
- * things you want to feel printed. The sans (Plus Jakarta Sans) carries
- * everything you read rather than glance at. `serif` overrides that default
- * where a specific composition wants the other one.
+ * The serif (Fraunces) carries anything editorial — headings, counts, the
+ * things you want to feel printed. The sans (Manrope) carries everything you
+ * read rather than glance at. `serif` overrides that default where a specific
+ * composition wants the other one.
  */
-const DISPLAY_VARIANTS = new Set<TxtVariant>(['hero', 'display', 'title']);
+const DISPLAY_VARIANTS = new Set<TxtVariant>(SERIF_VARIANTS);
 
 const WEIGHT_FONT: Record<Weight, string> = {
   regular: fonts.body,
