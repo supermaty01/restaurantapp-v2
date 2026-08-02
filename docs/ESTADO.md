@@ -1,6 +1,6 @@
 # 📍 ESTADO — documentación viva
 
-**Última actualización:** 2026-07-31 (ronda 8 — una semana de uso diario)
+**Última actualización:** 2026-08-01 (ronda 9 — los trece del segundo feedback)
 
 Punto de entrada al retomar el trabajo: qué está hecho, qué sigue, qué está bloqueado. Se actualiza al cerrar cada bloque de trabajo.
 
@@ -13,6 +13,19 @@ referencia el apartado donde está el detalle; **esto es el resumen, no la
 fuente**. Marcar aquí al cerrar algo.
 
 ### 🚀 Despliegue — bloquea a casi todo lo demás
+
+- [ ] **Aplicar 0024, 0025 y 0026 a Supabase** (`supabase db push`). Sin ellas,
+      de la ronda 9 no funciona nada de lo social: el perfil de otra persona
+      sigue viéndose como una lista de visitas (0024), el detalle de un plato o
+      un sitio contesta «no existe esa función» (0025) y el feed entero devuelve
+      un error porque `feed_page` cambió de firma (0026). **Las tres o ninguna**
+- [ ] **APK nuevo.** Nada de la ronda 9 se ha visto en un dispositivo
+- [ ] **Comprobar la Site URL de Supabase.** El arreglo del correo de
+      confirmación manda `emailRedirectTo` desde el cliente, pero
+      `restaurantapp://auth/callback` tiene que seguir en las _Redirect URLs_
+      del panel. Ya está —es la misma que usa OAuth—; queda confirmarlo
+
+### 🚀 Despliegue de rondas anteriores
 
 - [x] **APK nuevo** (`eas build -p android --profile preview`). Paso cero de las últimas tres rondas
 - [x] Desplegar el Worker (`npx wrangler deploy`) y comprobar que Cloudflare lista **dos** triggers
@@ -298,7 +311,121 @@ Sigue sin verificarse, y esto sí necesita cuenta o dos dispositivos:
 
 ---
 
-## 🔴 AQUÍ SE RETOMA — 31 de julio de 2026 (ronda 8)
+## 🔴 AQUÍ SE RETOMA — 1 de agosto de 2026 (ronda 9)
+
+Trece puntos de un segundo feedback de uso. Los trece están cerrados. **Ninguno
+se ha visto en un dispositivo**, y tres de ellos ni siquiera pueden verse hasta
+que las migraciones 0024–0026 estén en Supabase.
+
+### Los dos que no eran lo que parecían
+
+**1 · «El perfil de alguien más agrupa todo por visitas y no puedo buscar los
+platos o los restaurantes. En mi cuenta parece funcionar.»** Las dos mitades de
+la frase eran la pista entera. `user_entries_all` (0022) heredó del feed la regla
+de no repetir: un plato comido dentro de una visita compartida no cuenta como
+entrada suelta, y un sitio donde hubo una visita compartida tampoco. **En el feed
+esa regla es correcta** —es una lista cronológica, y una comida produciría cinco
+tarjetas seguidas contando lo mismo—; en un perfil de tres pestañas es lo
+contrario de lo que se quiere, porque la pestaña «Platos» tiene que contestar qué
+ha comido esa persona.
+
+Y como registrar una visita con sus platos es el camino normal de la app, a quien
+la usa así le quedaban las dos pestañas del catálogo **vacías** — y 0022 esconde
+las secciones vacías a propósito, así que ni salían: el perfil entero se veía
+como una lista de visitas. En la cuenta del autor «parecía funcionar» porque él
+además tiene platos y sitios sueltos, así que veía las tres pestañas, solo que
+incompletas. El síntoma cambia de forma según cómo use la app cada persona, que
+es por lo que se leía como un fallo de otra cosa. Migración **0024**.
+
+**2 · «La “g” de ¿Desayunaste en algún sitio? se corta por abajo.»** No era la
+fuente. En Android, un `lineHeight` explícito fija la altura de la caja de línea
+y **recorta** lo que no cabe: no desborda, borra media letra. `hero` estaba en 38
+sobre 34 px (un 1,12), que es un interlineado que queda muy bien en una maqueta
+con texto sin descendentes. Y Fraunces las tiene largas **a propósito**: es la
+letra con formas raras que se eligió justo por eso. Los tres tamaños que la usan
+van ahora por encima de 1,3, con un test que fija el suelo — porque cortar letras
+no rompe ningún test que mire el texto, la cadena sigue estando entera.
+
+### Las dos piezas grandes
+
+**El filtro de lectura por cuenta (B2), que llevaba cuatro rondas pendiente.** Es
+lo que el autor reportó como «cerré sesión de una cuenta, entré con otra recién
+creada, y seguía viendo todo». La primera mitad —la columna `account_uuid`, el
+sellado al escribir— entró en la ronda 6; faltaba **leer**, y va aparte porque es
+donde media implementación es peor que ninguna: un filtro que falte en un sitio
+no da ningún error, enseña el diario de otra cuenta.
+
+Están los trece hooks de `useLiveTablesQuery`, la libreta de personas, y las seis
+consultas del asistente —que eran el caso peor: un número no se puede mirar para
+ver de quién es—. La regla y el porqué de cada decisión están en
+`services/db/account-scope.ts`. Dos guardianes, y hacen falta los dos:
+`account-scope-contract` lee el código fuente y comprueba que el filtro **está**
+en todos y que la cuenta entra en las `deps`; `account-scope.node.test` comprueba
+contra SQLite que **dice lo que creemos**, porque un `or` mal puesto pasa el
+primero sin despeinarse.
+
+**Consecuencia que hay que decir en voz alta: cerrar sesión pasa a vaciar la
+pantalla.** Es la semántica correcta —las filas quedaron selladas— pero es un
+cambio brusco, y por eso el aviso al entrar con datos locales no es un extra: sin
+él esto se vive como pérdida de datos. Está en `account.tsx` y solo sale cuando
+hay algo huérfano que asociar.
+
+**Ocho paletas de color.** Verde (la del logo, por defecto), naranja, azul, rosa,
+morado, amarillo, rojo y escala de grises. Siete se **generan**: son diecisiete
+colores por esquema, dos esquemas, siete paletas — 238 valores hexadecimales, que
+son 238 oportunidades de que uno quede ilegible sin que nadie lo note. Cada
+paleta es un puñado de números y la estructura de claros y oscuros sale de la
+verde; `tokens.node.test.ts` mide **las ocho**.
+
+Dos cosas que costaron una pasada cada una y quedan escritas donde tocan:
+
+- **La separación entre `primary` y `sage` no se puede estimar.** El primer
+  intento fue «la luminosidad del primario más ocho» y falló en tres paletas sin
+  que se pudiera adivinar en cuáles: subir ocho puntos de luminosidad HSL no
+  sube lo mismo en un naranja que en un morado. Ahora se aclara de uno en uno
+  hasta medir la misma diferencia que tiene la verde.
+- **`vars()` de NativeWind devuelve un objeto vacío** y registra los valores
+  contra esa referencia en un `WeakMap`. O sea que la referencia _es_ el estilo:
+  esparcirlo (`{...vars(…)}`) dejaría el tema en el verde de `global.css` sin
+  que fallara nada, y llamarlo en cada render vuelve a resolver el árbol entero.
+
+### Lo demás de la lista
+
+| Punto                                           | Qué se hizo                                                                                                                                                       |
+| ----------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| El saludo no encaja con las comidas             | Seis franjas en vez de tres, y el **tiempo verbal sigue a la franja**: antes de comer se pregunta en futuro. A las 11:30 preguntaba «¿qué comiste hoy?»           |
+| «Avisos» → «Notificaciones»                     | Ajustes, onboarding, la tarjeta de estado y el canal de Android, que es lo que se ve en los ajustes del sistema                                                   |
+| El correo de confirmación va a `localhost:3000` | `signUp` sin `emailRedirectTo` usa la _Site URL_ del proyecto. La cuenta sí quedaba confirmada, así que se vivía como «se confirmó y la app no se entera»         |
+| Entrar con correo dejaba en Ajustes             | Con Google ya iba al diario porque el redirect aterriza en `auth/callback`; con correo no hay redirect. Ahora los dos hacen el mismo `replace`                    |
+| Me gusta en el feed                             | Tabla `entry_likes` con RLS, `toggle_like` comprobando que puedes leer lo que te gusta, y los recuentos viajando **dentro** de la tarjeta (0026)                  |
+| Pestañas deslizables en un perfil               | `swipeable`, como el diario                                                                                                                                       |
+| La ficha de la persona se come media pantalla   | Se encoge a una barra con la cara y el nombre. No se va del todo: una lista de tarjetas de una sola persona no dice de quién es                                   |
+| Abrir un plato o un sitio compartidos           | Dos pantallas nuevas y sus RPCs (0025). Dentro de una visita, `can_open` decide si se ofrece el toque — el detalle enseña platos que su dueño no comparte sueltos |
+
+### ⚠️ Lo que no se pudo comprobar, y las dudas que quedan
+
+- **Nada de esto se ha visto en un dispositivo.** Sigue siendo el paso cero, y
+  esta ronda lo agrava: tres puntos dependen además de las migraciones.
+- **La cabecera que se encoge no tiene test.** Usa reanimated, que no se puede
+  importar en jest (docs/12), y la lógica que se podría sacar fuera —una
+  interpolación— no es donde está el riesgo. El riesgo es la medida de la altura
+  desplegada, y eso solo se ve en pantalla.
+- **El aviso de «tu diario pasa a ser de esta cuenta» sale también al crear una
+  cuenta nueva desde un diario ya escrito**, que es exactamente cuando más falta
+  hace. Pero también sale si alguien entra, sale y vuelve a entrar con datos que
+  todavía no se han subido; ahí es redundante. Se dejó así porque el error caro
+  es el que no avisa.
+- **`entry_likes` no tiene clave ajena a lo que le gusta**, así que un borrado
+  duro deja filas que no lee nadie. Está razonado en la migración: aquí una fila
+  huérfana es invisible —todo lo que lee esa tabla parte de la entidad— y el
+  precio de las tres columnas anulables no compensa.
+- **El backup sigue copiando la base entera**, las dos cuentas incluidas. Es
+  defendible —es una copia de este teléfono— pero no se ha vuelto a pensar desde
+  que existe el filtro de lectura.
+
+---
+
+## 🔵 Ronda 8 — 31 de julio de 2026
 
 Una semana usando la app en el día a día, con otra persona en el otro lado. Los
 dieciséis puntos de la lista están cerrados. Después de una primera prueba en
