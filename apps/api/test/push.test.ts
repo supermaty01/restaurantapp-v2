@@ -30,6 +30,8 @@ function notification(id: number, userId: string): PendingNotification {
     actorId: 'caro-id',
     actorName: 'Caro',
     title: 'Ichiran',
+    entityUuid: null,
+    entityKind: null,
   };
 }
 
@@ -43,6 +45,23 @@ function socialNotification(kind: string): PendingNotification {
     actorId: 'caro-id',
     actorName: 'Caro',
     title: null,
+    entityUuid: null,
+    entityKind: null,
+  };
+}
+
+/** Un me gusta, que apunta a una entrada suelta y no a una visita (0027). */
+function likeNotification(entityKind: string, title: string | null): PendingNotification {
+  return {
+    id: 9,
+    userId: 'ana',
+    kind: 'entry_liked',
+    visitUuid: null,
+    actorId: 'caro-id',
+    actorName: 'Caro',
+    title,
+    entityUuid: 'entry-9',
+    entityKind,
   };
 }
 
@@ -243,13 +262,39 @@ describe('repartir avisos pendientes', () => {
 });
 
 describe('cómo se lee el aviso', () => {
-  it('el nombre en el título y el sitio en el cuerpo', () => {
+  /*
+   * El título dice qué ha pasado, no quién.
+   *
+   * Era el nombre de la persona, y se reportó: «no tiene mucho sentido que el
+   * título sea solo el nombre». Android ya pinta el nombre de la app encima, así
+   * que un aviso titulado «Caro» gasta las dos líneas destacadas en un nombre y
+   * deja lo ocurrido en la letra pequeña — y cuatro avisos de la misma persona
+   * salen como cuatro títulos idénticos en la bandeja.
+   */
+  it('el título cuenta qué pasó y el cuerpo lo dice entero', () => {
     const message = composeMessage(notification(7, 'ana'), 'ExponentPushToken[x]');
 
-    // En la pantalla de bloqueo el título es lo único que se lee entero, y
-    // quién te etiquetó es lo que decide si lo abres ahora.
-    expect(message.title).toBe('Caro');
-    expect(message.body).toBe('Te etiquetó en Ichiran');
+    expect(message.title).toBe('Te han etiquetado en una comida');
+    expect(message.body).toBe('Caro te etiquetó en Ichiran');
+  });
+
+  it('el nombre está en el cuerpo de todas, que es donde se lee la frase', () => {
+    const kinds = [
+      'tagged_in_visit',
+      'friend_published',
+      'friend_request',
+      'friend_accepted',
+      'entry_liked',
+      'una_clase_que_no_existe',
+    ];
+
+    for (const kind of kinds) {
+      const message = composeMessage({ ...socialNotification(kind), entityKind: 'dish' }, 't');
+      // Un aviso que no dice de quién es obliga a abrir la app para saberlo.
+      expect({ kind, dice: message.body.includes('Caro') }).toEqual({ kind, dice: true });
+      // Y ningún título puede ser el nombre a secas, que es lo que se arregló.
+      expect({ kind, titulo: message.title }).not.toEqual({ kind, titulo: 'Caro' });
+    }
   });
 
   it('lleva la visita, que es lo que la app abre al tocarlo', () => {
@@ -257,6 +302,8 @@ describe('cómo se lee el aviso', () => {
     expect(message.data).toEqual({
       visitUuid: 'visit-7',
       actorId: 'caro-id',
+      entityUuid: null,
+      entityKind: null,
       notificationId: 7,
     });
   });
@@ -269,16 +316,22 @@ describe('cómo se lee el aviso', () => {
   it('cada clase se lee distinta', () => {
     const body = (kind: string) => composeMessage(socialNotification(kind), 't').body;
 
-    expect(body('friend_request')).toBe('Quiere ser tu amigo');
-    expect(body('friend_accepted')).toBe('Aceptó tu solicitud de amistad');
-    expect(body('friend_published')).toBe('Ha añadido algo nuevo');
+    expect(body('friend_request')).toBe('Caro quiere ser tu amigo');
+    expect(body('friend_accepted')).toBe('Caro ya es tu amigo');
+    expect(body('friend_published')).toBe('Caro ha añadido algo nuevo');
   });
 
   it('las que no ocurren en una comida llevan a quien las provocó', () => {
     // Sin esto la app abre la pantalla de inicio, que desde fuera es igual que
     // un aviso que no lleva a ningún sitio.
     const message = composeMessage(socialNotification('friend_request'), 't');
-    expect(message.data).toEqual({ visitUuid: null, actorId: 'caro-id', notificationId: 1 });
+    expect(message.data).toEqual({
+      visitUuid: null,
+      actorId: 'caro-id',
+      entityUuid: null,
+      entityKind: null,
+      notificationId: 1,
+    });
   });
 
   it('una clase que este Worker no conoce sale igual', () => {
@@ -287,14 +340,55 @@ describe('cómo se lee el aviso', () => {
     // rama por defecto se quedarían sin enviar para siempre: `deliverPending`
     // solo marca `pushed_at` de lo que sale.
     const message = composeMessage(socialNotification('algo_que_vendra'), 't');
-    expect(message.title).toBe('Caro');
-    expect(message.body).toBe('Tienes una novedad');
+    expect(message.title).toBe('Tienes una novedad');
+    expect(message.body).toBe('Caro ha hecho algo en la app');
   });
 
   it('un aviso de etiqueta sin sitio no dice "undefined"', () => {
     // `titlesFor` devuelve null si la visita se borró entre que se escribió el
     // aviso y que salió.
     const orphan = { ...notification(3, 'ana'), title: null };
-    expect(composeMessage(orphan, 't').body).toBe('Te etiquetó en una comida');
+    expect(composeMessage(orphan, 't').body).toBe('Caro te etiquetó en una comida');
+  });
+});
+
+describe('el me gusta (0027)', () => {
+  it('nombra la entrada y de qué clase es', () => {
+    expect(composeMessage(likeNotification('dish', 'Tonkotsu'), 't').body).toBe(
+      'A Caro le gustó tu plato Tonkotsu',
+    );
+    expect(composeMessage(likeNotification('visit', 'Ichiran'), 't').body).toBe(
+      'A Caro le gustó tu visita Ichiran',
+    );
+    expect(composeMessage(likeNotification('restaurant', 'Ichiran'), 't').body).toBe(
+      'A Caro le gustó tu sitio Ichiran',
+    );
+  });
+
+  it('sin nombre, la frase sigue teniendo sentido', () => {
+    // La entrada se borró entre que se escribió el aviso y que salió. «Le gustó
+    // tu plato» dice bastante; «le gustó tu plato null» no dice nada.
+    expect(composeMessage(likeNotification('dish', null), 't').body).toBe(
+      'A Caro le gustó tu plato',
+    );
+  });
+
+  it('y con una clase de entrada que este Worker no conoce, tampoco miente', () => {
+    expect(composeMessage(likeNotification('cocktail', null), 't').body).toBe(
+      'A Caro le gustó algo tuyo',
+    );
+  });
+
+  it('lleva la entrada, que es lo que abre al tocarlo', () => {
+    // Sin `entityUuid` el aviso caería al perfil de quien dio el me gusta, que
+    // no es donde está lo que le gustó.
+    const message = composeMessage(likeNotification('dish', 'Tonkotsu'), 't');
+    expect(message.data).toEqual({
+      visitUuid: null,
+      actorId: 'caro-id',
+      entityUuid: 'entry-9',
+      entityKind: 'dish',
+      notificationId: 9,
+    });
   });
 });
